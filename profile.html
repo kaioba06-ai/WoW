@@ -1,0 +1,493 @@
+    <!-- ⑥ 設定・プロフィール (Profile) -->
+    <section id="page-profile" class="page-section hidden-section space-y-6">
+
+        <!-- ── プロフィールヘッダー ── -->
+        <div class="flex flex-col items-center text-center space-y-4 pt-4">
+            <div class="relative group">
+                <div class="w-24 h-24 rounded-full overflow-hidden shadow-2xl ring-4 ring-white dark:ring-slate-800 p-1">
+                    <!-- カスタム写真 -->
+                    <img id="profile-avatar-img" class="w-full h-full object-cover rounded-full hidden" src="" alt="プロフィール写真"/>
+                    <!-- 写真なし時のイラスト -->
+                    <div id="profile-avatar-placeholder" class="w-full h-full rounded-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 dark:from-blue-500/20 dark:to-blue-500/5">
+                        <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-16 h-16">
+                            <circle cx="64" cy="44" r="24" fill="#0060ad" fill-opacity="0.25"/>
+                            <circle cx="64" cy="44" r="16" fill="#0060ad" fill-opacity="0.5"/>
+                            <ellipse cx="64" cy="100" rx="36" ry="20" fill="#0060ad" fill-opacity="0.2"/>
+                            <ellipse cx="64" cy="98" rx="28" ry="16" fill="#0060ad" fill-opacity="0.35"/>
+                        </svg>
+                    </div>
+                </div>
+                <button onclick="openProfileEditModal()" class="absolute bottom-0 right-0 bg-primary dark:bg-blue-500 text-white p-2 rounded-full shadow-lg active:scale-90 transition-transform">
+                    <span class="material-symbols-outlined text-sm">edit</span>
+                </button>
+                <!-- スタイルスコアバッジ -->
+                <div class="absolute -top-1 -left-1 bg-gradient-to-br from-primary to-blue-400 text-white text-[10px] font-extrabold w-7 h-7 rounded-full flex items-center justify-center shadow-md ring-2 ring-white dark:ring-slate-900">A+</div>
+            </div>
+            <div>
+                <h1 id="profile-display-name" class="font-headline text-2xl font-extrabold tracking-tight dark:text-white">Alessandro Riva</h1>
+                <p id="profile-bio-display" class="text-[11px] text-on-surface-variant dark:text-white/60 mt-0.5 font-bold">🇮🇹 Milano Style • Kion認定スタイリスト</p>
+            </div>
+            
+
+            <!-- フォロワー / フォロー中 / 投稿 -->
+            <div class="flex gap-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[20px] px-6 py-3 border border-white/50 dark:border-white/10 shadow-sm w-full justify-center">
+                <div class="text-center cursor-pointer hover:opacity-70 transition-opacity">
+                    <p class="font-headline font-extrabold text-lg dark:text-white">248</p>
+                    <p class="text-[8px] font-bold text-on-surface-variant dark:text-white/60 uppercase tracking-wide">フォロー</p>
+                </div>
+                <div class="w-px bg-black/10 dark:bg-white/10"></div>
+                <div class="text-center cursor-pointer hover:opacity-70 transition-opacity">
+                    <p class="font-headline font-extrabold text-lg text-primary dark:text-blue-400">1.2k</p>
+                    <p class="text-[8px] font-bold text-on-surface-variant dark:text-white/60 uppercase tracking-wide">フォロワー</p>
+                </div>
+                <div class="w-px bg-black/10 dark:bg-white/10"></div>
+                <div class="text-center">
+                    <p class="font-headline font-extrabold text-lg dark:text-white">86</p>
+                    <p class="text-[8px] font-bold text-on-surface-variant dark:text-white/60 uppercase tracking-wide">投稿</p>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- ── Style Portfolio ── -->
+        <section class="space-y-4">
+            <h3 class="font-headline font-bold text-lg flex items-center gap-2 dark:text-white">
+                <span class="material-symbols-outlined text-primary dark:text-blue-400">photo_camera</span>
+                Style Portfolio
+                <span class="h-[1px] flex-grow bg-white/40 dark:bg-white/10 ml-2"></span>
+            </h3>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="aspect-[3/4] rounded-[24px] overflow-hidden bg-white/40 dark:bg-slate-800/40 shadow-sm relative group cursor-pointer border border-white/50 dark:border-white/10 hover:shadow-lg active:scale-[0.98] transition-all row-span-2">
+                    <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqvBlbyppfUMTJedHiMwUKAMrhIvvvF5DkYEv6g8wA3XB6pwIOrP144xnsxB5vtmAU3sYOi0kPEKqTcBtb_ibzvv6d0_QeyXAawb97eQaGUI8_08YQ-5N3XYpCWJ-LbSYdDQNz_zvwY_1XCYEFjntnVFjs6H0rcX1tbCVZFjbC1IFxhLEAHrrGOCsWIkg4zsrJp4F1V_VUnqvs0ymjRPPMFRuHLByu-kLBpOfgK5eGq0IZToRRyHQtRHD9C01ScAknmPLV57YoXQ" />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-90"></div>
+                    <div class="absolute bottom-3 left-3 text-white">
+                        <p class="font-bold text-[11px] uppercase tracking-wider mb-0.5">Office Casual</p>
+                        <p class="text-[9px] opacity-80 flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">favorite</span> 1.2k</p>
+                    </div>
+                </div>
+                <div class="aspect-square rounded-[24px] overflow-hidden bg-white/40 dark:bg-slate-800/40 shadow-sm relative group cursor-pointer border border-white/50 dark:border-white/10 hover:shadow-lg active:scale-[0.98] transition-all">
+                    <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHrJn4azvIQYn4lCFONT_hoI1z0ERDeYSabXsJQ9YBkFC9m2umBqgPX4wToLBtaAPw_WgFtrKBG-pqiXkTkrvkilDHFi5P2nD1hvJtYYtleBPVKql4r5ZnHTg9tyBTv1UbyCEMI92jw6XvNinXiktmCwggqli2bnF8emsRPuBfB-wWwhpdKQO4iSMPQjgET9NuSL6EgOQJHnWAZ8GXZPvWrfQrc9GjywkB0bcGWMTELruQXifNdCqOjJwdLw3MrfG8oVqw8OF4uw" />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-90"></div>
+                    <div class="absolute bottom-3 left-3 text-white"><p class="font-bold text-[10px] uppercase tracking-wider">Cafe Date</p></div>
+                </div>
+                <div onclick="openPostModal('trend')" class="aspect-square rounded-[24px] overflow-hidden bg-primary/10 dark:bg-blue-500/10 shadow-inner border border-dashed border-primary/30 dark:border-blue-500/30 flex flex-col items-center justify-center text-primary dark:text-blue-400 cursor-pointer hover:bg-primary/20 transition-all active:scale-[0.98]">
+                    <span class="material-symbols-outlined mb-1 text-3xl">add</span>
+                    <span class="text-[10px] font-bold">新規追加</span>
+                </div>
+            </div>
+        </section>
+
+
+
+
+
+        <div class="space-y-6">
+
+
+
+            <!-- ── クローゼット在庫 & 満足度 ── -->
+            <section class="grid grid-cols-2 gap-4">
+                <div class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[32px] p-5 border border-white/50 dark:border-white/10 shadow-sm flex flex-col justify-between">
+                    <p class="text-[9px] font-black text-on-surface-variant dark:text-white/50 uppercase">Closet Inventory</p>
+                    <div class="py-2">
+                        <div class="h-20 w-20 mx-auto relative flex items-center justify-center">
+                            <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                                <path class="stroke-current text-gray-200 dark:text-slate-700" stroke-width="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                <path class="stroke-current text-primary dark:text-blue-400" stroke-width="3" stroke-dasharray="70, 100" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                            </svg>
+                            <p class="absolute font-headline font-black text-xs dark:text-white">70%</p>
+                        </div>
+                    </div>
+                    <p class="text-[8px] font-bold text-center dark:text-white/70">容量の空きあり</p>
+                </div>
+                <div class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[32px] p-5 border border-white/50 dark:border-white/10 shadow-sm space-y-3">
+                    <p class="text-[9px] font-black text-on-surface-variant dark:text-white/50 uppercase">Daily Satisfaction</p>
+                    <div class="flex items-center justify-between">
+                        <span class="material-symbols-outlined text-primary text-xl">sentiment_very_satisfied</span>
+                        <span class="text-xs font-black dark:text-white">8.5/10</span>
+                    </div>
+                    <p class="text-[8px] font-medium dark:text-white/70 leading-tight">平均満足度が今週最高です！</p>
+                </div>
+            </section>
+
+            <!-- ── フレンドの最近の活動 ── -->
+            <section class="space-y-3">
+                <h3 class="font-headline font-bold text-sm dark:text-white">フレンドの最近の活動</h3>
+                <div class="flex gap-4 overflow-x-auto no-scrollbar drag-scroll-container pb-2">
+                    <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
+                        <div class="w-12 h-12 rounded-full overflow-hidden p-0.5 ring-2 ring-primary/20">
+                            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaRkINi2JduqKmvssw9miN06u7pb-ZuC_Q42FVre3Twr4oOMbcjBGq_33TB5SHubWOPm6SMovnvO6-Qsh5EQhAN-AwmZ5OcEiHwOWBLdTLmymGEGyaVaVJVBPLWIbJjQAuzVsttLOhgFkyyqAd3UHSSSdEG7xY_NhYtwN4bQfWURuUm5T9qbLWpbapIc0kVwzqttnhGewK6VrZ0wO21ikiDFBVN5TMA9HNhCMkKrN_wyq47tzB_sSbivYUJq3X9fUqM-v3-1aehA" class="w-full h-full object-cover rounded-full"/>
+                        </div>
+                        <p class="text-[8px] font-bold dark:text-white">Ken</p>
+                    </div>
+                    <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
+                        <div class="w-12 h-12 rounded-full overflow-hidden p-0.5 ring-2 ring-primary/10">
+                            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDO1-G-h_h4J5KleH68soFOFkso3Q5wKO11N_jXN0cWsuSrFTKQ274LcEbnFXIyVO37pAhlcvayP4a5hkN7GkLwAicGefxka2LcLCqAFVxKTTEGQsRMDzlgb6MKcvhGyflK571Bu_gPYp9A2QI8sMbjLNLcfPZ7PnrSg5wFuCTd9y50P1EEUycgkWX5AJdez-cz1o9QipSbmomDZ1XtPbLNhMDLrn44hChz9ZRkNnYqDhpUzbQlLow2J11TeWeJoronMfdoKuxiKA" class="w-full h-full object-cover rounded-full"/>
+                        </div>
+                        <p class="text-[8px] font-bold dark:text-white">Mika</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── パーソナライズ設定 ── -->
+            <section class="space-y-6">
+                <h3 class="font-headline font-bold text-lg flex items-center gap-2 dark:text-white">パーソナライズ設定<span class="h-[1px] flex-grow bg-white/40 dark:bg-white/10"></span></h3>
+                <div class="bg-white/40 dark:bg-slate-800/60 backdrop-blur-md p-6 rounded-[32px] space-y-6 border border-white/50 dark:border-white/10 shadow-sm">
+                    <div class="space-y-5">
+                        <div class="flex justify-between items-center">
+                            <label class="font-headline font-bold flex items-center gap-2 text-sm dark:text-white">
+                                <span class="material-symbols-outlined text-primary dark:text-blue-400">thermostat</span>
+                                暑がり・寒がりの設定
+                            </label>
+                            <span id="temp-label" class="bg-primary-container dark:bg-blue-900 text-on-primary-container dark:text-blue-200 px-3 py-1 rounded-full text-[10px] font-bold">寒がり</span>
+                        </div>
+                        <input class="w-full h-1.5 bg-white/50 dark:bg-slate-700 rounded-full appearance-none cursor-pointer accent-primary dark:accent-blue-400" max="5" min="1" step="1" type="range" value="2" oninput="document.getElementById('temp-label').innerText = ['極度の寒がり','寒がり','普通','暑がり','極度の暑がり'][this.value-1]"/>
+                        <div class="flex justify-between text-[8px] font-bold text-on-surface-variant dark:text-white/50 px-1">
+                            <span>寒がり</span><span>暑がり</span>
+                        </div>
+                    </div>
+                    <div class="w-full h-[1px] bg-black/5 dark:bg-white/10"></div>
+                    <div class="space-y-3">
+                        <label class="font-headline font-bold flex items-center gap-2 text-sm text-primary dark:text-blue-400">
+                            <span class="material-symbols-outlined">accessibility_new</span>体系別スタイル
+                        </label>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="selectProfileOption(this,'body')" class="profile-opt-body px-4 py-2 rounded-full bg-primary dark:bg-blue-500 text-white font-bold text-[10px] active:scale-95 transition-transform" data-active="true">スリム</button>
+                            <button onclick="selectProfileOption(this,'body')" class="profile-opt-body px-4 py-2 rounded-full bg-white/50 dark:bg-slate-700 font-bold text-[10px] dark:text-white active:scale-95 transition-transform">普通</button>
+                        </div>
+                    </div>
+                    <div class="w-full h-[1px] bg-black/5 dark:bg-white/10"></div>
+                    <div class="space-y-3">
+                        <label class="font-headline font-bold flex items-center gap-2 text-sm text-primary dark:text-blue-400">
+                            <span class="material-symbols-outlined">badge</span>ユーザー属性（切替）
+                        </label>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="selectProfileOption(this,'attr')" class="profile-opt-attr px-4 py-2 rounded-lg bg-primary dark:bg-blue-500 text-white font-bold text-[10px] active:scale-95 transition-transform flex items-center gap-1" data-active="true"><span class="material-symbols-outlined text-[14px]">school</span>大学生</button>
+                            <button onclick="selectProfileOption(this,'attr')" class="profile-opt-attr px-4 py-2 rounded-lg bg-white/50 dark:bg-slate-700 font-bold text-[10px] dark:text-white active:scale-95 transition-transform flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">work</span>オフィスカジュアル</button>
+                            <button onclick="selectProfileOption(this,'attr')" class="profile-opt-attr px-4 py-2 rounded-lg bg-white/50 dark:bg-slate-700 font-bold text-[10px] dark:text-white active:scale-95 transition-transform">フリー</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── アプリ設定 ── -->
+            <section class="space-y-4">
+                <h3 class="font-headline font-bold text-lg flex items-center gap-2 dark:text-white">アプリ設定<span class="h-[1px] flex-grow bg-white/40 dark:bg-white/10"></span></h3>
+                <div class="bg-white/40 dark:bg-slate-800/60 backdrop-blur-md p-6 rounded-[32px] space-y-5 border border-white/50 dark:border-white/10 shadow-sm">
+                    <!-- 演出モード -->
+                    <div class="flex justify-between items-center gap-4">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-headline font-bold text-sm flex items-center gap-2 dark:text-white">
+                                <span class="material-symbols-outlined text-primary dark:text-blue-400 text-[18px]">auto_awesome</span>
+                                リアクション演出
+                            </p>
+                            <p class="text-[10px] text-on-surface-variant dark:text-white/50 mt-0.5 ml-7">リアクション時のエフェクト範囲</p>
+                        </div>
+                        <div class="flex flex-col items-center gap-1 shrink-0">
+                            <button id="effect-mode-toggle" onclick="toggleSetting('isFullScreenEffectEnabled')"
+                                class="relative w-16 h-8 rounded-full transition-colors duration-300 focus:outline-none"
+                                style="background:#0060ad;">
+                                <span class="toggle-knob absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform duration-300" style="transform:translateX(28px)"></span>
+                            </button>
+                            <span class="toggle-label text-[9px] font-bold text-primary dark:text-blue-400">フルスクリーン</span>
+                        </div>
+                    </div>
+                    <div class="w-full h-[1px] bg-black/5 dark:bg-white/10"></div>
+                    <!-- バイブレーション -->
+                    <div class="flex justify-between items-center gap-4">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-headline font-bold text-sm flex items-center gap-2 dark:text-white">
+                                <span class="material-symbols-outlined text-primary dark:text-blue-400 text-[18px]">vibration</span>
+                                バイブレーション
+                            </p>
+                            <p class="text-[10px] text-on-surface-variant dark:text-white/50 mt-0.5 ml-7">タップ時の触覚フィードバック</p>
+                        </div>
+                        <div class="flex flex-col items-center gap-1 shrink-0">
+                            <button id="haptic-toggle" onclick="toggleSetting('isHapticEnabled')"
+                                class="relative w-16 h-8 rounded-full transition-colors duration-300 focus:outline-none"
+                                style="background:#0060ad;">
+                                <span class="toggle-knob absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform duration-300" style="transform:translateX(28px)"></span>
+                            </button>
+                            <span class="toggle-label text-[9px] font-bold text-primary dark:text-blue-400">ON</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── 冠婚葬祭 TPO 手引き ── -->
+            <section class="space-y-4">
+                <h3 class="font-headline font-bold text-lg flex items-center gap-2 dark:text-white">冠婚葬祭・シーン別手引き<span class="h-[1px] flex-grow bg-white/40 dark:bg-white/10"></span></h3>
+                <div class="bg-primary hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white rounded-[24px] p-5 shadow-lg active:scale-95 transition-transform cursor-pointer relative overflow-hidden flex items-center justify-between">
+                    <div class="absolute right-[-20px] top-[-25px] opacity-20">
+                        <span class="material-symbols-outlined text-[100px]">menu_book</span>
+                    </div>
+                    <div class="space-y-1 relative z-10 w-[80%]">
+                        <p class="font-bold text-sm tracking-wide">オトナのTPOマナー辞典</p>
+                        <p class="text-[10px] font-medium opacity-90 leading-tight">結婚式・お葬式・高級レストランでの外さない服装ルール＆マナー早見表</p>
+                    </div>
+                    <span class="material-symbols-outlined relative z-10 bg-white/20 p-2 rounded-full">chevron_right</span>
+                </div>
+            </section>
+
+            <!-- ── 背景・シーン設定 ── -->
+            <section class="space-y-6">
+                <h3 class="font-headline font-bold text-lg flex items-center gap-2 dark:text-white">背景・シーン設定<span class="h-[1px] flex-grow bg-white/40 dark:bg-white/10"></span></h3>
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <button onclick="switchScene('default', this)" class="scene-card active bg-white/40 dark:bg-slate-800/40 p-2 rounded-2xl flex flex-col items-center gap-1.5 border-2 border-primary/60 dark:border-blue-500/60 shadow-sm active:scale-95 transition-all relative">
+                        <div class="w-full h-16 bg-gradient-to-br from-slate-100 to-blue-50 dark:from-slate-800 dark:to-slate-900 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/5">
+                            <span class="material-symbols-outlined text-on-surface-variant dark:text-white/40 text-2xl">wb_sunny</span>
+                        </div>
+                        <span class="text-[9px] font-bold dark:text-white">Standard</span>
+                        <span class="scene-check absolute top-1.5 right-1.5 material-symbols-outlined text-primary dark:text-blue-400 text-[14px]" style="font-variation-settings:'FILL' 1">check_circle</span>
+                    </button>
+                    <button onclick="switchScene('office', this)" class="scene-card bg-white/40 dark:bg-slate-800/40 p-2 rounded-2xl flex flex-col items-center gap-1.5 border-2 border-white/50 dark:border-white/10 shadow-sm active:scale-95 transition-all relative">
+                        <div class="w-full h-16 rounded-xl overflow-hidden border border-black/5 dark:border-white/5">
+                            <img src="背景/背景：オフィス街.png" class="w-full h-full object-cover" alt="オフィス街" onerror="this.parentElement.style.background='#c7d2e7'"/>
+                        </div>
+                        <span class="text-[9px] font-bold dark:text-white">オフィス街</span>
+                        <span class="scene-check hidden absolute top-1.5 right-1.5 material-symbols-outlined text-primary dark:text-blue-400 text-[14px]" style="font-variation-settings:'FILL' 1">check_circle</span>
+                    </button>
+                    <button onclick="switchScene('park', this)" class="scene-card bg-white/40 dark:bg-slate-800/40 p-2 rounded-2xl flex flex-col items-center gap-1.5 border-2 border-white/50 dark:border-white/10 shadow-sm active:scale-95 transition-all relative">
+                        <div class="w-full h-16 rounded-xl overflow-hidden border border-black/5 dark:border-white/5">
+                            <img src="背景/背景：公園.png" class="w-full h-full object-cover" alt="公園" onerror="this.parentElement.style.background='#c7e7c7'"/>
+                        </div>
+                        <span class="text-[9px] font-bold dark:text-white">公園</span>
+                        <span class="scene-check hidden absolute top-1.5 right-1.5 material-symbols-outlined text-primary dark:text-blue-400 text-[14px]" style="font-variation-settings:'FILL' 1">check_circle</span>
+                    </button>
+                    <button onclick="switchScene('beach', this)" class="scene-card bg-white/40 dark:bg-slate-800/40 p-2 rounded-2xl flex flex-col items-center gap-1.5 border-2 border-white/50 dark:border-white/10 shadow-sm active:scale-95 transition-all relative">
+                        <div class="w-full h-16 rounded-xl overflow-hidden border border-black/5 dark:border-white/5">
+                            <img src="背景/背景：海辺の観光地.jpg" class="w-full h-full object-cover" alt="海辺の観光地" onerror="this.parentElement.style.background='#b3d9f0'"/>
+                        </div>
+                        <span class="text-[9px] font-bold dark:text-white">海辺</span>
+                        <span class="scene-check hidden absolute top-1.5 right-1.5 material-symbols-outlined text-primary dark:text-blue-400 text-[14px]" style="font-variation-settings:'FILL' 1">check_circle</span>
+                    </button>
+                    <button onclick="switchScene('room', this)" class="scene-card bg-white/40 dark:bg-slate-800/40 p-2 rounded-2xl flex flex-col items-center gap-1.5 border-2 border-white/50 dark:border-white/10 shadow-sm active:scale-95 transition-all relative">
+                        <div class="w-full h-16 rounded-xl overflow-hidden border border-black/5 dark:border-white/5">
+                            <img src="背景/背景：白い部屋.jpg" class="w-full h-full object-cover" alt="白い部屋" onerror="this.parentElement.style.background='#f0f0f0'"/>
+                        </div>
+                        <span class="text-[9px] font-bold dark:text-white">白い部屋</span>
+                        <span class="scene-check hidden absolute top-1.5 right-1.5 material-symbols-outlined text-primary dark:text-blue-400 text-[14px]" style="font-variation-settings:'FILL' 1">check_circle</span>
+                    </button>
+                </div>
+                <div id="scene-outfit-preview" class="hidden mt-4 p-4 bg-white/40 dark:bg-slate-800/40 backdrop-blur-md rounded-2xl border border-white/50 dark:border-white/10">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-[11px] font-bold text-on-surface dark:text-white flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-primary dark:text-blue-400 text-[16px]">checkroom</span>
+                            <span id="scene-outfit-label">このシーンのコーデ</span>
+                        </p>
+                        <button onclick="openSceneOutfitModal()" class="text-[10px] font-bold text-primary dark:text-blue-400 flex items-center gap-0.5 hover:underline">
+                            変更 <span class="material-symbols-outlined text-[13px]">chevron_right</span>
+                        </button>
+                    </div>
+                    <div id="scene-outfit-items" class="flex gap-2 overflow-x-auto no-scrollbar"></div>
+                    <p id="scene-outfit-empty" class="text-[10px] text-on-surface-variant dark:text-white/50 hidden">コーデが未設定です。「変更」から選択してください。</p>
+                </div>
+            </section>
+
+            <!-- ── システム・サポート ── -->
+            <section class="space-y-4">
+                <h3 class="font-headline font-bold text-base flex items-center gap-2 dark:text-white">
+                    システム・サポート<span class="h-[1px] flex-grow bg-white/40 dark:bg-white/10 ml-1"></span>
+                </h3>
+                <div class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[32px] overflow-hidden border border-white/50 dark:border-white/10 shadow-sm divide-y divide-black/5 dark:divide-white/10">
+                    <div class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer active:scale-[0.99] transition-all">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary/70">notifications</span>
+                            <span class="text-xs font-bold dark:text-white">通知設定</span>
+                        </div>
+                        <span class="text-[9px] font-bold text-on-surface-variant dark:text-white/50 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full">ON</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary/70">lock_person</span>
+                            <span class="text-xs font-bold dark:text-white">プライバシーとセキュリティ</span>
+                        </div>
+                        <span class="material-symbols-outlined text-sm text-on-surface-variant">chevron_right</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary/70">palette</span>
+                            <span class="text-xs font-bold dark:text-white">アプリアイコン・テーマ</span>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <div class="w-3 h-3 rounded-full bg-primary"></div>
+                            <div class="w-3 h-3 rounded-full bg-blue-400"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 hover:bg-black/5 cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary/70">help_outline</span>
+                            <span class="text-xs font-bold dark:text-white">ヘルプとフィードバック</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </section>
+    </section>
+
+    <!-- ===== プロフィール編集モーダル ===== -->
+    <div id="profile-edit-overlay" onclick="closeProfileEditModal()" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] transition-opacity duration-300 opacity-0"></div>
+    <div id="profile-edit-modal" class="hidden fixed bottom-0 left-0 w-full z-[70] max-w-2xl" style="left:50%;transform:translateX(-50%) translateY(100%);">
+        <div class="bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl border border-white/30 dark:border-white/10 max-h-[92vh] flex flex-col">
+            <div class="flex justify-center pt-3 pb-1"><div class="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full"></div></div>
+            <div class="px-6 pt-2 pb-4 flex items-center justify-between">
+                <h3 class="font-headline font-bold text-lg dark:text-white">プロフィールを編集</h3>
+                <button onclick="closeProfileEditModal()" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                    <span class="material-symbols-outlined text-on-surface-variant dark:text-white/60">close</span>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 px-6 pb-8 space-y-6">
+                <!-- 写真アップロード -->
+                <div class="flex flex-col items-center gap-4">
+                    <div class="relative cursor-pointer" onclick="document.getElementById('profile-photo-input').click()">
+                        <div class="w-28 h-28 rounded-full overflow-hidden ring-4 ring-primary/30 dark:ring-blue-500/30 bg-surface-container-high dark:bg-slate-700">
+                            <img id="profile-edit-preview-img" class="w-full h-full object-cover hidden" src="" alt=""/>
+                            <div id="profile-edit-preview-placeholder" class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 dark:from-blue-500/20 dark:to-blue-500/5">
+                                <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-16 h-16">
+                                    <circle cx="64" cy="44" r="24" fill="#0060ad" fill-opacity="0.25"/>
+                                    <circle cx="64" cy="44" r="16" fill="#0060ad" fill-opacity="0.5"/>
+                                    <ellipse cx="64" cy="100" rx="36" ry="20" fill="#0060ad" fill-opacity="0.2"/>
+                                    <ellipse cx="64" cy="98" rx="28" ry="16" fill="#0060ad" fill-opacity="0.35"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="absolute bottom-0 right-0 bg-primary dark:bg-blue-500 text-white p-2 rounded-full shadow-md">
+                            <span class="material-symbols-outlined text-sm">photo_camera</span>
+                        </div>
+                    </div>
+                    <input type="file" id="profile-photo-input" accept="image/*" class="hidden" onchange="handleProfilePhotoChange(this)"/>
+                    <div class="flex gap-3">
+                        <button onclick="document.getElementById('profile-photo-input').click()" class="text-sm font-semibold text-primary dark:text-blue-400 border border-primary/30 dark:border-blue-400/30 px-4 py-2 rounded-full hover:bg-primary/5 transition-colors">
+                            写真を選択
+                        </button>
+                        <button id="profile-remove-photo-btn" onclick="removeProfilePhoto()" class="text-sm font-semibold text-red-500 border border-red-300 px-4 py-2 rounded-full hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors hidden">
+                            写真を削除
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 名前 -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-on-surface-variant dark:text-white/70 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-base text-primary dark:text-blue-400">badge</span>名前
+                    </label>
+                    <input id="profile-edit-name" type="text" maxlength="30" placeholder="名前を入力" class="w-full bg-surface-container-low dark:bg-slate-800 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-medium dark:text-white placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 dark:focus:ring-blue-500/40 transition"/>
+                </div>
+
+                <!-- 自己紹介 -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-on-surface-variant dark:text-white/70 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-base text-primary dark:text-blue-400">edit_note</span>自己紹介
+                    </label>
+                    <textarea id="profile-edit-bio" maxlength="150" rows="4" placeholder="自己紹介を入力してください（150文字以内）" class="w-full bg-surface-container-low dark:bg-slate-800 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-medium dark:text-white placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 dark:focus:ring-blue-500/40 transition resize-none"></textarea>
+                    <p class="text-xs text-right text-on-surface-variant/60 dark:text-white/30"><span id="profile-bio-count">0</span>/150</p>
+                </div>
+
+                <!-- 保存ボタン -->
+                <button onclick="saveProfileEdit()" class="w-full bg-primary dark:bg-blue-500 text-white font-bold py-3.5 rounded-2xl shadow-lg active:scale-[0.98] transition-transform text-sm">
+                    保存する
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 今日のポイント編集モーダル ===== -->
+    <div id="tip-edit-overlay" onclick="closeTipEditModal()" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] transition-opacity duration-300 opacity-0"></div>
+    <div id="tip-edit-modal" class="hidden fixed bottom-0 left-0 w-full z-[70] max-w-2xl" style="left:50%;transform:translateX(-50%) translateY(100%);">
+        <div class="bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl border border-white/30 dark:border-white/10 max-h-[90vh] flex flex-col">
+            <div class="flex justify-center pt-3 pb-1"><div class="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full"></div></div>
+            <div class="px-6 pt-2 pb-4 flex items-center justify-between">
+                <h3 class="font-headline font-bold text-lg dark:text-white flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary dark:text-blue-400 text-xl">assignment_turned_in</span>今日のポイントを編集
+                </h3>
+                <button onclick="closeTipEditModal()" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                    <span class="material-symbols-outlined text-on-surface-variant dark:text-white/60">close</span>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 px-6 pb-8 space-y-5">
+                <!-- サマリー文 -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-on-surface-variant dark:text-white/70 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-base text-primary dark:text-blue-400">format_quote</span>メインの一言
+                    </label>
+                    <textarea id="tip-edit-summary" maxlength="80" rows="3" placeholder="例：メイン活動は「大学からバイトへ直行」。脱ぎ着しやすい薄手の重ね着が必須！" class="w-full bg-surface-container-low dark:bg-slate-800 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-medium dark:text-white placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 dark:focus:ring-blue-500/40 transition resize-none"></textarea>
+                    <p class="text-xs text-right text-on-surface-variant/60 dark:text-white/30"><span id="tip-summary-count">0</span>/80</p>
+                </div>
+                <!-- ポイント1 -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-on-surface-variant dark:text-white/70 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-base text-primary dark:text-blue-400">label</span>ポイント①
+                    </label>
+                    <input id="tip-edit-bullet1" type="text" maxlength="40" placeholder="例：シワになりにくい羽織りで温度差対策" class="w-full bg-surface-container-low dark:bg-slate-800 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-medium dark:text-white placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 dark:focus:ring-blue-500/40 transition"/>
+                </div>
+                <!-- ポイント2 -->
+                <div class="space-y-2">
+                    <label class="text-sm font-bold text-on-surface-variant dark:text-white/70 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-base text-primary dark:text-blue-400">label</span>ポイント②
+                    </label>
+                    <input id="tip-edit-bullet2" type="text" maxlength="40" placeholder="例：足元はスニーカーで動きやすく" class="w-full bg-surface-container-low dark:bg-slate-800 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-medium dark:text-white placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 dark:focus:ring-blue-500/40 transition"/>
+                </div>
+                <!-- リセット + 保存 -->
+                <div class="flex gap-3 pt-1">
+                    <button onclick="resetTipEdit()" class="flex-1 border border-on-surface-variant/30 dark:border-white/20 text-on-surface-variant dark:text-white/60 font-bold py-3 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition text-sm">
+                        デフォルトに戻す
+                    </button>
+                    <button onclick="saveTipEdit()" class="flex-2 flex-grow bg-primary dark:bg-blue-500 text-white font-bold py-3 rounded-2xl shadow-lg active:scale-[0.98] transition-transform text-sm px-6">
+                        保存する
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== シーン別コーデ選択モーダル ===== -->
+    <div id="scene-outfit-overlay" onclick="closeSceneOutfitModal()" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] transition-opacity duration-300 opacity-0"></div>
+    <div id="scene-outfit-modal" class="hidden fixed bottom-0 left-0 w-full z-[70] max-w-2xl" style="left:50%;transform:translateX(-50%) translateY(100%);">
+        <div class="bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl border border-white/30 dark:border-white/10 max-h-[85vh] flex flex-col">
+            <div class="flex justify-center pt-3 pb-1"><div class="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full"></div></div>
+            <div class="px-6 pt-2 pb-3 flex items-center justify-between flex-shrink-0">
+                <div>
+                    <h3 class="font-headline font-bold text-lg dark:text-white" id="scene-outfit-modal-title">シーンのコーデを選択</h3>
+                    <p class="text-[10px] text-on-surface-variant dark:text-white/50">タップして選択・解除できます</p>
+                </div>
+                <button onclick="closeSceneOutfitModal()" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                    <span class="material-symbols-outlined text-on-surface-variant dark:text-white/60">close</span>
+                </button>
+            </div>
+            <!-- カテゴリフィルター -->
+            <div class="px-6 pb-3 flex-shrink-0">
+                <div class="flex gap-2 overflow-x-auto no-scrollbar">
+                    <button onclick="filterSceneCloset('all', this)" class="scene-closet-filter flex-shrink-0 bg-primary dark:bg-blue-500 text-white px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">すべて</button>
+                    <button onclick="filterSceneCloset('tops', this)" class="scene-closet-filter flex-shrink-0 bg-white/70 dark:bg-slate-800 border border-black/10 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">トップス</button>
+                    <button onclick="filterSceneCloset('bottoms', this)" class="scene-closet-filter flex-shrink-0 bg-white/70 dark:bg-slate-800 border border-black/10 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">ボトムス</button>
+                    <button onclick="filterSceneCloset('outer', this)" class="scene-closet-filter flex-shrink-0 bg-white/70 dark:bg-slate-800 border border-black/10 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">アウター</button>
+                    <button onclick="filterSceneCloset('shoes', this)" class="scene-closet-filter flex-shrink-0 bg-white/70 dark:bg-slate-800 border border-black/10 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">シューズ</button>
+                </div>
+            </div>
+            <!-- クローゼットアイテム一覧 -->
+            <div id="scene-closet-grid" class="px-6 pb-4 overflow-y-auto flex-1 grid grid-cols-3 gap-3 content-start"></div>
+            <!-- 空のとき -->
+            <div id="scene-closet-empty" class="hidden px-6 py-10 text-center">
+                <span class="material-symbols-outlined text-4xl text-on-surface-variant/40 dark:text-white/20">checkroom</span>
+                <p class="text-sm font-bold text-on-surface-variant dark:text-white/50 mt-2">クローゼットにアイテムがありません</p>
+                <p class="text-[11px] text-on-surface-variant dark:text-white/40 mt-1">先にクローゼットタブでアイテムを追加してください</p>
+            </div>
+            <!-- 決定ボタン -->
+            <div class="px-6 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))] flex-shrink-0 border-t border-black/5 dark:border-white/5">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-[11px] font-bold text-on-surface-variant dark:text-white/60"><span id="scene-selected-count">0</span> アイテム選択中</p>
+                    <button onclick="clearSceneOutfit()" class="text-[10px] text-red-400 hover:underline font-bold">選択を解除</button>
+                </div>
+                <button onclick="saveSceneOutfitSelection()" class="w-full bg-primary dark:bg-blue-500 text-white py-3 rounded-2xl font-bold text-sm shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                    このシーンのコーデとして保存
+                </button>
+            </div>
+        </div>
+    </div>
+<script src="js/scene.js"></script>
+<script src="js/profile.js"></script>

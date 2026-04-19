@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kion コミュニティ</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/dist/tailwind.min.css" rel="stylesheet" />
+</head>
+<body class="bg-surface-container-low dark:bg-slate-900 text-on-surface dark:text-white">
+  <!-- Header -->
+  <header class="p-4 flex justify-between items-center bg-primary dark:bg-blue-800 text-white">
+    <h1 class="text-xl font-bold">Kion コミュニティ</h1>
+    <nav>
+      <a href="index.html" class="mr-4 hover:underline">ホーム</a>
+      <a href="community.html" class="font-semibold underline">コミュニティ</a>
+    </nav>
+  </header>
+
+  <!-- Filter Section -->
+  <section class="p-4 border-b border-gray-200 dark:border-gray-700">
+    <div class="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0">
+      <label class="text-sm font-medium">リアクションで絞り込む：</label>
+<!-- Updated filter dropdown with new reactions -->
+      <select id="reaction-filter" class="border rounded px-2 py-1">
+        <option value="all">すべて</option>
+        <option value="creative">独創的</option>
+        <option value="stylish">オシャレ</option>
+        <option value="funny">おもしろい</option>
+        <option value="vibe">雰囲気好き</option>
+        <option value="reference">参考になる</option>
+        <option value="cute">かわいい</option>
+        <option value="cool">かっこいい</option>
+      </select>
+
+      <label class="text-sm font-medium md:ml-4">カテゴリで絞り込む：</label>
+      <select id="tag-filter" class="border rounded px-2 py-1">
+        <option value="all">すべて</option>
+        <option value="celebration">お祝い事</option>
+        <option value="mourning">喪事</option>
+        <option value="daily">日常</option>
+        <option value="fashion">ファッション</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Posts List -->
+  <main class="p-4" id="post-list">
+    <!-- Posts will be rendered here by community.js -->
+  </main>
+
+  <script type="module" src="js/community.js"></script>
+</body>
+</html>

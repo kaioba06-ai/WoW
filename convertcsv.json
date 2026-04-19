@@ -1,0 +1,1332 @@
+{
+   "openapi": "3.0.0",
+   "info": {
+      "title": "Kion API",
+      "description": "天気連動の服装提案アプリ「Kion」のバックエンド API",
+      "version": "1.0.0",
+      "contact": {
+         "name": "Kion Development Team"
+      },
+      "license": {
+         "name": "MIT"
+      }
+   },
+   "servers": [
+      {
+         "url": "https://xxx.supabase.co/rest/v1",
+         "description": "Supabase 本番環境",
+         "variables": {
+            "region": {
+               "default": "ap-southeast-1",
+               "description": "AWS Region"
+            }
+         }
+      }
+   ],
+   "components": {
+      "securitySchemes": {
+         "bearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Supabase JWT トークン（Authorization: Bearer {token}）"
+         }
+      },
+      "schemas": {
+         "User": {
+            "type": "object",
+            "required": [
+               "id",
+               "email",
+               "username",
+               "created_at"
+            ],
+            "properties": {
+               "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "ユーザーID（UUID）",
+                  "example": "550e8400-e29b-41d4-a716-446655440000"
+               },
+               "email": {
+                  "type": "string",
+                  "format": "email",
+                  "description": "メールアドレス",
+                  "example": "user@example.com"
+               },
+               "username": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 20,
+                  "description": "ユーザー名（一意）",
+                  "example": "alice_fashion"
+               },
+               "avatar_url": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "uri",
+                  "description": "プロフィール画像 URL",
+                  "example": "https://xxx.supabase.co/storage/v1/object/public/avatars/user123.jpg"
+               },
+               "bio": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "nullable": true,
+                  "description": "自己紹介",
+                  "example": "ファッションと天気が好きです"
+               },
+               "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "アカウント作成日時（UTC）",
+                  "example": "2024-04-11T10:30:00Z"
+               },
+               "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "最終更新日時（UTC）",
+                  "example": "2024-04-11T10:30:00Z"
+               }
+            }
+         },
+         "ClosetItem": {
+            "type": "object",
+            "required": [
+               "id",
+               "user_id",
+               "name",
+               "category",
+               "created_at"
+            ],
+            "properties": {
+               "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "アイテムID",
+                  "example": "660e8400-e29b-41d4-a716-446655440001"
+               },
+               "user_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "ユーザーID（誰のクローゼットか）"
+               },
+               "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "description": "アイテム名",
+                  "example": "トレンチコート"
+               },
+               "category": {
+                  "type": "string",
+                  "enum": [
+                     "jacket",
+                     "pants",
+                     "shoes",
+                     "shirt",
+                     "dress",
+                     "skirt",
+                     "accessories",
+                     "underwear"
+                  ],
+                  "description": "カテゴリ",
+                  "example": "jacket"
+               },
+               "color": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "色",
+                  "example": "beige"
+               },
+               "image_url": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "uri",
+                  "description": "画像 URL",
+                  "example": "https://xxx.supabase.co/storage/v1/object/public/closet-images/user123/123456-coat.jpg"
+               },
+               "temp_range_min": {
+                  "type": "integer",
+                  "nullable": true,
+                  "description": "対応気温（最小値、℃）",
+                  "example": 5
+               },
+               "temp_range_max": {
+                  "type": "integer",
+                  "nullable": true,
+                  "description": "対応気温（最大値、℃）",
+                  "example": 20
+               },
+               "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "作成日時（UTC）"
+               },
+               "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "更新日時（UTC）"
+               }
+            }
+         },
+         "ClosetItemInput": {
+            "type": "object",
+            "required": [
+               "name",
+               "category"
+            ],
+            "properties": {
+               "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "example": "トレンチコート"
+               },
+               "category": {
+                  "type": "string",
+                  "enum": [
+                     "jacket",
+                     "pants",
+                     "shoes",
+                     "shirt",
+                     "dress",
+                     "skirt",
+                     "accessories",
+                     "underwear"
+                  ],
+                  "example": "jacket"
+               },
+               "color": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": "beige"
+               },
+               "temp_range_min": {
+                  "type": "integer",
+                  "nullable": true,
+                  "example": 5
+               },
+               "temp_range_max": {
+                  "type": "integer",
+                  "nullable": true,
+                  "example": 20
+               }
+            }
+         },
+         "CommunityPost": {
+            "type": "object",
+            "required": [
+               "id",
+               "user_id",
+               "title",
+               "created_at"
+            ],
+            "properties": {
+               "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "投稿ID"
+               },
+               "user_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "投稿者のユーザーID"
+               },
+               "user": {
+                  "type": "object",
+                  "description": "投稿者の情報（selectで明示的に指定時のみ）",
+                  "properties": {
+                     "id": {
+                        "type": "string",
+                        "format": "uuid"
+                     },
+                     "username": {
+                        "type": "string"
+                     },
+                     "avatar_url": {
+                        "type": "string",
+                        "nullable": true
+                     }
+                  }
+               },
+               "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "description": "投稿タイトル",
+                  "example": "春の寒暖差対策コーデ"
+               },
+               "description": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "nullable": true,
+                  "description": "説明文",
+                  "example": "トレンチと薄手のニットで春の変わりやすい気温に対応"
+               },
+               "outfit_item_ids": {
+                  "type": "array",
+                  "items": {
+                     "type": "string",
+                     "format": "uuid"
+                  },
+                  "description": "使用したクローゼットアイテムのID一覧",
+                  "example": [
+                     "660e8400-e29b-41d4-a716-446655440001",
+                     "660e8400-e29b-41d4-a716-446655440002"
+                  ]
+               },
+               "image_url": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "uri",
+                  "description": "コーディネート写真"
+               },
+               "temperature": {
+                  "type": "number",
+                  "format": "float",
+                  "nullable": true,
+                  "description": "投稿時の気温（℃）",
+                  "example": 15.5
+               },
+               "weather_desc": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "投稿時の天気説明",
+                  "example": "晴れ"
+               },
+               "likes_count": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "いいね数"
+               },
+               "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "投稿日時（UTC）"
+               },
+               "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "更新日時（UTC）"
+               }
+            }
+         },
+         "CommunityPostInput": {
+            "type": "object",
+            "required": [
+               "title",
+               "outfit_item_ids"
+            ],
+            "properties": {
+               "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "example": "春の寒暖差対策コーデ"
+               },
+               "description": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "nullable": true
+               },
+               "outfit_item_ids": {
+                  "type": "array",
+                  "items": {
+                     "type": "string",
+                     "format": "uuid"
+                  },
+                  "minItems": 1,
+                  "example": [
+                     "660e8400-e29b-41d4-a716-446655440001"
+                  ]
+               },
+               "temperature": {
+                  "type": "number",
+                  "format": "float",
+                  "nullable": true
+               },
+               "weather_desc": {
+                  "type": "string",
+                  "nullable": true
+               }
+            }
+         },
+         "Like": {
+            "type": "object",
+            "required": [
+               "id",
+               "user_id",
+               "post_id",
+               "created_at"
+            ],
+            "properties": {
+               "id": {
+                  "type": "string",
+                  "format": "uuid"
+               },
+               "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+               },
+               "post_id": {
+                  "type": "string",
+                  "format": "uuid"
+               },
+               "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+               }
+            }
+         },
+         "AuthResponse": {
+            "type": "object",
+            "required": [
+               "user",
+               "session"
+            ],
+            "properties": {
+               "user": {
+                  "$ref": "#/components/schemas/User"
+               },
+               "session": {
+                  "type": "object",
+                  "properties": {
+                     "access_token": {
+                        "type": "string",
+                        "description": "JWT アクセストークン"
+                     },
+                     "token_type": {
+                        "type": "string",
+                        "enum": [
+                           "bearer"
+                        ]
+                     },
+                     "expires_in": {
+                        "type": "integer",
+                        "description": "トークン有効期限（秒）"
+                     },
+                     "refresh_token": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "リフレッシュトークン"
+                     }
+                  }
+               }
+            }
+         },
+         "Error": {
+            "type": "object",
+            "required": [
+               "code",
+               "message"
+            ],
+            "properties": {
+               "code": {
+                  "type": "string",
+                  "description": "エラーコード",
+                  "enum": [
+                     "INVALID_REQUEST",
+                     "UNAUTHORIZED",
+                     "FORBIDDEN",
+                     "NOT_FOUND",
+                     "CONFLICT",
+                     "INTERNAL_SERVER_ERROR"
+                  ]
+               },
+               "message": {
+                  "type": "string",
+                  "description": "エラーメッセージ"
+               },
+               "details": {
+                  "type": "object",
+                  "nullable": true,
+                  "description": "詳細情報"
+               }
+            }
+         }
+      }
+   },
+   "paths": {
+      "/auth/v1/signup": {
+         "post": {
+            "tags": [
+               "Authentication"
+            ],
+            "summary": "メールアドレスでサインアップ",
+            "description": "新しいユーザーアカウントを作成します。\nメール確認リンクが送信されます。\n",
+            "operationId": "signUpWithEmail",
+            "requestBody": {
+               "required": true,
+               "content": {
+                  "application/json": {
+                     "schema": {
+                        "type": "object",
+                        "required": [
+                           "email",
+                           "password",
+                           "username"
+                        ],
+                        "properties": {
+                           "email": {
+                              "type": "string",
+                              "format": "email",
+                              "example": "user@example.com"
+                           },
+                           "password": {
+                              "type": "string",
+                              "minLength": 8,
+                              "description": "8文字以上",
+                              "example": "SecurePassword123!"
+                           },
+                           "username": {
+                              "type": "string",
+                              "minLength": 3,
+                              "maxLength": 20,
+                              "example": "alice_fashion"
+                           }
+                        }
+                     }
+                  }
+               }
+            },
+            "responses": {
+               "200": {
+                  "description": "サインアップ成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/AuthResponse"
+                        }
+                     }
+                  }
+               },
+               "400": {
+                  "description": "無効なリクエスト（パスワード短い、メール形式など）",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               },
+               "409": {
+                  "description": "メールアドレスまたはユーザー名が既に使用されている",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "/auth/v1/token": {
+         "post": {
+            "tags": [
+               "Authentication"
+            ],
+            "summary": "メールでログイン",
+            "description": "メールアドレスとパスワードでログインします。",
+            "operationId": "signInWithEmail",
+            "requestBody": {
+               "required": true,
+               "content": {
+                  "application/json": {
+                     "schema": {
+                        "type": "object",
+                        "required": [
+                           "email",
+                           "password"
+                        ],
+                        "properties": {
+                           "email": {
+                              "type": "string",
+                              "format": "email"
+                           },
+                           "password": {
+                              "type": "string"
+                           }
+                        }
+                     }
+                  }
+               }
+            },
+            "responses": {
+               "200": {
+                  "description": "ログイン成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/AuthResponse"
+                        }
+                     }
+                  }
+               },
+               "400": {
+                  "description": "メールまたはパスワードが未入力"
+               },
+               "401": {
+                  "description": "メールアドレスまたはパスワードが間違っている",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "/auth/v1/authorize": {
+         "get": {
+            "tags": [
+               "Authentication"
+            ],
+            "summary": "Google OAuth ログイン",
+            "description": "Google を使ってログインします。\n以下のクエリパラメータが必要です。\n",
+            "operationId": "signInWithGoogle",
+            "parameters": [
+               {
+                  "name": "provider",
+                  "in": "query",
+                  "required": true,
+                  "schema": {
+                     "type": "string",
+                     "enum": [
+                        "google"
+                     ]
+                  }
+               },
+               {
+                  "name": "redirect_to",
+                  "in": "query",
+                  "required": true,
+                  "description": "ログイン後のリダイレクト URL",
+                  "schema": {
+                     "type": "string",
+                     "format": "uri",
+                     "example": "https://kion.app/home"
+                  }
+               }
+            ],
+            "responses": {
+               "302": {
+                  "description": "Google ログイン画面へリダイレクト"
+               }
+            }
+         }
+      },
+      "/auth/v1/user": {
+         "get": {
+            "tags": [
+               "Authentication"
+            ],
+            "summary": "現在のユーザー情報を取得",
+            "description": "ログイン中のユーザー情報を返します。",
+            "operationId": "getCurrentUser",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "ユーザー情報取得成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/User"
+                        }
+                     }
+                  }
+               },
+               "401": {
+                  "description": "認証トークンが無効または期限切れ",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Error"
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "/auth/v1/logout": {
+         "post": {
+            "tags": [
+               "Authentication"
+            ],
+            "summary": "ログアウト",
+            "description": "セッションを終了します。",
+            "operationId": "signOut",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "ログアウト成功"
+               },
+               "401": {
+                  "description": "認証トークンが無効"
+               }
+            }
+         }
+      },
+      "/closet_items": {
+         "get": {
+            "tags": [
+               "Closet"
+            ],
+            "summary": "クローゼットアイテム一覧を取得",
+            "description": "ログインユーザーのクローゼット内のすべてのアイテムを取得します。",
+            "operationId": "getClosetItems",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "parameters": [
+               {
+                  "name": "user_id",
+                  "in": "query",
+                  "required": true,
+                  "description": "ユーザーID（URLに含める: ?user_id=eq.{userId}）",
+                  "schema": {
+                     "type": "string",
+                     "format": "uuid"
+                  }
+               },
+               {
+                  "name": "category",
+                  "in": "query",
+                  "description": "カテゴリでフィルタ（オプション）",
+                  "schema": {
+                     "type": "string",
+                     "enum": [
+                        "jacket",
+                        "pants",
+                        "shoes",
+                        "shirt",
+                        "dress",
+                        "skirt",
+                        "accessories",
+                        "underwear"
+                     ]
+                  }
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "アイテム一覧取得成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "type": "array",
+                           "items": {
+                              "$ref": "#/components/schemas/ClosetItem"
+                           }
+                        }
+                     }
+                  }
+               },
+               "401": {
+                  "description": "認証が必要です"
+               },
+               "403": {
+                  "description": "他ユーザーのクローゼットは閲覧できません"
+               }
+            }
+         },
+         "post": {
+            "tags": [
+               "Closet"
+            ],
+            "summary": "クローゼットにアイテムを追加",
+            "description": "新しいアイテムをクローゼットに追加します。\n画像アップロードは別途 Storage API を使用してください。\n",
+            "operationId": "addClosetItem",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "requestBody": {
+               "required": true,
+               "content": {
+                  "application/json": {
+                     "schema": {
+                        "$ref": "#/components/schemas/ClosetItemInput"
+                     }
+                  }
+               }
+            },
+            "responses": {
+               "201": {
+                  "description": "アイテム追加成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/ClosetItem"
+                        }
+                     }
+                  }
+               },
+               "400": {
+                  "description": "無効なリクエスト（名前やカテゴリが必須）"
+               },
+               "401": {
+                  "description": "認証が必要です"
+               }
+            }
+         }
+      },
+      "/closet_items/{item_id}": {
+         "get": {
+            "tags": [
+               "Closet"
+            ],
+            "summary": "特定のアイテムを取得",
+            "operationId": "getClosetItem",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "parameters": [
+               {
+                  "name": "item_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                     "type": "string",
+                     "format": "uuid"
+                  }
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "アイテム取得成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/ClosetItem"
+                        }
+                     }
+                  }
+               },
+               "403": {
+                  "description": "アクセス権限がありません"
+               },
+               "404": {
+                  "description": "アイテムが見つかりません"
+               }
+            }
+         },
+         "patch": {
+            "tags": [
+               "Closet"
+            ],
+            "summary": "アイテムを更新",
+            "operationId": "updateClosetItem",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "parameters": [
+               {
+                  "name": "item_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                     "type": "string",
+                     "format": "uuid"
+                  }
+               }
+            ],
+            "requestBody": {
+               "required": true,
+               "content": {
+                  "application/json": {
+                     "schema": {
+                        "$ref": "#/components/schemas/ClosetItemInput"
+                     }
+                  }
+               }
+            },
+            "responses": {
+               "200": {
+                  "description": "アイテム更新成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/ClosetItem"
+                        }
+                     }
+                  }
+               },
+               "403": {
+                  "description": "アクセス権限がありません"
+               },
+               "404": {
+                  "description": "アイテムが見つかりません"
+               }
+            }
+         },
+         "delete": {
+            "tags": [
+               "Closet"
+            ],
+            "summary": "アイテムを削除",
+            "operationId": "deleteClosetItem",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "parameters": [
+               {
+                  "name": "item_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                     "type": "string",
+                     "format": "uuid"
+                  }
+               }
+            ],
+            "responses": {
+               "204": {
+                  "description": "アイテム削除成功（レスポンスボディなし）"
+               },
+               "403": {
+                  "description": "アクセス権限がありません"
+               },
+               "404": {
+                  "description": "アイテムが見つかりません"
+               }
+            }
+         }
+      },
+      "/community_posts": {
+         "get": {
+            "tags": [
+               "Community"
+            ],
+            "summary": "コミュニティフィード取得",
+            "description": "全ユーザーの投稿を時系列で取得します。",
+            "operationId": "getCommunityFeed",
+            "parameters": [
+               {
+                  "name": "limit",
+                  "in": "query",
+                  "description": "取得件数（デフォルト: 20）",
+                  "schema": {
+                     "type": "integer",
+                     "default": 20,
+                     "maximum": 100
+                  }
+               },
+               {
+                  "name": "offset",
+                  "in": "query",
+                  "description": "オフセット（ページネーション用）",
+                  "schema": {
+                     "type": "integer",
+                     "default": 0
+                  }
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "投稿一覧取得成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "type": "array",
+                           "items": {
+                              "$ref": "#/components/schemas/CommunityPost"
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         },
+         "post": {
+            "tags": [
+               "Community"
+            ],
+            "summary": "新しい投稿を作成",
+            "description": "コーディネート投稿を作成します。",
+            "operationId": "createPost",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "requestBody": {
+               "required": true,
+               "content": {
+                  "application/json": {
+                     "schema": {
+                        "$ref": "#/components/schemas/CommunityPostInput"
+                     }
+                  }
+               }
+            },
+            "responses": {
+               "201": {
+                  "description": "投稿作成成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/CommunityPost"
+                        }
+                     }
+                  }
+               },
+               "400": {
+                  "description": "無効なリクエスト"
+               },
+               "401": {
+                  "description": "認証が必要です"
+               }
+            }
+         }
+      },
+      "/community_posts/{post_id}": {
+         "get": {
+            "tags": [
+               "Community"
+            ],
+            "summary": "特定の投稿を取得",
+            "operationId": "getPost",
+            "parameters": [
+               {
+                  "name": "post_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                     "type": "string",
+                     "format": "uuid"
+                  }
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "投稿取得成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/CommunityPost"
+                        }
+                     }
+                  }
+               },
+               "404": {
+                  "description": "投稿が見つかりません"
+               }
+            }
+         },
+         "patch": {
+            "tags": [
+               "Community"
+            ],
+            "summary": "投稿を更新",
+            "operationId": "updatePost",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "parameters": [
+               {
+                  "name": "post_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                     "type": "string",
+                     "format": "uuid"
+                  }
+               }
+            ],
+            "requestBody": {
+               "required": true,
+               "content": {
+                  "application/json": {
+                     "schema": {
+                        "$ref": "#/components/schemas/CommunityPostInput"
+                     }
+                  }
+               }
+            },
+            "responses": {
+               "200": {
+                  "description": "投稿更新成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/CommunityPost"
+                        }
+                     }
+                  }
+               },
+               "403": {
+                  "description": "自分の投稿のみ編集可能です"
+               },
+               "404": {
+                  "description": "投稿が見つかりません"
+               }
+            }
+         },
+         "delete": {
+            "tags": [
+               "Community"
+            ],
+            "summary": "投稿を削除",
+            "operationId": "deletePost",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "parameters": [
+               {
+                  "name": "post_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                     "type": "string",
+                     "format": "uuid"
+                  }
+               }
+            ],
+            "responses": {
+               "204": {
+                  "description": "投稿削除成功"
+               },
+               "403": {
+                  "description": "自分の投稿のみ削除可能です"
+               },
+               "404": {
+                  "description": "投稿が見つかりません"
+               }
+            }
+         }
+      },
+      "/community_posts/{post_id}/like": {
+         "post": {
+            "tags": [
+               "Community"
+            ],
+            "summary": "投稿にいいね（またはいいね数を増やす）",
+            "description": "投稿にいいねを追加します。既にいいね済みの場合は何もしません。",
+            "operationId": "likePost",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "parameters": [
+               {
+                  "name": "post_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                     "type": "string",
+                     "format": "uuid"
+                  }
+               }
+            ],
+            "responses": {
+               "201": {
+                  "description": "いいね追加成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/Like"
+                        }
+                     }
+                  }
+               },
+               "400": {
+                  "description": "既にいいね済み"
+               },
+               "401": {
+                  "description": "認証が必要です"
+               },
+               "404": {
+                  "description": "投稿が見つかりません"
+               }
+            }
+         },
+         "delete": {
+            "tags": [
+               "Community"
+            ],
+            "summary": "いいねを削除",
+            "description": "投稿のいいねを削除します。",
+            "operationId": "unlikePost",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "parameters": [
+               {
+                  "name": "post_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                     "type": "string",
+                     "format": "uuid"
+                  }
+               }
+            ],
+            "responses": {
+               "204": {
+                  "description": "いいね削除成功"
+               },
+               "401": {
+                  "description": "認証が必要です"
+               },
+               "404": {
+                  "description": "いいねレコードが見つかりません"
+               }
+            }
+         }
+      },
+      "/users/{user_id}": {
+         "get": {
+            "tags": [
+               "Users"
+            ],
+            "summary": "ユーザープロフィール取得",
+            "operationId": "getUserProfile",
+            "parameters": [
+               {
+                  "name": "user_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                     "type": "string",
+                     "format": "uuid"
+                  }
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "プロフィール取得成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/User"
+                        }
+                     }
+                  }
+               },
+               "404": {
+                  "description": "ユーザーが見つかりません"
+               }
+            }
+         },
+         "patch": {
+            "tags": [
+               "Users"
+            ],
+            "summary": "プロフィール情報を更新",
+            "description": "ログインユーザーは自分のプロフィールのみ更新可能です。",
+            "operationId": "updateUserProfile",
+            "security": [
+               {
+                  "bearerAuth": []
+               }
+            ],
+            "parameters": [
+               {
+                  "name": "user_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                     "type": "string",
+                     "format": "uuid"
+                  }
+               }
+            ],
+            "requestBody": {
+               "required": true,
+               "content": {
+                  "application/json": {
+                     "schema": {
+                        "type": "object",
+                        "properties": {
+                           "username": {
+                              "type": "string",
+                              "minLength": 3,
+                              "maxLength": 20
+                           },
+                           "bio": {
+                              "type": "string",
+                              "maxLength": 500
+                           },
+                           "avatar_url": {
+                              "type": "string",
+                              "format": "uri",
+                              "nullable": true
+                           }
+                        }
+                     }
+                  }
+               }
+            },
+            "responses": {
+               "200": {
+                  "description": "プロフィール更新成功",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "$ref": "#/components/schemas/User"
+                        }
+                     }
+                  }
+               },
+               "400": {
+                  "description": "無効なリクエスト"
+               },
+               "403": {
+                  "description": "他ユーザーのプロフィールは編集できません"
+               },
+               "404": {
+                  "description": "ユーザーが見つかりません"
+               }
+            }
+         }
+      }
+   },
+   "tags": [
+      {
+         "name": "Authentication",
+         "description": "ユーザー認証関連（サインアップ、ログイン、Google OAuth）"
+      },
+      {
+         "name": "Closet",
+         "description": "クローゼット管理（アイテム追加・編集・削除）"
+      },
+      {
+         "name": "Community",
+         "description": "コミュニティ機能（投稿、いいね）"
+      },
+      {
+         "name": "Users",
+         "description": "ユーザープロフィール管理"
+      }
+   ]
+}

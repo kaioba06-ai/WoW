@@ -1,0 +1,25 @@
+    <section id="page-weekly" class="page-section hidden-section space-y-8 relative pb-20">
+
+        <div class="flex justify-between items-end">
+            <div class="space-y-1">
+                <p class="font-label text-[10px] font-bold tracking-[0.2em] uppercase text-primary dark:text-blue-400 mb-1">長期予報</p>
+                <h2 class="font-headline text-3xl font-extrabold tracking-tight dark:text-white">Weekly Plan</h2>
+                <p class="font-label text-xs text-on-surface-variant dark:text-white/70 font-bold opacity-80">10着から28通りの組み合わせ！</p>
+            </div>
+            <button onclick="refreshWeeklyData()"
+                class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-2.5 rounded-full border border-white/50 dark:border-white/10 shadow-sm active:scale-90 transition-transform">
+                <span class="material-symbols-outlined text-primary dark:text-blue-400" data-icon="refresh">refresh</span>
+            </button>
+        </div>
+
+        <!-- Weekly Planner Grid (k-card) -->
+        <div class="k-weekly-grid" id="weekly-grid">
+            <!-- Open-Meteo APIから動的生成 -->
+            <!-- ローディング中のスケルトン -->
+            <div class="k-card skeleton" style="min-height:130px;"></div>
+            <div class="k-card skeleton" style="min-height:130px;"></div>
+            <div class="k-card skeleton" style="min-height:130px;"></div>
+            <div class="k-card skeleton" style="min-height:130px;"></div>
+        </div>
+    </section>
+<script src="js/weekly.js"></script>

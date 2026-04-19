@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Kion - アカウント作成</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0060ad",
+                        "on-primary": "#f8f8ff",
+                        "secondary": "#426751",
+                        "on-secondary": "#e7ffed",
+                        "tertiary": "#8a4f46",
+                        "on-tertiary": "#fff7f6",
+                        "on-surface": "#173355",
+                        "on-surface-variant": "#466084",
+                        "surface-container-low": "#eff3ff",
+                        "surface-container-high": "#dde9ff",
+                        "surface-container-highest": "#d4e3ff",
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans", "Noto Sans JP", "sans-serif"],
+                        "body": ["Manrope", "Noto Sans JP", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "1rem", "xl": "1.5rem", "2xl": "2.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+    <style>
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Manrope', 'Noto Sans JP', sans-serif;
+            min-height: 100dvh;
+            background-color: #f8f9ff;
+            background-image: url('背景/weather_sunny.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #173355;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(248, 250, 255, 0.75);
+            backdrop-filter: blur(10px);
+            z-index: -1;
+        }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up { animation: fadeSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        .fade-up-2 { animation: fadeSlideUp 0.5s 0.08s cubic-bezier(0.4, 0, 0.2, 1) both; }
+        .fade-up-3 { animation: fadeSlideUp 0.5s 0.16s cubic-bezier(0.4, 0, 0.2, 1) both; }
+        .fade-up-4 { animation: fadeSlideUp 0.5s 0.24s cubic-bezier(0.4, 0, 0.2, 1) both; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); } 20%, 40%, 60%, 80% { transform: translateX(4px); } }
+        .shake-err { animation: shake 0.6s !important; border-color: #ef4444 !important; }
+        input:focus { outline: none; }
+        .input-field {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 3rem;
+            background: rgba(255,255,255,0.6);
+            border: 1.5px solid rgba(0,96,173,0.15);
+            border-radius: 1rem;
+            font-family: 'Manrope', 'Noto Sans JP', sans-serif;
+            font-size: 0.9rem;
+            color: #173355;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            backdrop-filter: blur(8px);
+        }
+        .input-field:focus {
+            border-color: #0060ad;
+            box-shadow: 0 0 0 3px rgba(0,96,173,0.12);
+        }
+        .input-field::placeholder { color: #466084; opacity: 0.6; }
+        .btn-primary {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            background: #0060ad;
+            color: white;
+            border: none;
+            border-radius: 1rem;
+            font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 8px 24px rgba(0,96,173,0.25);
+        }
+        .btn-primary:hover { background: #0052a0; box-shadow: 0 10px 28px rgba(0,96,173,0.35); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { background: #8cb4d4; box-shadow: none; cursor: not-allowed; }
+        .error-msg { color: #ef4444; font-size: 0.78rem; font-weight: 600; margin-top: 0.25rem; display: none; }
+        .success-msg { color: #22c55e; font-size: 0.78rem; font-weight: 600; margin-top: 0.25rem; display: none; }
+
+        /* パスワード強度バー */
+        .pw-strength-bar { height: 3px; border-radius: 9999px; transition: width 0.4s, background-color 0.4s; }
+
+        /* ステップインジケーター */
+        .step-dot { width: 8px; height: 8px; border-radius: 9999px; transition: background 0.3s, width 0.3s; }
+        .step-dot.active { background: #0060ad; width: 24px; }
+        .step-dot.done { background: #22c55e; }
+        .step-dot.inactive { background: rgba(0,96,173,0.2); }
+
+        /* チェックボックスカスタム */
+        .custom-check {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(0,96,173,0.3);
+            border-radius: 5px;
+            background: rgba(255,255,255,0.6);
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .custom-check.checked {
+            background: #0060ad;
+            border-color: #0060ad;
+        }
+
+        /* アバター選択 */
+        .avatar-opt {
+            width: 52px; height: 52px;
+            border-radius: 9999px;
+            border: 2.5px solid transparent;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            overflow: hidden;
+            background: rgba(255,255,255,0.5);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .avatar-opt:hover { transform: scale(1.08); }
+        .avatar-opt.selected {
+            border-color: #0060ad;
+            box-shadow: 0 0 0 3px rgba(0,96,173,0.18);
+            transform: scale(1.08);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-dvh px-4 py-10">
+
+<div class="w-full max-w-sm mx-auto space-y-5">
+
+    <!-- ヘッダー & 戻るボタン -->
+    <div class="flex items-center gap-3 fade-up">
+        <a href="login.html" class="w-10 h-10 rounded-full bg-white/50 backdrop-blur-md border border-white/60 shadow flex items-center justify-center text-on-surface hover:bg-white/80 transition active:scale-90">
+            <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+        </a>
+        <div>
+            <h1 class="font-headline font-extrabold text-xl tracking-tight text-on-surface">アカウント作成</h1>
+            <p class="text-on-surface-variant text-xs font-medium">Kionへようこそ</p>
+        </div>
+        <!-- ステップインジケーター -->
+        <div class="flex gap-1.5 items-center ml-auto" id="step-indicator">
+            <div class="step-dot active" id="dot-1"></div>
+            <div class="step-dot inactive" id="dot-2"></div>
+            <div class="step-dot inactive" id="dot-3"></div>
+        </div>
+    </div>
+
+    <!-- ===== STEP 1: 基本情報 ===== -->
+    <div id="step-1" class="bg-white/50 backdrop-blur-xl rounded-[28px] border border-white/60 shadow-2xl p-7 space-y-4 fade-up-2">
+        <div class="space-y-1">
+            <h2 class="font-headline font-bold text-lg text-on-surface">基本情報</h2>
+            <p class="text-on-surface-variant text-xs">まずはアカウントの基本情報を入力してください。</p>
+        </div>
+
+        <form id="step1-form" novalidate class="space-y-3.5">
+            <!-- 表示名 -->
+            <div class="space-y-1">
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">badge</span>
+                    <input id="display-name" type="text" placeholder="表示名（ニックネーム）" class="input-field" autocomplete="nickname" maxlength="30"/>
+                </div>
+                <p class="error-msg" id="name-err">表示名を入力してください。</p>
+            </div>
+
+            <!-- メール -->
+            <div class="space-y-1">
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">mail</span>
+                    <input id="reg-email" type="email" placeholder="メールアドレス" class="input-field" autocomplete="email" inputmode="email"/>
+                </div>
+                <p class="error-msg" id="reg-email-err">有効なメールアドレスを入力してください。</p>
+            </div>
+
+            <!-- パスワード -->
+            <div class="space-y-1">
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
+                    <input id="reg-password" type="password" placeholder="パスワード（8文字以上）" class="input-field" autocomplete="new-password" oninput="updatePwStrength(this.value)"/>
+                    <button type="button" id="reg-pw-toggle" onclick="togglePassword('reg-password','reg-pw-toggle')" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">visibility_off</span>
+                    </button>
+                </div>
+                <!-- 強度バー -->
+                <div class="h-1 bg-black/5 rounded-full overflow-hidden">
+                    <div id="pw-strength-bar" class="pw-strength-bar h-full w-0 bg-red-400"></div>
+                </div>
+                <p id="pw-strength-label" class="text-[11px] font-semibold text-on-surface-variant/60"></p>
+                <p class="error-msg" id="reg-password-err">パスワードは8文字以上で入力してください。</p>
+            </div>
+
+            <!-- パスワード確認 -->
+            <div class="space-y-1">
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock_reset</span>
+                    <input id="reg-password2" type="password" placeholder="パスワード（再入力）" class="input-field" autocomplete="new-password"/>
+                    <button type="button" id="reg-pw2-toggle" onclick="togglePassword('reg-password2','reg-pw2-toggle')" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">visibility_off</span>
+                    </button>
+                </div>
+                <p class="error-msg" id="reg-password2-err">パスワードが一致しません。</p>
+            </div>
+
+            <button type="button" onclick="goStep(2)" class="btn-primary">次へ <span class="material-symbols-outlined text-[18px] align-middle">arrow_forward</span></button>
+        </form>
+    </div>
+
+    <!-- ===== STEP 2: スタイル設定 ===== -->
+    <div id="step-2" class="bg-white/50 backdrop-blur-xl rounded-[28px] border border-white/60 shadow-2xl p-7 space-y-4 fade-up-2 hidden">
+        <div class="space-y-1">
+            <h2 class="font-headline font-bold text-lg text-on-surface">スタイル設定</h2>
+            <p class="text-on-surface-variant text-xs">あなたの好みをKionに教えてください。</p>
+        </div>
+
+        <!-- アバター選択 -->
+        <div class="space-y-2">
+            <p class="font-semibold text-sm text-on-surface">アバターを選択</p>
+            <div class="flex gap-3 flex-wrap">
+                <button class="avatar-opt selected" data-avatar="1" onclick="selectAvatar(this)">
+                    <span class="text-2xl">🧣</span>
+                </button>
+                <button class="avatar-opt" data-avatar="2" onclick="selectAvatar(this)">
+                    <span class="text-2xl">🧥</span>
+                </button>
+                <button class="avatar-opt" data-avatar="3" onclick="selectAvatar(this)">
+                    <span class="text-2xl">👗</span>
+                </button>
+                <button class="avatar-opt" data-avatar="4" onclick="selectAvatar(this)">
+                    <span class="text-2xl">🎩</span>
+                </button>
+                <button class="avatar-opt" data-avatar="5" onclick="selectAvatar(this)">
+                    <span class="text-2xl">🧢</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- スタイルの好み -->
+        <div class="space-y-2">
+            <p class="font-semibold text-sm text-on-surface">スタイルの好み <span class="text-on-surface-variant font-normal text-xs">（複数選択可）</span></p>
+            <div class="flex flex-wrap gap-2" id="style-tags">
+                <button class="style-tag px-3 py-1.5 rounded-full border border-primary/20 text-xs font-semibold text-on-surface-variant bg-white/50 hover:border-primary/60 transition-all active:scale-95" onclick="toggleStyleTag(this)">カジュアル</button>
+                <button class="style-tag px-3 py-1.5 rounded-full border border-primary/20 text-xs font-semibold text-on-surface-variant bg-white/50 hover:border-primary/60 transition-all active:scale-95" onclick="toggleStyleTag(this)">オフィス</button>
+                <button class="style-tag px-3 py-1.5 rounded-full border border-primary/20 text-xs font-semibold text-on-surface-variant bg-white/50 hover:border-primary/60 transition-all active:scale-95" onclick="toggleStyleTag(this)">アウトドア</button>
+                <button class="style-tag px-3 py-1.5 rounded-full border border-primary/20 text-xs font-semibold text-on-surface-variant bg-white/50 hover:border-primary/60 transition-all active:scale-95" onclick="toggleStyleTag(this)">ストリート</button>
+                <button class="style-tag px-3 py-1.5 rounded-full border border-primary/20 text-xs font-semibold text-on-surface-variant bg-white/50 hover:border-primary/60 transition-all active:scale-95" onclick="toggleStyleTag(this)">ナチュラル</button>
+                <button class="style-tag px-3 py-1.5 rounded-full border border-primary/20 text-xs font-semibold text-on-surface-variant bg-white/50 hover:border-primary/60 transition-all active:scale-95" onclick="toggleStyleTag(this)">フォーマル</button>
+                <button class="style-tag px-3 py-1.5 rounded-full border border-primary/20 text-xs font-semibold text-on-surface-variant bg-white/50 hover:border-primary/60 transition-all active:scale-95" onclick="toggleStyleTag(this)">スポーツ</button>
+            </div>
+        </div>
+
+        <!-- 寒がり / 暑がり -->
+        <div class="space-y-2">
+            <p class="font-semibold text-sm text-on-surface">体感温度の傾向</p>
+            <div class="flex gap-2">
+                <button class="temp-pref flex-1 py-2.5 rounded-xl border border-primary/20 text-xs font-semibold text-on-surface-variant bg-white/50 hover:border-primary/60 transition-all active:scale-95 flex items-center justify-center gap-1" data-pref="cold" onclick="selectTempPref(this)">
+                    🥶 寒がり
+                </button>
+                <button class="temp-pref flex-1 py-2.5 rounded-xl border border-primary/20 text-xs font-semibold text-on-surface-variant bg-white/50 hover:border-primary/60 transition-all active:scale-95 flex items-center justify-center gap-1" data-pref="normal" onclick="selectTempPref(this)">
+                    😊 普通
+                </button>
+                <button class="temp-pref flex-1 py-2.5 rounded-xl border border-primary/20 text-xs font-semibold text-on-surface-variant bg-white/50 hover:border-primary/60 transition-all active:scale-95 flex items-center justify-center gap-1" data-pref="hot" onclick="selectTempPref(this)">
+                    🥵 暑がり
+                </button>
+            </div>
+        </div>
+
+        <div class="flex gap-2 pt-1">
+            <button type="button" onclick="goStep(1)" class="flex-none w-12 h-12 rounded-[14px] bg-white/60 backdrop-blur border border-white/60 shadow flex items-center justify-center text-on-surface hover:bg-white/80 transition active:scale-90">
+                <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+            </button>
+            <button type="button" onclick="goStep(3)" class="btn-primary flex-1">次へ <span class="material-symbols-outlined text-[18px] align-middle">arrow_forward</span></button>
+        </div>
+    </div>
+
+    <!-- ===== STEP 3: 確認 & 同意 ===== -->
+    <div id="step-3" class="bg-white/50 backdrop-blur-xl rounded-[28px] border border-white/60 shadow-2xl p-7 space-y-4 fade-up-2 hidden">
+        <div class="space-y-1">
+            <h2 class="font-headline font-bold text-lg text-on-surface">確認 & 同意</h2>
+            <p class="text-on-surface-variant text-xs">内容を確認してアカウントを作成します。</p>
+        </div>
+
+        <!-- 入力内容サマリー -->
+        <div class="bg-surface-container-low rounded-[18px] border border-primary/10 p-4 space-y-2.5 text-sm">
+            <div class="flex items-center gap-3">
+                <div id="summary-avatar" class="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-xl">🧣</div>
+                <div>
+                    <p class="font-headline font-bold text-on-surface" id="summary-name">-</p>
+                    <p class="text-on-surface-variant text-xs" id="summary-email">-</p>
+                </div>
+            </div>
+            <div class="h-px bg-black/5"></div>
+            <div class="flex items-start gap-2 text-xs text-on-surface-variant">
+                <span class="material-symbols-outlined text-primary text-[16px] mt-0.5">style</span>
+                <span id="summary-styles">スタイル未選択</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-on-surface-variant">
+                <span class="material-symbols-outlined text-primary text-[16px]">thermostat</span>
+                <span id="summary-temp">体感温度: 普通</span>
+            </div>
+        </div>
+
+        <!-- 利用規約同意 -->
+        <div class="space-y-2.5">
+            <label class="flex items-start gap-3 cursor-pointer select-none" onclick="toggleCheck('check-terms')">
+                <div class="custom-check" id="check-terms">
+                    <span class="material-symbols-outlined text-white text-[13px]" style="display:none;font-variation-settings:'FILL' 1">check</span>
+                </div>
+                <span class="text-xs text-on-surface-variant leading-relaxed pt-0.5">
+                    <a href="#" class="text-primary font-semibold underline">利用規約</a>に同意します
+                </span>
+            </label>
+            <label class="flex items-start gap-3 cursor-pointer select-none" onclick="toggleCheck('check-privacy')">
+                <div class="custom-check" id="check-privacy">
+                    <span class="material-symbols-outlined text-white text-[13px]" style="display:none;font-variation-settings:'FILL' 1">check</span>
+                </div>
+                <span class="text-xs text-on-surface-variant leading-relaxed pt-0.5">
+                    <a href="#" class="text-primary font-semibold underline">プライバシーポリシー</a>に同意します
+                </span>
+            </label>
+            <label class="flex items-start gap-3 cursor-pointer select-none" onclick="toggleCheck('check-news')">
+                <div class="custom-check" id="check-news">
+                    <span class="material-symbols-outlined text-white text-[13px]" style="display:none;font-variation-settings:'FILL' 1">check</span>
+                </div>
+                <span class="text-xs text-on-surface-variant leading-relaxed pt-0.5">
+                    お得な情報・スタイル提案メールを受け取る <span class="text-[10px]">（任意）</span>
+                </span>
+            </label>
+        </div>
+        <p class="error-msg" id="agree-err">利用規約とプライバシーポリシーへの同意が必要です。</p>
+
+        <div class="flex gap-2 pt-1">
+            <button type="button" onclick="goStep(2)" class="flex-none w-12 h-12 rounded-[14px] bg-white/60 backdrop-blur border border-white/60 shadow flex items-center justify-center text-on-surface hover:bg-white/80 transition active:scale-90">
+                <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+            </button>
+            <button type="button" id="create-btn" onclick="handleRegister()" class="btn-primary flex-1 flex items-center justify-center gap-2">
+                <span id="create-btn-text">アカウントを作成</span>
+                <span id="create-spinner" class="hidden">
+                    <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                </span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ログインへ -->
+    <p class="text-center text-sm text-on-surface-variant font-medium fade-up-3">
+        すでにアカウントをお持ちの方は
+        <a href="login.html" class="text-primary font-bold hover:underline ml-1">ログイン</a>
+    </p>
+
+</div>
+
+<!-- 完了オーバーレイ -->
+<div id="success-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-xl hidden">
+    <div class="text-center space-y-4 px-8">
+        <div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto shadow-lg">
+            <span class="material-symbols-outlined text-green-500 text-4xl" style="font-variation-settings:'FILL' 1">check_circle</span>
+        </div>
+        <h2 class="font-headline font-extrabold text-2xl text-on-surface">ようこそ！</h2>
+        <p class="text-on-surface-variant text-sm" id="welcome-name">Kionへようこそ。<br>アカウントが作成されました。</p>
+        <div class="w-8 h-1 bg-primary rounded-full mx-auto opacity-60"></div>
+        <p class="text-xs text-on-surface-variant">ホーム画面へ移動します...</p>
+    </div>
+</div>
+
+<script>
+    let currentStep = 1;
+    let selectedAvatar = '🧣';
+    let selectedTempPref = 'normal';
+    const selectedStyles = new Set();
+
+    // ===== ステップ管理 =====
+    function goStep(n) {
+        if (n === 2 && !validateStep1()) return;
+        if (n === 3) updateSummary();
+
+        document.getElementById('step-' + currentStep).classList.add('hidden');
+        currentStep = n;
+        document.getElementById('step-' + n).classList.remove('hidden');
+        updateDots();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateDots() {
+        for (let i = 1; i <= 3; i++) {
+            const dot = document.getElementById('dot-' + i);
+            dot.className = 'step-dot ' + (i < currentStep ? 'done' : i === currentStep ? 'active' : 'inactive');
+        }
+    }
+
+    // ===== Step1 バリデーション =====
+    function validateStep1() {
+        let valid = true;
+        const name = document.getElementById('display-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const pw = document.getElementById('reg-password').value;
+        const pw2 = document.getElementById('reg-password2').value;
+
+        if (!name) { showErr('name-err', true); shakeField('display-name'); valid = false; } else { showErr('name-err', false); }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('reg-email-err', true); shakeField('reg-email'); valid = false; } else { showErr('reg-email-err', false); }
+        if (pw.length < 8) { showErr('reg-password-err', true); shakeField('reg-password'); valid = false; } else { showErr('reg-password-err', false); }
+        if (pw !== pw2) { showErr('reg-password2-err', true); shakeField('reg-password2'); valid = false; } else { showErr('reg-password2-err', false); }
+
+        return valid;
+    }
+
+    // ===== Step3 確認サマリー更新 =====
+    function updateSummary() {
+        document.getElementById('summary-avatar').textContent = selectedAvatar;
+        document.getElementById('summary-name').textContent = document.getElementById('display-name').value.trim() || '-';
+        document.getElementById('summary-email').textContent = document.getElementById('reg-email').value.trim() || '-';
+        const styles = selectedStyles.size > 0 ? Array.from(selectedStyles).join('・') : '未選択';
+        document.getElementById('summary-styles').textContent = 'スタイル: ' + styles;
+        const tempMap = { cold: '寒がり', normal: '普通', hot: '暑がり' };
+        document.getElementById('summary-temp').textContent = '体感温度: ' + (tempMap[selectedTempPref] || '普通');
+    }
+
+    // ===== アカウント作成 =====
+    function handleRegister() {
+        showErr('agree-err', false);
+        const termsOk = document.getElementById('check-terms').classList.contains('checked');
+        const privacyOk = document.getElementById('check-privacy').classList.contains('checked');
+        if (!termsOk || !privacyOk) {
+            showErr('agree-err', true);
+            return;
+        }
+
+        const btn = document.getElementById('create-btn');
+        document.getElementById('create-btn-text').textContent = '作成中...';
+        document.getElementById('create-spinner').classList.remove('hidden');
+        btn.disabled = true;
+
+        // 登録処理（仮: 2秒後に完了）
+        setTimeout(() => {
+            const name = document.getElementById('display-name').value.trim();
+            document.getElementById('welcome-name').innerHTML = `<strong>${name}</strong> さん、ようこそ！<br>アカウントが作成されました。`;
+            document.getElementById('success-overlay').classList.remove('hidden');
+            // 少し待ってからホームへ
+            setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+        }, 1500);
+    }
+
+    // ===== UI ユーティリティ =====
+    function togglePassword(inputId, btnId) {
+        const input = document.getElementById(inputId);
+        const btn = document.getElementById(btnId);
+        const icon = btn.querySelector('.material-symbols-outlined');
+        input.type = input.type === 'password' ? 'text' : 'password';
+        icon.textContent = input.type === 'password' ? 'visibility_off' : 'visibility';
+    }
+
+    function showErr(id, show) {
+        document.getElementById(id).style.display = show ? 'block' : 'none';
+    }
+
+    function shakeField(inputId) {
+        const el = document.getElementById(inputId);
+        el.classList.remove('shake-err');
+        void el.offsetWidth;
+        el.classList.add('shake-err');
+        setTimeout(() => el.classList.remove('shake-err'), 700);
+    }
+
+    function updatePwStrength(pw) {
+        const bar = document.getElementById('pw-strength-bar');
+        const label = document.getElementById('pw-strength-label');
+        let score = 0;
+        if (pw.length >= 8) score++;
+        if (/[A-Z]/.test(pw)) score++;
+        if (/[0-9]/.test(pw)) score++;
+        if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+        const levels = [
+            { width: '0%', color: 'transparent', text: '' },
+            { width: '25%', color: '#ef4444', text: '弱い' },
+            { width: '50%', color: '#f97316', text: '普通' },
+            { width: '75%', color: '#eab308', text: '強い' },
+            { width: '100%', color: '#22c55e', text: 'とても強い' },
+        ];
+        const l = levels[score] || levels[0];
+        bar.style.width = l.width;
+        bar.style.backgroundColor = l.color;
+        label.textContent = l.text;
+        label.style.color = l.color;
+    }
+
+    function selectAvatar(btn) {
+        document.querySelectorAll('.avatar-opt').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedAvatar = btn.textContent.trim();
+    }
+
+    function toggleStyleTag(btn) {
+        const text = btn.textContent.trim();
+        if (selectedStyles.has(text)) {
+            selectedStyles.delete(text);
+            btn.classList.remove('bg-surface-container-high', 'border-primary', 'text-primary');
+            btn.classList.add('border-primary/20', 'text-on-surface-variant', 'bg-white/50');
+        } else {
+            selectedStyles.add(text);
+            btn.classList.remove('border-primary/20', 'text-on-surface-variant', 'bg-white/50');
+            btn.classList.add('bg-surface-container-high', 'border-primary', 'text-primary');
+        }
+    }
+
+    function selectTempPref(btn) {
+        document.querySelectorAll('.temp-pref').forEach(b => {
+            b.classList.remove('bg-surface-container-high', 'border-primary', 'text-primary');
+            b.classList.add('border-primary/20', 'text-on-surface-variant', 'bg-white/50');
+        });
+        btn.classList.remove('border-primary/20', 'text-on-surface-variant', 'bg-white/50');
+        btn.classList.add('bg-surface-container-high', 'border-primary', 'text-primary');
+        selectedTempPref = btn.dataset.pref;
+    }
+
+    function toggleCheck(id) {
+        const el = document.getElementById(id);
+        const icon = el.querySelector('.material-symbols-outlined');
+        el.classList.toggle('checked');
+        icon.style.display = el.classList.contains('checked') ? 'block' : 'none';
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+    <section id="page-closet" class="page-section hidden-section space-y-6">
+        <!-- ヘッダー -->
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="font-headline font-extrabold text-4xl tracking-tight dark:text-white">クローゼット</h2>
+                <p class="text-[10px] text-on-surface-variant dark:text-white/50 mt-1" id="closet-count">0 アイテム</p>
+            </div>
+            <button onclick="openClosetModal()" class="bg-primary dark:bg-blue-500 text-white px-4 py-2.5 rounded-full shadow-lg flex items-center gap-1.5 font-bold text-[11px] hover:scale-105 active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-[16px]">add</span>服を追加
+            </button>
+        </div>
+
+        <!-- カテゴリフィルター -->
+        <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            <button onclick="filterCloset('all', this)" class="closet-filter-btn flex-shrink-0 bg-primary dark:bg-blue-500 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-sm transition-all active:scale-95">すべて</button>
+            <button onclick="filterCloset('tops', this)" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
+                <span class="material-symbols-outlined text-[11px] align-middle">apparel</span> トップス
+            </button>
+            <button onclick="filterCloset('bottoms', this)" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
+                <span class="material-symbols-outlined text-[11px] align-middle">accessibility_new</span> ボトムス
+            </button>
+            <button onclick="filterCloset('outer', this)" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
+                <span class="material-symbols-outlined text-[11px] align-middle">dry_cleaning</span> アウター
+            </button>
+            <button onclick="filterCloset('shoes', this)" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
+                <span class="material-symbols-outlined text-[11px] align-middle">steps</span> シューズ
+            </button>
+            <button onclick="filterCloset('other', this)" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">その他</button>
+        </div>
+
+        <!-- 保有色割合の見える化 -->
+        <div id="closet-color-stats" class="bg-white/40 dark:bg-slate-800/40 backdrop-blur-md rounded-[28px] p-5 border border-white/50 dark:border-white/10 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-headline font-bold text-xs flex items-center gap-2 dark:text-white">
+                    <span class="material-symbols-outlined text-primary dark:text-blue-400 text-base">palette</span>
+                    保有色の割合
+                </h3>
+                <span id="color-stats-total" class="text-[9px] font-bold text-on-surface-variant dark:text-white/50 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full">-- items</span>
+            </div>
+            
+            <!-- スタックバー -->
+            <div id="color-proportion-bar" class="w-full h-3 rounded-full overflow-hidden flex bg-gray-200 dark:bg-slate-700 shadow-inner">
+                <!-- 動的に生成 -->
+            </div>
+
+            <!-- ラベル一覧 -->
+            <div id="color-proportion-labels" class="flex flex-wrap gap-x-4 gap-y-2">
+                <!-- 動的に生成 -->
+            </div>
+
+            <!-- 詳細分析レポート (18カテゴリ・3グループ) -->
+            <div id="color-analysis-report" class="mt-6 pt-6 border-t border-black/5 dark:border-white/5 space-y-5">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary dark:text-blue-400 text-base">analytics</span>
+                    <span class="text-[11px] font-black uppercase tracking-widest text-on-surface-variant/60 dark:text-white/40">Detailed Analysis</span>
+                </div>
+
+                <!-- 3グループ比率 -->
+                <div class="space-y-2">
+                    <div class="flex h-1.5 rounded-full overflow-hidden bg-black/5 dark:bg-white/5">
+                        <div id="analysis-basic-ratio" class="bg-on-surface dark:bg-white/80 transition-all duration-700" style="width:0%"></div>
+                        <div id="analysis-color-ratio" class="bg-primary dark:bg-blue-500 transition-all duration-700" style="width:0%"></div>
+                        <div id="analysis-pattern-ratio" class="bg-amber-400 transition-all duration-700" style="width:0%"></div>
+                    </div>
+                    <div class="flex justify-between text-[9px] font-bold">
+                        <div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-on-surface dark:bg-white/80"></span> 無彩色: <span id="analysis-basic-text">0%</span></div>
+                        <div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-primary dark:bg-blue-500"></span> 有彩色: <span id="analysis-color-text">0%</span></div>
+                        <div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> 柄物: <span id="analysis-pattern-text">0%</span></div>
+                    </div>
+                </div>
+
+                <!-- 印象評価 -->
+                <div class="bg-primary/5 dark:bg-blue-500/10 rounded-2xl p-4 border border-primary/10 dark:border-blue-500/10">
+                    <p class="text-[9px] font-bold text-primary dark:text-blue-400 mb-1 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-xs">auto_awesome</span> ワードローブの印象評価
+                    </p>
+                    <p id="wardrobe-impression" class="text-[11px] font-bold dark:text-white leading-relaxed">分析中...</p>
+                </div>
+
+                <!-- カテゴリー別ランキング -->
+                <div class="space-y-2">
+                    <p class="text-[9px] font-bold text-on-surface-variant/60 dark:text-white/40 uppercase tracking-tighter">Top Categories</p>
+                    <div id="analysis-category-list" class="space-y-1">
+                        <!-- 動的に生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- アイテムグリッド -->
+        <div id="closet-grid" class="grid grid-cols-2 gap-4">
+            <!-- 追加ボタンカード -->
+            <div onclick="openClosetModal()" id="closet-add-card" class="bg-primary/5 dark:bg-blue-500/10 backdrop-blur-md aspect-square rounded-[28px] overflow-hidden border-2 border-dashed border-primary/30 dark:border-blue-500/30 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-primary/10 active:scale-95 transition-all">
+                <span class="material-symbols-outlined text-4xl text-primary dark:text-blue-400">add_circle</span>
+                <span class="font-bold text-[10px] text-primary dark:text-blue-400">服を追加する</span>
+            </div>
+        </div>
+
+        <!-- 空っぽ時のメッセージ -->
+        <div id="closet-empty" class="text-center py-8 text-on-surface-variant dark:text-white/50 hidden">
+            <span class="material-symbols-outlined text-5xl opacity-30">checkroom</span>
+            <p class="font-bold text-sm mt-2">まだ服が登録されていません</p>
+            <p class="text-[10px] mt-1">「服を追加」から登録してみましょう</p>
+        </div>
+    </section>
+
+    <!-- ===== クローゼット追加モーダル ===== -->
+    <div id="closet-modal-overlay" onclick="closeClosetModal()" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] transition-opacity duration-300 opacity-0"></div>
+    <div id="closet-modal" class="hidden fixed bottom-0 left-0 w-full z-[70] max-w-2xl" style="left:50%;transform:translateX(-50%) translateY(100%);">
+        <div class="bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl border border-white/30 dark:border-white/10">
+            <!-- ハンドル -->
+            <div class="flex justify-center pt-3 pb-1"><div class="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full"></div></div>
+            <!-- ヘッダー -->
+            <div class="flex items-center justify-between px-5 pt-2 pb-3">
+                <h2 id="closet-modal-title" class="font-headline font-extrabold text-xl dark:text-white">服を追加</h2>
+                <button onclick="closeClosetModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-800 active:scale-90 transition-transform">
+                    <span class="material-symbols-outlined text-[18px] dark:text-white">close</span>
+                </button>
+            </div>
+            <!-- タブ切り替え -->
+            <div class="flex bg-gray-100 dark:bg-slate-800 mx-5 rounded-full p-1 mb-4">
+                <button id="closet-tab-quick" onclick="switchClosetTab('quick')" class="flex-1 py-2 rounded-full bg-primary dark:bg-blue-500 text-white text-[11px] font-bold shadow-sm transition-all flex items-center justify-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">bolt</span>クイック追加
+                </button>
+                <button id="closet-tab-custom" onclick="switchClosetTab('custom')" class="flex-1 py-2 rounded-full text-on-surface-variant dark:text-white/60 text-[11px] font-bold transition-all flex items-center justify-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">edit</span>カスタム追加
+                </button>
+            </div>
+
+            <!-- ===== クイック追加 ===== -->
+            <div id="closet-tab-quick-content" class="px-5 pb-10 overflow-y-auto max-h-[70vh]">
+                <p class="text-[10px] text-on-surface-variant dark:text-white/50 mb-4">タップするとすぐにクローゼットへ追加されます</p>
+                <div id="quick-add-grid" class="space-y-5"></div>
+            </div>
+
+            <!-- ===== カスタム追加 ===== -->
+            <div id="closet-tab-custom-content" class="px-5 pb-10 space-y-5 overflow-y-auto max-h-[70vh] hidden">
+                <!-- 写真 -->
+                <div>
+                    <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block">写真</label>
+                    <label for="closet-photo-input" id="closet-photo-area" class="flex flex-col items-center justify-center gap-2 h-36 border-2 border-dashed border-primary/30 dark:border-blue-500/30 rounded-2xl bg-primary/5 dark:bg-blue-500/10 cursor-pointer hover:bg-primary/10 transition-all">
+                        <span class="material-symbols-outlined text-3xl text-primary dark:text-blue-400">add_photo_alternate</span>
+                        <span class="font-bold text-[10px] text-primary dark:text-blue-400">写真を選択</span>
+                        <input type="file" id="closet-photo-input" accept="image/*" class="hidden" onchange="handleClosetPhoto(event)"/>
+                    </label>
+                    <div id="closet-photo-preview" class="hidden mt-2 relative">
+                        <img id="closet-preview-img" class="w-full h-44 object-cover rounded-2xl"/>
+                        <button onclick="removeClosetPhoto()" class="absolute top-2 right-2 bg-black/60 text-white w-7 h-7 rounded-full flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[14px]">close</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- アイテム名 -->
+                <div>
+                    <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-1 block">アイテム名 <span class="text-red-500">*</span></label>
+                    <input id="closet-name" type="text" placeholder="例：ネイビーチェスターコート" maxlength="30"
+                        class="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:outline-none transition-all"/>
+                </div>
+
+                <!-- カテゴリ -->
+                <div>
+                    <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block">カテゴリ <span class="text-red-500">*</span></label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" onclick="selectClosetCategory(this,'tops')" class="closet-cat-btn flex flex-col items-center gap-1 py-3 rounded-2xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-2xl dark:text-white/70">apparel</span>
+                            <span class="text-[9px] font-bold dark:text-white/70">トップス</span>
+                        </button>
+                        <button type="button" onclick="selectClosetCategory(this,'bottoms')" class="closet-cat-btn flex flex-col items-center gap-1 py-3 rounded-2xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-2xl dark:text-white/70">accessibility_new</span>
+                            <span class="text-[9px] font-bold dark:text-white/70">ボトムス</span>
+                        </button>
+                        <button type="button" onclick="selectClosetCategory(this,'outer')" class="closet-cat-btn flex flex-col items-center gap-1 py-3 rounded-2xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-2xl dark:text-white/70">dry_cleaning</span>
+                            <span class="text-[9px] font-bold dark:text-white/70">アウター</span>
+                        </button>
+                        <button type="button" onclick="selectClosetCategory(this,'shoes')" class="closet-cat-btn flex flex-col items-center gap-1 py-3 rounded-2xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-2xl dark:text-white/70">steps</span>
+                            <span class="text-[9px] font-bold dark:text-white/70">シューズ</span>
+                        </button>
+                        <button type="button" onclick="selectClosetCategory(this,'bag')" class="closet-cat-btn flex flex-col items-center gap-1 py-3 rounded-2xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-2xl dark:text-white/70">shopping_bag</span>
+                            <span class="text-[9px] font-bold dark:text-white/70">バッグ</span>
+                        </button>
+                        <button type="button" onclick="selectClosetCategory(this,'other')" class="closet-cat-btn flex flex-col items-center gap-1 py-3 rounded-2xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined text-2xl dark:text-white/70">more_horiz</span>
+                            <span class="text-[9px] font-bold dark:text-white/70">その他</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- カラー -->
+                <div>
+                    <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block">カラー</label>
+                    <div class="flex gap-3 flex-wrap items-center">
+                        <button type="button" onclick="selectClosetColor(this,'#111111','ブラック')" class="closet-color-btn w-9 h-9 rounded-full bg-[#111111] shadow-md active:scale-95 transition-transform border-2 border-transparent" title="ブラック"></button>
+                        <button type="button" onclick="selectClosetColor(this,'#f8f8f8','ホワイト')" class="closet-color-btn w-9 h-9 rounded-full bg-[#f8f8f8] shadow-md border-2 border-gray-200 active:scale-95 transition-transform" title="ホワイト"></button>
+                        <button type="button" onclick="selectClosetColor(this,'#6b7280','グレー')" class="closet-color-btn w-9 h-9 rounded-full bg-[#6b7280] shadow-md active:scale-95 transition-transform border-2 border-transparent" title="グレー"></button>
+                        <button type="button" onclick="selectClosetColor(this,'#1e3a8a','ネイビー')" class="closet-color-btn w-9 h-9 rounded-full bg-[#1e3a8a] shadow-md active:scale-95 transition-transform border-2 border-transparent" title="ネイビー"></button>
+                        <button type="button" onclick="selectClosetColor(this,'#7c3aed','パープル')" class="closet-color-btn w-9 h-9 rounded-full bg-[#7c3aed] shadow-md active:scale-95 transition-transform border-2 border-transparent" title="パープル"></button>
+                        <button type="button" onclick="selectClosetColor(this,'#dc2626','レッド')" class="closet-color-btn w-9 h-9 rounded-full bg-[#dc2626] shadow-md active:scale-95 transition-transform border-2 border-transparent" title="レッド"></button>
+                        <button type="button" onclick="selectClosetColor(this,'#92400e','ブラウン')" class="closet-color-btn w-9 h-9 rounded-full bg-[#92400e] shadow-md active:scale-95 transition-transform border-2 border-transparent" title="ブラウン"></button>
+                        <button type="button" onclick="selectClosetColor(this,'#f59e0b','イエロー')" class="closet-color-btn w-9 h-9 rounded-full bg-[#f59e0b] shadow-md active:scale-95 transition-transform border-2 border-transparent" title="イエロー"></button>
+                        <button type="button" onclick="selectClosetColor(this,'#16a34a','グリーン')" class="closet-color-btn w-9 h-9 rounded-full bg-[#16a34a] shadow-md active:scale-95 transition-transform border-2 border-transparent" title="グリーン"></button>
+                        <button type="button" onclick="selectClosetColor(this,'#fda4af','ピンク')" class="closet-color-btn w-9 h-9 rounded-full bg-[#fda4af] shadow-md active:scale-95 transition-transform border-2 border-transparent" title="ピンク"></button>
+                        <button type="button" onclick="selectClosetColor(this,'#0ea5e9','ブルー')" class="closet-color-btn w-9 h-9 rounded-full bg-[#0ea5e9] shadow-md active:scale-95 transition-transform border-2 border-transparent" title="ブルー"></button>
+                        <button type="button" onclick="selectClosetColor(this,'#d1fae5','ベージュ')" class="closet-color-btn w-9 h-9 rounded-full bg-[#e8d5b7] shadow-md active:scale-95 transition-transform border-2 border-transparent" title="ベージュ"></button>
+                    </div>
+                </div>
+
+                <!-- メモ -->
+                <div>
+                    <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-1 block">メモ (任意)</label>
+                    <input id="closet-memo" type="text" placeholder="例：冬のメインアウター" maxlength="50"
+                        class="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:outline-none transition-all"/>
+                </div>
+
+                <!-- 登録・更新ボタン -->
+                <button onclick="submitClosetItem()" id="closet-submit-btn" class="w-full bg-primary dark:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all text-[13px]">
+                    <span class="material-symbols-outlined text-[16px] align-middle mr-1" id="closet-submit-icon">checkroom</span><span id="closet-submit-label">クローゼットに追加する</span>
+                </button>
+            </div><!-- end カスタム追加 -->
+        </div>
+    </div>
+
+    <!-- ===== 削除確認ダイアログ ===== -->
+    <div id="delete-confirm-overlay" onclick="cancelDeleteCloset()" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-center justify-center px-6">
+        <div id="delete-confirm-dialog" onclick="event.stopPropagation()" class="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-white/30 dark:border-white/10 overflow-hidden" style="animation: fadeSlideIn 0.2s ease forwards;">
+            <div class="px-6 pt-6 pb-5 text-center">
+                <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center mx-auto mb-4">
+                    <span class="material-symbols-outlined text-red-500 dark:text-red-400 text-2xl">delete</span>
+                </div>
+                <h3 class="font-headline font-bold text-base dark:text-white mb-1">クローゼットから削除しますか？</h3>
+                <p id="delete-confirm-name" class="text-[11px] text-on-surface-variant dark:text-white/60 font-medium"></p>
+            </div>
+            <div class="flex border-t border-black/5 dark:border-white/10">
+                <button onclick="cancelDeleteCloset()" class="flex-1 py-4 font-bold text-sm text-on-surface-variant dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5 transition-colors border-r border-black/5 dark:border-white/10">
+                    いいえ
+                </button>
+                <button onclick="confirmDeleteCloset()" class="flex-1 py-4 font-bold text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                    はい
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script src="js/closet.js"></script>

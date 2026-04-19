@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Kion - シーンに合わせた安心感を</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0060ad",
+                        "on-primary": "#f8f8ff",
+                        "secondary": "#426751",
+                        "on-secondary": "#e7ffed",
+                        "tertiary": "#8a4f46",
+                        "on-tertiary": "#fff7f6",
+                        "on-surface": "#173355",
+                        "on-surface-variant": "#466084",
+                        "surface-container-low": "#eff3ff",
+                        "surface-container-high": "#dde9ff",
+                        "surface-container-highest": "#d4e3ff",
+                        "surface-container-lowest": "#ffffff/80",
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans", "Noto Sans JP", "sans-serif"],
+                        "body": ["Manrope", "Noto Sans JP", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "1rem", "xl": "1.5rem", "2xl": "2.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+    <link rel="stylesheet" href="styles.css"/>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="pb-32 overflow-x-hidden transition-colors duration-500">
+
+<!-- 共通 TopAppBar -->
+<!-- 26. スクロール追従型Stickyヘッダー -->
+<header class="fixed top-0 w-full z-50 transition-all duration-300">
+    <!-- 34. 緊急気象アラートのティッカー表示 -->
+    <div class="w-full bg-red-500 text-white overflow-hidden flex items-center shadow-md">
+        <div style="animation: tick 12s linear infinite;" class="whitespace-nowrap w-max text-[10px] py-1 font-bold tracking-widest flex gap-8">
+            <span>⚠️ 18時から深夜にかけて急な雷雨のアラートが出ています</span>
+        </div>
+    </div>
+    <div class="bg-white/40 dark:bg-black/40 backdrop-blur-2xl border-b border-white/20 dark:border-white/10 flex justify-between items-center w-full px-6 py-3 max-w-2xl mx-auto shadow-sm">
+        <button id="location-btn" onclick="openLocationModal()" class="flex items-center gap-2 relative cursor-pointer hover:opacity-80 active:scale-95 transition-all bg-transparent border-none p-0">
+            <div class="relative flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary dark:text-blue-400 font-bold relative z-10" data-icon="location_on">location_on</span>
+                <!-- 32. 位置情報取得中ピンアニメーション -->
+                <span id="location-ping" class="absolute w-4 h-4 bg-primary/40 dark:bg-blue-400/50 rounded-full animate-ping z-0"></span>
+            </div>
+            <div class="flex flex-col items-start">
+                <h1 id="location-text" class="font-headline font-bold text-sm tracking-tight overflow-hidden text-on-surface dark:text-white text-left">現在地を取得中...</h1>
+                <span id="location-sub" class="text-[10px] text-on-surface-variant dark:text-white/60 font-medium"></span>
+            </div>
+            <span class="material-symbols-outlined text-on-surface-variant dark:text-white/40 text-[16px] ml-1">expand_more</span>
+        </button>
+        <div class="flex gap-2">
+            <button onclick="toggleDarkMode()" class="bg-white/40 dark:bg-white/10 p-2 rounded-full shadow-sm active:scale-90 transition-transform flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary dark:text-yellow-400 text-[16px]" id="theme-icon" data-icon="dark_mode">dark_mode</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="pt-28 px-6 max-w-2xl mx-auto space-y-12">
+    <div id="home-container"></div>
+    <div id="weekly-container"></div>
+    <div id="closet-container"></div>
+    <div id="discover-container"></div>
+    <div id="profile-container"></div>
+</main>
+
+
+
+<!-- Modals moved to component files (home.html, closet.html, profile.html) -->
+
+<!-- 7. iOSセーフエリアへの対応 pb-[calc(2rem+env(safe-area-inset-bottom))] -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-4 bg-white/40 dark:bg-slate-900/60 backdrop-blur-2xl rounded-t-[3rem] shadow-[0_-12px_40px_rgba(0,0,0,0.05)] border-t border-white/30 dark:border-white/10 transition-colors">
+    <button onclick="switchTab('home', this)" class="nav-item flex flex-col items-center justify-center text-on-surface-variant dark:text-white/60 transition-all hover:text-primary dark:hover:text-blue-400 px-5 py-2 rounded-2xl active-nav-item">
+        <span class="material-symbols-outlined" data-icon="wb_sunny" style="font-variation-settings: 'FILL' 1;">wb_sunny</span>
+        <span class="font-['Manrope'] font-bold text-[8px] tracking-[0.2em] uppercase mt-1">今日</span>
+    </button>
+    <button onclick="switchTab('weekly', this)" class="nav-item flex flex-col items-center justify-center text-on-surface-variant dark:text-white/60 transition-all hover:text-primary dark:hover:text-blue-400 px-5 py-2 rounded-2xl">
+        <span class="material-symbols-outlined" data-icon="date_range">date_range</span>
+        <span class="font-['Manrope'] font-bold text-[8px] tracking-[0.2em] uppercase mt-1">週間</span>
+    </button>
+    <button onclick="switchTab('closet', this)" class="nav-item flex flex-col items-center justify-center text-on-surface-variant dark:text-white/60 transition-all hover:text-primary dark:hover:text-blue-400 px-5 py-2 rounded-2xl">
+        <span class="material-symbols-outlined" data-icon="checkroom">checkroom</span>
+        <span class="font-['Manrope'] font-bold text-[8px] tracking-[0.2em] uppercase mt-1">クローゼット</span>
+    </button>
+    <button onclick="switchTab('discover', this)" class="nav-item flex flex-col items-center justify-center text-on-surface-variant dark:text-white/60 transition-all hover:text-primary dark:hover:text-blue-400 px-5 py-2 rounded-2xl">
+        <span class="material-symbols-outlined" data-icon="explore">explore</span>
+        <span class="font-['Manrope'] font-bold text-[8px] tracking-[0.2em] uppercase mt-1">コミュニティ</span>
+    </button>
+    <button onclick="switchTab('profile', this)" class="nav-item flex flex-col items-center justify-center text-on-surface-variant dark:text-white/60 transition-all hover:text-primary dark:hover:text-blue-400 px-5 py-2 rounded-2xl">
+        <span class="material-symbols-outlined" data-icon="person">person</span>
+        <span class="font-['Manrope'] font-bold text-[8px] tracking-[0.2em] uppercase mt-1">プロフ</span>
+    </button>
+</nav>
+
+    <!-- Core Scripts -->
+    <script src="js/app.js"></script>
+    <script src="js/weather.js"></script>
+    <script src="js/location.js"></script>
+    <script src="js/ui.js"></script>
+
+    <!-- Supabase Client Initialization -->
+    <script>
+        // Supabase クライアント初期化
+        const SUPABASE_URL = 'https://bjqfmfiqzmwezlkjbgfn.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_Olj5M55D1DnHjua7UZkHHA_u49S6Z2O';
+
+        const { createClient } = window.supabase;
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // セッション復帰チェック
+        async function initializeAuth() {
+            const { data, error } = await supabase.auth.getSession();
+            if (error) {
+                console.error('Session error:', error);
+                return;
+            }
+
+            if (data.session) {
+                console.log('User logged in:', data.session.user.email);
+                // ログイン済みの場合の処理
+            } else {
+                console.log('No session found');
+                // ログインページへリダイレクト
+            }
+        }
+
+        // ページロード時に初期化
+        window.addEventListener('load', initializeAuth);
+    </script>
+</body>
+</html>
