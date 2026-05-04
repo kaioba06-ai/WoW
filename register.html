@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="js/config.js?v=1"></script>
     <script src="js/utils.js?v=1"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="styles.css"/>
     <style>
         body {
@@ -362,8 +364,12 @@
         document.getElementById('summary-temp').textContent = '体感温度: ' + (tempMap[selectedTempPref] || '普通');
     }
 
-    // ===== アカウント作成 =====
-    function handleRegister() {
+    // ===== Supabase クライアント初期化（config.js から） =====
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(WOW_CONFIG.supabase.url, WOW_CONFIG.supabase.anonKey);
+
+    // ===== アカウント作成（Supabase サインアップ） =====
+    async function handleRegister() {
         showErr('agree-err', false);
         const termsOk = document.getElementById('check-terms').classList.contains('checked');
         const privacyOk = document.getElementById('check-privacy').classList.contains('checked');
@@ -377,14 +383,59 @@
         document.getElementById('create-spinner').classList.remove('hidden');
         btn.disabled = true;
 
-        // 登録処理（仮: 2秒後に完了）
-        setTimeout(() => {
-            const name = document.getElementById('display-name').value.trim();
-            document.getElementById('welcome-name').innerHTML = `<strong>${name}</strong> さん、ようこそ！<br>アカウントが作成されました。`;
+        // 入力値を取得
+        const name = document.getElementById('display-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const password = document.getElementById('reg-password').value;
+
+        try {
+            // Supabase サインアップ
+            const { data, error } = await supabaseClient.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        display_name: name,
+                        avatar: selectedAvatar,
+                        temp_preference: selectedTempPref,
+                        styles: Array.from(selectedStyles)
+                    }
+                }
+            });
+
+            if (error) {
+                console.error('Register error:', error);
+                let errorMessage = '登録に失敗しました。もう一度お試しください。';
+                if (error.message.includes('User already registered')) {
+                    errorMessage = 'このメールアドレスは既に登録されています。';
+                } else if (error.message.includes('Password should be at least')) {
+                    errorMessage = 'パスワードが短すぎます。8文字以上で入力してください。';
+                }
+                alert(errorMessage);
+                document.getElementById('create-btn-text').textContent = 'アカウントを作成';
+                document.getElementById('create-spinner').classList.add('hidden');
+                btn.disabled = false;
+                return;
+            }
+
+            console.log('Register success:', data.user?.email);
+
+            // 成功画面を表示
+            document.getElementById('welcome-name').innerHTML =
+                `<strong>${name}</strong> さん、ようこそ！<br>` +
+                `確認メールを送信しました。メールを確認してログインしてください。`;
             document.getElementById('success-overlay').classList.remove('hidden');
-            // 少し待ってからホームへ
-            setTimeout(() => { window.location.href = 'index.html'; }, 2000);
-        }, 1500);
+
+            // 少し待ってからログイン画面へ
+            setTimeout(() => { window.location.href = 'login.html'; }, 3000);
+
+        } catch (err) {
+            console.error('Unexpected error:', err);
+            alert('予期せぬエラーが発生しました。もう一度お試しください。');
+            document.getElementById('create-btn-text').textContent = 'アカウントを作成';
+            document.getElementById('create-spinner').classList.add('hidden');
+            btn.disabled = false;
+        }
     }
 
     // ===== UI ユーティリティ =====

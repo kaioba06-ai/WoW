@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="js/config.js?v=1"></script>
     <script src="js/utils.js?v=1"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="styles.css"/>
     <style>
         body {
@@ -133,13 +135,27 @@
 </div>
 
 <script>
+    // ===== Supabase クライアント初期化（config.js から） =====
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(WOW_CONFIG.supabase.url, WOW_CONFIG.supabase.anonKey);
 
-    function handleLogin(e) {
+    // ===== セッション復帰チェック（既にログイン済みなら index.html へ） =====
+    (async function checkExistingSession() {
+        const { data } = await supabaseClient.auth.getSession();
+        if (data.session) {
+            console.log('Already logged in, redirecting to index.html');
+            window.location.href = 'index.html';
+        }
+    })();
+
+    // ===== ログイン処理（Supabase 認証） =====
+    async function handleLogin(e) {
         e.preventDefault();
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         let valid = true;
 
+        // メールアドレスのバリデーション
         const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         if (!emailValid) {
             showError('email-err', true);
@@ -149,6 +165,7 @@
             showError('email-err', false);
         }
 
+        // パスワード入力チェック
         if (!password) {
             showError('password-err', true);
             shakeField('password');
@@ -165,13 +182,37 @@
         document.getElementById('login-spinner').classList.remove('hidden');
         btn.disabled = true;
 
-        // 認証処理（仮: 2秒後にホームへ遷移）
-        setTimeout(() => {
+        // エラーバナーを隠す
+        document.getElementById('error-banner').classList.add('hidden');
+
+        try {
+            // Supabase 認証
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
+            if (error) {
+                console.error('Login error:', error);
+                // エラーメッセージを日本語化
+                let errorMessage = 'メールアドレスまたはパスワードが正しくありません。';
+                if (error.message.includes('Email not confirmed')) {
+                    errorMessage = 'メールアドレスの確認が完了していません。確認メールをチェックしてください。';
+                } else if (error.message.includes('Invalid login credentials')) {
+                    errorMessage = 'メールアドレスまたはパスワードが正しくありません。';
+                }
+                showLoginError(errorMessage);
+                return;
+            }
+
+            console.log('Login success:', data.user.email);
             // 認証成功 → index.html へ
             window.location.href = 'index.html';
-            // 認証失敗の場合は以下を呼ぶ:
-            // showLoginError('メールアドレスまたはパスワードが正しくありません。');
-        }, 1500);
+
+        } catch (err) {
+            console.error('Unexpected error:', err);
+            showLoginError('予期せぬエラーが発生しました。もう一度お試しください。');
+        }
     }
 
     function showLoginError(msg) {
@@ -184,9 +225,24 @@
         document.getElementById('login-btn').disabled = false;
     }
 
-    function socialLogin(provider) {
-        console.log('Social login:', provider);
-        // ソーシャル認証処理をここに実装
+    // ===== Google OAuth ログイン =====
+    async function socialLogin(provider) {
+        if (provider !== 'google') return;
+        try {
+            const { data, error } = await supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + '/index.html'
+                }
+            });
+            if (error) {
+                console.error('OAuth error:', error);
+                showLoginError('Googleログインに失敗しました。');
+            }
+        } catch (err) {
+            console.error('OAuth unexpected error:', err);
+            showLoginError('予期せぬエラーが発生しました。');
+        }
     }
 </script>
 </body>

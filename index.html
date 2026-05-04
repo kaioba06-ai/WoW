@@ -123,21 +123,43 @@
     <!-- modals-container -->
     <div id="modals-container"></div>
 
-    <!-- Supabase Client Initialization -->
+    <!-- Supabase Client Initialization & 認証ガード -->
     <script>
         const { createClient } = window.supabase;
         const supabase = createClient(WOW_CONFIG.supabase.url, WOW_CONFIG.supabase.anonKey);
 
-        async function initializeAuth() {
+        // ===== 認証ガード：未ログインなら login.html へリダイレクト =====
+        async function checkAuthGuard() {
             const { data, error } = await supabase.auth.getSession();
-            if (error) { console.error('Session error:', error); return; }
-            if (data.session) {
-                console.log('User logged in:', data.session.user.email);
-            } else {
-                console.log('No session found');
+            if (error) {
+                console.error('Session error:', error);
+                return;
             }
+            if (!data.session) {
+                console.log('Not logged in. Redirecting to login.html');
+                window.location.href = 'login.html';
+                return;
+            }
+            console.log('User logged in:', data.session.user.email);
+            // ログイン中ユーザー情報をグローバルに保存
+            window.currentUser = data.session.user;
         }
-        window.addEventListener('load', initializeAuth);
+
+        // ===== ログアウト機能（グローバル関数として公開） =====
+        window.logout = async function() {
+            const confirmed = confirm('ログアウトしますか？');
+            if (!confirmed) return;
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                console.error('Logout error:', error);
+                alert('ログアウトに失敗しました。');
+                return;
+            }
+            window.location.href = 'login.html';
+        };
+
+        // ページロード時に認証チェック
+        checkAuthGuard();
     </script>
 
     <!-- Vue Community App Initialization (after sections loaded) -->
