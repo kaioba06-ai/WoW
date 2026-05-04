@@ -1,0 +1,30 @@
+<!-- ⑦ フォロー中 / フォロワー 一覧 (Social List) -->
+<section id="page-social" class="page-section hidden-section fixed inset-0 z-[60] bg-[#f8f9ff] dark:bg-slate-950 translate-x-full transition-transform duration-300 ease-in-out flex flex-col pt-0 px-0 space-y-0">
+    
+    <!-- ── ヘッダー ── -->
+    <header class="sticky top-0 w-full z-10 bg-white/40 dark:bg-slate-900/60 backdrop-blur-2xl border-b border-white/20 dark:border-white/10 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <button onclick="closeSubPage('social')" class="w-10 h-10 rounded-full bg-white/40 dark:bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm active:scale-90 transition-transform">
+                <span class="material-symbols-outlined text-on-surface dark:text-white">arrow_back</span>
+            </button>
+            <h2 id="social-title" class="font-headline font-black text-xl dark:text-white">フォロー中</h2>
+        </div>
+    </header>
+
+    <!-- ── ユーザーリスト ── -->
+    <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4 no-scrollbar">
+        <!-- 検索バー（オプション） -->
+        <div class="relative mb-6">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 dark:text-white/20 text-[20px]">search</span>
+            <input id="social-search-input" type="text" placeholder="名前を検索..." oninput="filterSocialList(this.value)" class="w-full pl-10 pr-4 py-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl border border-white/50 dark:border-white/10 text-sm font-bold text-on-surface dark:text-white placeholder:text-on-surface-variant/30 dark:placeholder:text-white/20 outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"/>
+        </div>
+
+        <div id="social-user-list" class="space-y-3">
+            <!-- JSで動的に生成 -->
+            <div class="py-10 text-center opacity-40">
+                <div class="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p class="text-[10px] font-bold mt-4 tracking-widest text-on-surface dark:text-white">LOADING USERS...</p>
+            </div>
+        </div>
+    </div>
+</section>

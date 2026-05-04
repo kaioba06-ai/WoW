@@ -1,4 +1,4 @@
-    <section id="page-closet" class="page-section hidden-section space-y-6">
+    <section id="page-closet" class="page-section hidden-section px-6 pb-32 space-y-6">
         <!-- ヘッダー -->
         <div class="flex justify-between items-center">
             <div>
@@ -26,65 +26,6 @@
                 <span class="material-symbols-outlined text-[11px] align-middle">steps</span> シューズ
             </button>
             <button onclick="filterCloset('other', this)" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">その他</button>
-        </div>
-
-        <!-- 保有色割合の見える化 -->
-        <div id="closet-color-stats" class="bg-white/40 dark:bg-slate-800/40 backdrop-blur-md rounded-[28px] p-5 border border-white/50 dark:border-white/10 shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
-                <h3 class="font-headline font-bold text-xs flex items-center gap-2 dark:text-white">
-                    <span class="material-symbols-outlined text-primary dark:text-blue-400 text-base">palette</span>
-                    保有色の割合
-                </h3>
-                <span id="color-stats-total" class="text-[9px] font-bold text-on-surface-variant dark:text-white/50 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full">-- items</span>
-            </div>
-            
-            <!-- スタックバー -->
-            <div id="color-proportion-bar" class="w-full h-3 rounded-full overflow-hidden flex bg-gray-200 dark:bg-slate-700 shadow-inner">
-                <!-- 動的に生成 -->
-            </div>
-
-            <!-- ラベル一覧 -->
-            <div id="color-proportion-labels" class="flex flex-wrap gap-x-4 gap-y-2">
-                <!-- 動的に生成 -->
-            </div>
-
-            <!-- 詳細分析レポート (18カテゴリ・3グループ) -->
-            <div id="color-analysis-report" class="mt-6 pt-6 border-t border-black/5 dark:border-white/5 space-y-5">
-                <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary dark:text-blue-400 text-base">analytics</span>
-                    <span class="text-[11px] font-black uppercase tracking-widest text-on-surface-variant/60 dark:text-white/40">Detailed Analysis</span>
-                </div>
-
-                <!-- 3グループ比率 -->
-                <div class="space-y-2">
-                    <div class="flex h-1.5 rounded-full overflow-hidden bg-black/5 dark:bg-white/5">
-                        <div id="analysis-basic-ratio" class="bg-on-surface dark:bg-white/80 transition-all duration-700" style="width:0%"></div>
-                        <div id="analysis-color-ratio" class="bg-primary dark:bg-blue-500 transition-all duration-700" style="width:0%"></div>
-                        <div id="analysis-pattern-ratio" class="bg-amber-400 transition-all duration-700" style="width:0%"></div>
-                    </div>
-                    <div class="flex justify-between text-[9px] font-bold">
-                        <div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-on-surface dark:bg-white/80"></span> 無彩色: <span id="analysis-basic-text">0%</span></div>
-                        <div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-primary dark:bg-blue-500"></span> 有彩色: <span id="analysis-color-text">0%</span></div>
-                        <div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> 柄物: <span id="analysis-pattern-text">0%</span></div>
-                    </div>
-                </div>
-
-                <!-- 印象評価 -->
-                <div class="bg-primary/5 dark:bg-blue-500/10 rounded-2xl p-4 border border-primary/10 dark:border-blue-500/10">
-                    <p class="text-[9px] font-bold text-primary dark:text-blue-400 mb-1 flex items-center gap-1">
-                        <span class="material-symbols-outlined text-xs">auto_awesome</span> ワードローブの印象評価
-                    </p>
-                    <p id="wardrobe-impression" class="text-[11px] font-bold dark:text-white leading-relaxed">分析中...</p>
-                </div>
-
-                <!-- カテゴリー別ランキング -->
-                <div class="space-y-2">
-                    <p class="text-[9px] font-bold text-on-surface-variant/60 dark:text-white/40 uppercase tracking-tighter">Top Categories</p>
-                    <div id="analysis-category-list" class="space-y-1">
-                        <!-- 動的に生成 -->
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- アイテムグリッド -->
@@ -243,5 +184,3 @@
             </div>
         </div>
     </div>
-
-<script src="js/closet.js"></script>

@@ -1,15 +1,5 @@
 {
-  "name": "kion-app",
-  "version": "1.0.0",
-  "description": "Kion - Temperature-based outfit recommendation app",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@supabase/supabase-js": "^2.103.3"
+    "puppeteer": "^24.41.0"
   }
 }

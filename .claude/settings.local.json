@@ -3,11 +3,7 @@
     "allow": [
       "Bash(python \"c:/Users/Xtoy8/OneDrive/デスクトップ/drive-download-20260405T101814Z-1-001/check.py\")",
       "Bash(python3 -c ':*)",
-      "Bash(python -c ':*)",
-      "Bash(npx --version)",
-      "Bash(where python:*)",
-      "Bash(where node:*)",
-      "Bash(where npx:*)"
+      "Bash(python -c ':*)"
     ]
   }
 }

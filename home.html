@@ -1,203 +1,89 @@
-    <section id="page-home" class="page-section space-y-8">
-
-        <!-- ── 天気ヒーローカード ── -->
-        <div class="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-primary/10 via-blue-50/70 to-white/50 dark:from-blue-900/40 dark:via-slate-800/50 dark:to-slate-900/30 border border-white/60 dark:border-white/10 shadow-xl backdrop-blur-lg p-6">
-
-            <!-- 挨拶 & 日付 -->
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <p class="font-body font-bold text-[11px] uppercase tracking-widest text-on-surface-variant dark:text-white/50" id="greeting-text">Good Morning</p>
-                    <script>
-                        const timeStr = new Date().getHours() >= 17 ? "Good Evening" : (new Date().getHours() >= 12 ? "Good Afternoon" : "Good Morning");
-                        document.getElementById('greeting-text').innerText = `${timeStr}, Alessandro`;
-                    </script>
-                    <p class="text-[11px] text-on-surface-variant dark:text-white/40 font-medium mt-0.5" id="today-date"></p>
-                    <script>
-                        const _d = new Date();
-                        const _days = ['日','月','火','水','木','金','土'];
-                        document.getElementById('today-date').textContent =
-                            `${_d.getFullYear()}年${_d.getMonth()+1}月${_d.getDate()}日（${_days[_d.getDay()]}）`;
-                    </script>
+<!-- ===== HOME SECTION (Main Card + Sub Cards) ===== -->
+<section id="page-home" class="page-section home-one-screen pt-1">
+    <div class="home-layout-inner">
+        <!-- Main Card Section (Left) -->
+        <div class="home-main-card" onclick="openCurrentOutfitDetail()">
+            <div id="grid-card-main" class="w-full h-full relative overflow-hidden rounded-[32px] bg-white/40 dark:bg-black/20 border border-white/60 dark:border-white/10 shadow-2xl backdrop-blur-xl group transition-all duration-500 hover:shadow-primary/20">
+                <!-- Main Image (full bleed, bottom padding for bar) -->
+                <div class="w-full h-full pb-20 skeleton">
+                    <img id="suggest-img-0"
+                        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                        onerror="this.src='https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800'; this.onerror=null;"
+                        alt="Suggestion" class="w-full h-full object-cover filter drop-shadow-2xl transition-transform duration-700 group-hover:scale-[1.03] opacity-0" onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton')"/>
                 </div>
-                <!-- 天気バッジ -->
-                <div class="bg-white/60 dark:bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/60 dark:border-white/10 shadow-sm">
-                    <span id="weather-emoji" class="text-xl animate-[pulse_3s_infinite]">--</span>
-                    <span id="weather-desc" class="font-body font-bold text-primary dark:text-blue-300 text-[11px]">取得中...</span>
-                </div>
-            </div>
 
-            <!-- 気温 -->
-            <div class="relative inline-block">
-                <h2 id="current-temp" class="font-headline font-extrabold text-[88px] text-on-surface dark:text-white tracking-tighter leading-none">--°</h2>
-                <span id="umbrella-icon" class="absolute -top-2 -right-6 text-2xl animate-bounce" title="降水確率" style="display:none">☂️</span>
-            </div>
-
-            <!-- 詳細チップス -->
-            <div class="flex gap-2 mt-4 flex-wrap">
-                <div class="flex items-center gap-1 bg-white/50 dark:bg-white/10 rounded-full px-3 py-1.5 border border-white/50 dark:border-white/10 text-[10px] font-bold text-on-surface-variant dark:text-white/60">
-                    <span class="material-symbols-outlined text-[14px] text-primary dark:text-blue-400">device_thermostat</span>
-                    体感 <span id="feels-like" class="ml-0.5">--</span>°
-                </div>
-                <div class="flex items-center gap-1 bg-white/50 dark:bg-white/10 rounded-full px-3 py-1.5 border border-white/50 dark:border-white/10 text-[10px] font-bold text-on-surface-variant dark:text-white/60">
-                    <span class="material-symbols-outlined text-[14px] text-primary dark:text-blue-400">water_drop</span>
-                    湿度 <span id="humidity" class="ml-0.5">--</span>%
-                </div>
-                <div class="flex items-center gap-1 bg-white/50 dark:bg-white/10 rounded-full px-3 py-1.5 border border-white/50 dark:border-white/10 text-[10px] font-bold text-on-surface-variant dark:text-white/60">
-                    <span class="material-symbols-outlined text-[14px] text-primary dark:text-blue-400">air</span>
-                    風 <span id="wind-speed" class="ml-0.5">--</span>m/s
-                </div>
-            </div>
-        </div>
-
-        <!-- ── 今日のコーデ提案 ── -->
-        <div class="space-y-3">
-            <h3 class="font-headline font-bold text-base flex items-center gap-2 dark:text-white px-1">
-                <span class="material-symbols-outlined text-primary dark:text-blue-400" style="font-variation-settings:'FILL' 1">styler</span>
-                今日のコーデ提案
-            </h3>
-
-            <!-- スワイプ可能カード -->
-            <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-2 no-scrollbar -mx-2 px-2">
-                <!-- Plan A -->
-                <div class="min-w-full snap-center group relative overflow-hidden rounded-[32px] bg-white/40 dark:bg-black/30 border border-white/60 dark:border-white/20 shadow-xl backdrop-blur-lg">
-                    <div class="aspect-[3/4] w-full relative">
-                        <span class="absolute top-4 right-4 z-20 bg-black/40 text-white p-2 rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                            <span class="material-symbols-outlined text-[16px]" data-icon="zoom_in">zoom_in</span>
-                        </span>
-                        <img class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105 active:scale-150 active:cursor-zoom-in origin-center"
-                             src="https://lh3.googleusercontent.com/aida-public/AB6AXuBB-QU0-zAmjrV7pnLKHUgiq42DhOBVi6U6n2rMhuhPAJ9DFD3yAnTg8_cZlhEtM1jt_xcRiV3V5nqV4W4nxY1nZ04NrXI0drvrqzFwWyscagoTkfQCiywc6Q61IajoyXBC3md2K_WpPzzuBhePdWIoe7PyLVPtfI1V-A8jGrbHeACqCY0D3IHkfZb5CVYYY5XqjrdkSHyVcurwXLGZqSKKex5zuDV56EJjSWt0BitnnIWfR1P_mdcj8NABNIJmFSF4Jflq8pPFew"
-                             alt="Coordinate"/>
-
-                        <div class="absolute inset-x-0 bottom-0 p-5 pt-24 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col gap-3">
-                            <div class="flex items-start justify-between">
-                                <div>
-                                    <span class="inline-block bg-primary/80 text-white text-[9px] font-extrabold px-2.5 py-0.5 rounded-full tracking-wider uppercase backdrop-blur-sm mb-1.5">Plan A</span>
-                                    <h3 class="font-headline font-bold text-xl text-white tracking-tight drop-shadow-sm">Transitional Trench</h3>
-                                    <p class="font-body text-white/80 text-[11px] leading-snug mt-0.5">軽量トレンチで寒暖差を乗り切る、都会的なルック。</p>
-                                </div>
-                                <button id="home-like-btn" class="bg-white/20 backdrop-blur text-white p-3 rounded-full hover:bg-pink-500 transition-colors active:scale-95 shadow-md flex-shrink-0 mt-1" onclick="toggleHomeLike(this)">
-                                    <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 0">favorite</span>
-                                </button>
+                <!-- Single Unified Bottom Bar -->
+                <div class="absolute bottom-4 left-4 right-4 z-20">
+                    <div class="flex items-center gap-2.5 bg-white/60 dark:bg-black/55 backdrop-blur-xl px-4 py-3 rounded-2xl border border-white/60 dark:border-white/10 shadow-lg">
+                        <!-- Weather emoji -->
+                        <span id="suggest-weather-emoji" class="text-xl leading-none shrink-0">--</span>
+                        <span class="w-px h-5 bg-black/15 dark:bg-white/15 shrink-0"></span>
+                        <!-- Time + Temp (compact, 2 rows) -->
+                        <div class="flex flex-col shrink-0">
+                            <span id="suggest-time-label" class="text-[9px] font-black uppercase tracking-widest text-on-surface dark:text-white leading-none">NOW</span>
+                            <div class="flex items-baseline mt-0.5">
+                                <span id="suggest-apparent-temp" class="text-[16px] font-black text-primary dark:text-blue-300 leading-none">--°</span>
+                                <span class="text-[8px] font-bold text-on-surface-variant/60 dark:text-white/40 uppercase ml-1">feels</span>
                             </div>
-                            <div class="flex gap-2 w-full">
-                                <button class="flex-1 bg-white/20 backdrop-blur hover:bg-white/30 text-white py-2.5 rounded-[14px] border border-white/20 font-bold text-[10px] transition-colors flex items-center justify-center gap-1 active:scale-95" onclick="shareOutfit()">
-                                    <span class="material-symbols-outlined text-[14px]">ios_share</span> シェア
-                                </button>
-                                <button id="home-save-btn" class="flex-1 bg-primary hover:bg-blue-600 text-white py-2.5 rounded-[14px] font-bold text-[10px] transition-colors flex items-center justify-center gap-1 shadow-lg active:scale-95" onclick="saveHomeOutfitToCloset(this)">
-                                    <span class="material-symbols-outlined text-[14px]">hanger</span> クローゼットに保存
-                                </button>
-                            </div>
+                        </div>
+                        <span class="w-px h-5 bg-black/15 dark:bg-white/15 shrink-0"></span>
+                        <!-- Outfit info -->
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[7px] font-black text-primary dark:text-blue-400 uppercase tracking-[0.25em] leading-none mb-0.5">Recommended Look</p>
+                            <h3 id="suggest-title-0" class="font-headline font-bold text-sm text-on-surface dark:text-white leading-tight truncate">--</h3>
+                            <p id="suggest-desc-0" class="text-[8px] font-bold text-on-surface-variant dark:text-white/55 line-clamp-1 leading-snug mt-0.5">Loading fashion recommendations...</p>
+                        </div>
+                        <!-- Tap hint -->
+                        <div class="shrink-0 p-2 bg-primary/10 dark:bg-blue-500/20 rounded-xl tap-hint">
+                            <span class="material-symbols-outlined text-primary dark:text-blue-300 text-[18px]">touch_app</span>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- アイテムサムネイル -->
-            <div class="flex gap-3 overflow-x-auto pb-1 no-scrollbar px-1">
-                <div class="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer group">
-                    <div class="w-16 h-16 rounded-2xl overflow-hidden shadow-sm border border-black/5 dark:border-white/5 bg-white dark:bg-slate-800 group-hover:scale-105 transition-transform">
-                        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHrJn4azvIQYn4lCFONT_hoI1z0ERDeYSabXsJQ9YBkFC9m2umBqgPX4wToLBtaAPw_WgFtrKBG-pqiXkTkrvkilDHFi5P2nD1hvJtYYtleBPVKql4r5ZnHTg9tyBTv1UbyCEMI92jw6XvNinXiktmCwggqli2bnF8emsRPuBfB-wWwhpdKQO4iSMPQjgET9NuSL6EgOQJHnWAZ8GXZPvWrfQrc9GjywkB0bcGWMTELruQXifNdCqOjJwdLw3MrfG8oVqw8OF4uw" class="w-full h-full object-cover opacity-90" alt="アイテム"/>
-                    </div>
-                    <span class="text-[9px] font-bold text-on-surface-variant dark:text-white/50">アウター</span>
-                </div>
-                <div class="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer group">
-                    <div class="w-16 h-16 rounded-2xl overflow-hidden shadow-sm border border-black/5 dark:border-white/5 bg-white dark:bg-slate-800 group-hover:scale-105 transition-transform">
-                        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqvBlbyppfUMTJedHiMwUKAMrhIvvvF5DkYEv6g8wA3XB6pwIOrP144xnsxB5vtmAU3sYOi0kPEKqTcBtb_ibzvv6d0_QeyXAawb97eQaGUI8_08YQ-5N3XYpCWJ-LbSYdDQNz_zvwY_1XCYEFjntnVFjs6H0rcX1tbCVZFjbC1IFxhLEAHrrGOCsWIkg4zsrJp4F1V_VUnqvs0ymjRPPMFRuHLByu-kLBpOfgK5eGq0IZToRRyHQtRHD9C01ScAknmPLV57YoXQ" class="w-full h-full object-cover opacity-90" alt="アイテム"/>
-                    </div>
-                    <span class="text-[9px] font-bold text-on-surface-variant dark:text-white/50">ボトムス</span>
-                </div>
-                <div class="flex flex-col items-center gap-1 flex-shrink-0">
-                    <div class="w-16 h-16 rounded-2xl bg-primary/10 dark:bg-blue-500/10 border border-dashed border-primary/30 dark:border-blue-500/30 flex items-center justify-center text-[10px] font-extrabold text-primary dark:text-blue-400 cursor-pointer hover:bg-primary/20 transition-colors">
-                        ALL 4
-                    </div>
-                    <span class="text-[9px] font-bold text-transparent">-</span>
-                </div>
-            </div>
         </div>
 
-        <!-- ── 今日のポイント ── -->
-        <div class="space-y-3">
-            <h3 class="font-headline font-bold text-base flex items-center gap-2 dark:text-white px-1">
-                <span class="material-symbols-outlined text-primary dark:text-blue-400" style="font-variation-settings:'FILL' 1">tips_and_updates</span>
-                今日のポイント
-                <button onclick="openTipEditModal()" class="ml-auto p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors" title="編集">
-                    <span class="material-symbols-outlined text-[16px] text-on-surface-variant dark:text-white/50">edit</span>
-                </button>
-            </h3>
-
-            <details class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[24px] border border-white/50 dark:border-white/10 shadow-sm cursor-pointer group outline-none" open>
-                <summary class="p-5 flex items-start justify-between outline-none list-none marker:hidden">
-                    <span class="flex items-start gap-3 relative flex-1 min-w-0">
-                        <span class="text-4xl text-primary/20 dark:text-white/15 absolute -top-3 -left-1 font-serif font-black leading-none select-none">"</span>
-                        <span id="tip-summary-span" class="relative z-10 text-[13px] pt-0.5 tracking-wide leading-relaxed font-semibold text-on-surface dark:text-white">
-                            メイン活動は「<span class="text-primary dark:text-blue-300">大学からバイトへ直行</span>」。<br/>
-                            <mark class="bg-yellow-200 dark:bg-yellow-500/70 text-on-surface px-1.5 rounded font-extrabold">脱ぎ着しやすい薄手の重ね着</mark>が必須！
-                        </span>
-                    </span>
-                    <span class="material-symbols-outlined transition-transform duration-300 group-open:rotate-180 text-on-surface-variant dark:text-white/60 ml-3 mt-0.5 flex-shrink-0" data-icon="expand_more">expand_more</span>
-                </summary>
-                <div class="px-5 pb-5 border-t border-black/5 dark:border-white/5">
-                    <div class="flex gap-3 items-start pt-4">
-                        <img class="w-[72px] h-[72px] object-cover rounded-2xl shadow-sm border border-black/5 dark:border-white/10 flex-shrink-0"
-                             src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_lzWJmQsqDRuWBV0cEkOyMKVnYj8KEQnlnuO3p155jFR2m0COLN5pXrTiIdCPQh2EQeRRenF2K39ob3lLtrM9G0usiDIDO0nKJ78WxUiwPkc8jlKeJ6WjRWIL6NmI2JC_e8JIX9dYDmyLfQn4WFxdLBp8XgHDi3DU3UDbRcOLSKFoftDhSzw6vxzBwd6wH1mUXP30FEgVtz43x6GwJW9qCAZZZE8gIfjtyvUVtetVbQmtQuj_N-DdizQhZP9FMbaOlmcxKnh5-A"
-                             alt="TPO"/>
-                        <ul class="text-[11px] space-y-2.5 text-on-surface-variant dark:text-white/70 font-medium leading-relaxed">
-                            <li id="tip-bullet-1-li" class="flex items-start gap-2">
-                                <span class="w-1.5 h-1.5 rounded-full bg-primary dark:bg-blue-400 mt-1 flex-shrink-0"></span>
-                                <span id="tip-bullet-1-text">屋内と外の温度差には<mark class="bg-yellow-200 dark:bg-yellow-500/70 text-on-surface px-1 rounded font-bold">シワになりにくい羽織り</mark></span>
-                            </li>
-                            <li id="tip-bullet-2-li" class="flex items-start gap-2">
-                                <span class="w-1.5 h-1.5 rounded-full bg-primary dark:bg-blue-400 mt-1 flex-shrink-0"></span>
-                                <span id="tip-bullet-2-text">バイト先に備えて<mark class="bg-yellow-200 dark:bg-yellow-500/70 text-on-surface px-1 rounded font-bold">足元はスニーカー</mark></span>
-                            </li>
-                        </ul>
+        <!-- Sub Column Section (Right) -->
+        <div class="home-sub-column">
+            <div id="grid-card-0" onclick="selectSuggestion(0)" class="home-sub-card group relative overflow-hidden rounded-[20px] bg-white/30 dark:bg-black/20 border border-white/40 dark:border-white/10 shadow-lg backdrop-blur-md cursor-pointer transition-all duration-300 skeleton">
+                <img id="grid-img-0" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-0" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton')" onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;" alt="NOW"/>
+                <div class="absolute inset-x-2 bottom-2 p-1.5 bg-black/40 dark:bg-black/60 backdrop-blur-md border border-white/20 dark:border-white/10 rounded-xl flex items-center justify-between pointer-events-none shadow-sm opacity-0" id="grid-overlay-0">
+                    <div id="grid-badge-left-0"><span class="text-[9px] font-black tracking-wider text-white/90 pl-1">--:--</span></div>
+                    <div class="flex items-center gap-1.5 pr-1">
+                        <span id="grid-badge-icon-0" class="text-[12px] leading-none drop-shadow-sm">--</span>
+                        <div id="grid-badge-right-0"><span class="text-[12px] font-black text-white">--°</span></div>
                     </div>
                 </div>
-            </details>
-        </div>
-
-        <!-- ── 時間別タイムライン ── -->
-        <div class="space-y-3">
-            <h3 class="font-headline font-bold text-base flex items-center gap-2 dark:text-white px-1">
-                <span class="material-symbols-outlined text-primary dark:text-blue-400" style="font-variation-settings:'FILL' 1">schedule</span>
-                時間別天気
-                <span class="h-px flex-grow bg-black/10 dark:bg-white/15 ml-1"></span>
-            </h3>
-            <div id="hourly-timeline" class="flex gap-2.5 overflow-x-auto pb-3 no-scrollbar">
-                <!-- Open-Meteo APIから動的生成 -->
             </div>
-        </div>
-
-    </section>
-
-    <!-- ===== 地域選択モーダル (Home 用) ===== -->
-    <div id="location-modal-overlay" onclick="closeLocationModal()" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] transition-opacity duration-300 opacity-0"></div>
-    <div id="location-modal" class="hidden fixed bottom-0 left-0 w-full z-[70] max-w-2xl" style="left:50%;transform:translateX(-50%) translateY(100%);">
-        <div class="bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl border border-white/30 dark:border-white/10 max-h-[80vh] flex flex-col">
-            <div class="flex justify-center pt-3 pb-1"><div class="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full"></div></div>
-            <div class="px-6 pt-2 pb-4 flex items-center justify-between">
-                <h3 class="font-headline font-bold text-lg dark:text-white">地域を選択</h3>
-                <button onclick="closeLocationModal()" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
-                    <span class="material-symbols-outlined text-on-surface-variant dark:text-white/60">close</span>
-                </button>
-            </div>
-            <div class="px-6 pb-3">
-                <button onclick="selectCurrentLocation()" class="w-full flex items-center gap-3 p-3 bg-primary/10 dark:bg-blue-500/20 rounded-2xl border border-primary/20 dark:border-blue-500/30 hover:bg-primary/20 dark:hover:bg-blue-500/30 transition-colors active:scale-[0.98]">
-                    <span class="material-symbols-outlined text-primary dark:text-blue-400">my_location</span>
-                    <div class="flex flex-col items-start">
-                        <span class="font-bold text-sm text-primary dark:text-blue-300">現在地を使用</span>
-                        <span class="text-[10px] text-on-surface-variant dark:text-white/60">GPSで位置情報を取得します</span>
+            <div id="grid-card-1" onclick="selectSuggestion(1)" class="home-sub-card group relative overflow-hidden rounded-[20px] bg-white/30 dark:bg-black/20 border border-white/40 dark:border-white/10 shadow-lg backdrop-blur-md cursor-pointer transition-all duration-300 skeleton">
+                <img id="grid-img-1" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-0" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton')" onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;" alt="3h"/>
+                <div class="absolute inset-x-2 bottom-2 p-1.5 bg-black/40 dark:bg-black/60 backdrop-blur-md border border-white/20 dark:border-white/10 rounded-xl flex items-center justify-between pointer-events-none shadow-sm opacity-0" id="grid-overlay-1">
+                    <div id="grid-badge-left-1"><span class="text-[9px] font-black tracking-wider text-white/90 pl-1">--:--</span></div>
+                    <div class="flex items-center gap-1.5 pr-1">
+                        <span id="grid-badge-icon-1" class="text-[12px] leading-none drop-shadow-sm">--</span>
+                        <div id="grid-badge-right-1"><span class="text-[12px] font-black text-white">--°</span></div>
                     </div>
-                </button>
-            </div>
-            <div class="px-6 pb-3">
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-white/40 text-[18px]">search</span>
-                    <input id="location-search" type="text" placeholder="市区町村名で検索..." oninput="filterLocations(this.value)" class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low dark:bg-slate-800 rounded-xl border border-white/50 dark:border-white/10 text-sm font-medium text-on-surface dark:text-white placeholder:text-on-surface-variant/50 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-primary/30 dark:focus:ring-blue-500/30 transition-shadow"/>
                 </div>
             </div>
-            <div id="location-list" class="px-6 pb-6 overflow-y-auto flex-1 space-y-1"></div>
+            <div id="grid-card-2" onclick="selectSuggestion(2)" class="home-sub-card group relative overflow-hidden rounded-[20px] bg-white/30 dark:bg-black/20 border border-white/40 dark:border-white/10 shadow-lg backdrop-blur-md cursor-pointer transition-all duration-300 skeleton">
+                <img id="grid-img-2" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-0" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton')" onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;" alt="6h"/>
+                <div class="absolute inset-x-2 bottom-2 p-1.5 bg-black/40 dark:bg-black/60 backdrop-blur-md border border-white/20 dark:border-white/10 rounded-xl flex items-center justify-between pointer-events-none shadow-sm opacity-0" id="grid-overlay-2">
+                    <div id="grid-badge-left-2"><span class="text-[9px] font-black tracking-wider text-white/90 pl-1">--:--</span></div>
+                    <div class="flex items-center gap-1.5 pr-1">
+                        <span id="grid-badge-icon-2" class="text-[12px] leading-none drop-shadow-sm">--</span>
+                        <div id="grid-badge-right-2"><span class="text-[12px] font-black text-white">--°</span></div>
+                    </div>
+                </div>
+            </div>
+            <div id="grid-card-3" onclick="selectSuggestion(3)" class="home-sub-card group relative overflow-hidden rounded-[20px] bg-white/30 dark:bg-black/20 border border-white/40 dark:border-white/10 shadow-lg backdrop-blur-md cursor-pointer transition-all duration-300 skeleton">
+                <img id="grid-img-3" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-0" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton')" onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;" alt="12h"/>
+                <div class="absolute inset-x-2 bottom-2 p-1.5 bg-black/40 dark:bg-black/60 backdrop-blur-md border border-white/20 dark:border-white/10 rounded-xl flex items-center justify-between pointer-events-none shadow-sm opacity-0" id="grid-overlay-3">
+                    <div id="grid-badge-left-3"><span class="text-[9px] font-black tracking-wider text-white/90 pl-1">--:--</span></div>
+                    <div class="flex items-center gap-1.5 pr-1">
+                        <span id="grid-badge-icon-3" class="text-[12px] leading-none drop-shadow-sm">--</span>
+                        <div id="grid-badge-right-3"><span class="text-[12px] font-black text-white">--°</span></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-<script src="js/home.js"></script>
+</section>

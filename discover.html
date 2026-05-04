@@ -1,8 +1,8 @@
     <!-- ⑤ コミュニティ (Discover / 知恵袋) -->
-    <section id="page-discover" class="page-section hidden-section space-y-0 relative pb-20">
+    <section id="page-discover" class="page-section hidden-section px-6 pb-32 space-y-6 relative">
 
         <!-- タイトル行 -->
-        <div class="flex justify-between items-center mb-4">
+        <div class="flex justify-between items-center">
             <h2 class="font-headline font-extrabold text-4xl tracking-tight dark:text-white">Community</h2>
             <button class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-2.5 rounded-full border border-white/50 dark:border-white/10 shadow-sm active:scale-90 transition-transform">
                 <span class="material-symbols-outlined text-primary dark:text-blue-400">map</span>
@@ -10,7 +10,7 @@
         </div>
 
         <!-- スティッキータブ -->
-        <div class="flex border-b border-black/5 dark:border-white/10 sticky top-[88px] bg-[#f8f9ff]/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-30 -mx-6 px-6 pt-1 mb-4">
+        <div class="flex border-b border-black/5 dark:border-white/10 sticky top-[64px] bg-[#f8f9ff]/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-30 -mx-6 px-6 pt-1">
             <button id="tab-btn-trend" onclick="switchCommunityTab('trend')"
                 class="flex-1 py-3 border-b-[3px] border-primary dark:border-blue-400 text-primary dark:text-blue-400 font-extrabold text-[12px] tracking-widest text-center transition-all">
                 DISCOVER
@@ -21,12 +21,53 @@
             </button>
         </div>
 
+        <!-- 検索バー + フィルターボタン -->
+        <div class="space-y-4">
+            <div class="flex gap-3 items-center">
+                <div class="relative flex-grow">
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-white/40 text-[18px]">search</span>
+                    <input type="text" id="community-search-input" placeholder="キーワードで探す..."
+                        class="w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full py-3.5 pl-12 pr-4 border border-white/50 dark:border-white/10 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary shadow-sm placeholder:text-on-surface-variant/50 transition-all" />
+                </div>
+                <!-- フィルターボタン（アクティブ時はピンクドット表示） -->
+                <button id="filter-btn" onclick="toggleFilterSheet()"
+                    class="w-[48px] h-[48px] flex-shrink-0 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm border border-white/50 dark:border-white/10 active:scale-95 transition-all relative">
+                    <span class="material-symbols-outlined text-primary dark:text-blue-400">tune</span>
+                    <span id="filter-dot" class="absolute top-2 right-2 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-[#f8f9ff] dark:border-slate-900 hidden"></span>
+                </button>
+            </div>
+
+            <!-- Browse by Vibe -->
+            <div class="flex gap-3 overflow-x-auto no-scrollbar drag-scroll-container pb-2 -mx-2 px-2">
+                <button onclick="applyVibeFilter('Tokyo Night')" class="relative w-32 h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm border border-white/20 active:scale-95 transition-transform">
+                    <img src="https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&q=80&w=300" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                    <p class="absolute bottom-2 left-2 text-white text-[10px] font-black drop-shadow-md text-left">Tokyo Night 🌃</p>
+                </button>
+                <button onclick="applyVibeFilter('Office Minimal')" class="relative w-32 h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm border border-white/20 active:scale-95 transition-transform">
+                    <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=300" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                    <p class="absolute bottom-2 left-2 text-white text-[10px] font-black drop-shadow-md text-left">Office Minimal 💻</p>
+                </button>
+                <button onclick="applyVibeFilter('Cafe Casual')" class="relative w-32 h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm border border-white/20 active:scale-95 transition-transform">
+                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                    <p class="absolute bottom-2 left-2 text-white text-[10px] font-black drop-shadow-md text-left">Cafe Casual ☕</p>
+                </button>
+                <button onclick="applyVibeFilter('Street Mix')" class="relative w-32 h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm border border-white/20 active:scale-95 transition-transform">
+                    <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=300" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                    <p class="absolute bottom-2 left-2 text-white text-[10px] font-black drop-shadow-md text-left">Street Mix 🛹</p>
+                </button>
+            </div>
+        </div>
+
         <!-- Floating Post Button -->
         <button onclick="openPostModal()" class="fixed bottom-28 right-6 z-40 bg-primary dark:bg-blue-500 text-white w-14 h-14 rounded-full shadow-[0_8px_20px_rgba(0,96,173,0.4)] flex items-center justify-center hover:scale-105 active:scale-95 transition-transform animate-float">
             <span class="material-symbols-outlined text-3xl" style="font-variation-settings:'FILL' 1">add</span>
         </button>
 
-        <!-- ===== Q&A View ===== -->
+        <!-- QA Post (知恵袋) View -->
         <div id="discover-qa" class="space-y-4 transition-opacity duration-300">
             <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[28px] p-5 border border-white/50 dark:border-white/10 shadow-sm space-y-4">
                 <div class="flex justify-between items-start">
@@ -42,10 +83,12 @@
                 <p class="font-bold text-sm dark:text-white leading-relaxed">
                    明日、海沿いの野外フェスに右のコーデで行く予定ですが、雨で15度だと寒いですかね...？アウターの相談に乗ってください🙏
                 </p>
+
                 <div class="flex gap-2 items-center">
                     <img class="w-16 h-20 object-cover rounded-lg shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaRkINi2JduqKmvssw9miN06u7pb-ZuC_Q42FVre3Twr4oOMbcjBGq_33TB5SHubWOPm6SMovnvO6-Qsh5EQhAN-AwmZ5OcEiHwOWBLdTLmymGEGyaVaVJVBPLWIbJjQAuzVsttLOhgFkyyqAd3UHSSSdEG7xY_NhYtwN4bQfWURuUm5T9qbLWpbapIc0kVwzqttnhGewK6VrZ0wO21ikiDFBVN5TMA9HNhCMkKrN_wyq47tzB_sSbivYUJq3X9fUqM-v3-1aehA" alt="投稿コーデ"/>
                     <button onclick="openReplyForm(this)" class="bg-white/50 dark:bg-slate-700 h-20 px-4 rounded-lg flex flex-col justify-center items-center gap-1 text-[10px] font-bold text-primary dark:text-blue-400 border border-white/50 dark:border-white/10 active:scale-95 transition-transform"><span class="material-symbols-outlined text-lg">add_comment</span> 回答する</button>
                 </div>
+                <!-- インライン返信フォーム（初期非表示） -->
                 <div class="reply-form hidden mt-1 space-y-2 animate-[fadeSlideIn_0.3s_ease_forwards]">
                     <textarea placeholder="アドバイスを入力してください..." rows="2" class="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-2xl px-3 py-2 text-xs font-bold dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:outline-none resize-none transition-all"></textarea>
                     <div class="flex gap-2 justify-end">
@@ -53,14 +96,17 @@
                         <button onclick="submitReply(this)" class="px-4 py-1.5 rounded-full text-[10px] font-bold bg-primary dark:bg-blue-500 text-white shadow-sm active:scale-95 transition-transform">送信する</button>
                     </div>
                 </div>
+
                 <div class="w-full h-[1px] bg-black/5 dark:bg-white/10 my-3"></div>
+
+                <!-- Best Answer -->
                 <div class="bg-primary/5 dark:bg-blue-500/10 rounded-[20px] p-4 border border-primary/20 dark:border-blue-500/30 relative">
                    <div class="absolute -top-3 left-4 bg-primary dark:bg-blue-500 text-white text-[8px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-md">
-                       <span class="material-symbols-outlined text-[10px]">workspace_premium</span> ベストアンサー
+                       <span class="material-symbols-outlined text-[10px]" data-icon="workspace_premium">workspace_premium</span> ベストアンサー
                    </div>
                    <div class="flex gap-2 items-center mb-2 mt-1">
                        <div class="w-6 h-6 rounded-full bg-gray-200 overflow-hidden"><img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3YR_I64C8zxTh08bT84ZdHElXd5QP9pcF-X4pu4nYJm_r4AULDbvZGq6GMXuOS02mPutDjlqbuNSs_FgkzMyGgwPEPcKoVL9cey4mI1nCA9U72TUn-xPeSZLQLYSf_Zuafohjr0sAjywjci8J9lPWJt_TZp4XJN73_K1UxSe74Kjc5cIn1DXxKSonigGP1ChXRtHLDPEzSbogOCole26aLZ63dSF45VzvbqMZyf4Hg2TyggfVE1iay93m576IcHbTNtMtPoapEQ" alt="回答者"/></div>
-                       <p class="font-bold text-[10px] dark:text-white">Kion Stylist / リサ</p>
+                       <p class="font-bold text-[10px] dark:text-white">WoW Stylist / リサ</p>
                    </div>
                    <p class="text-xs dark:text-white/90 leading-relaxed text-on-surface-variant font-bold">
                        海沿いで雨の15度は体感10度近くなります！そのアウターだと確実に冷えるので、GORE-TEXなどの防風・撥水マウンテンパーカーへの変更をオススメします💡
@@ -69,287 +115,98 @@
             </div>
         </div>
 
-        <!-- ===== DISCOVER View ===== -->
-        <div id="discover-trend" class="hidden space-y-6 transition-opacity duration-300">
+        <!-- Trend (トレンド) View -->
+        <div id="discover-trend" class="hidden space-y-5 transition-opacity duration-300">
+            <h3 class="font-headline font-bold text-lg flex items-center gap-2 dark:text-white">
+                <span class="material-symbols-outlined text-primary dark:text-blue-400" data-icon="local_fire_department">local_fire_department</span>
+                18°Cのみんなのコーデ
+                <span class="h-[1px] flex-grow bg-white/40 dark:bg-white/10 ml-2"></span>
+            </h3>
 
-            <!-- 検索バー + フィルターボタン -->
-            <div class="flex gap-3 items-center">
-                <div class="relative flex-grow">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-white/40 text-[18px]">search</span>
-                    <input type="text" id="community-search-input" placeholder="Explore styles, tags..."
-                        class="w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full py-3.5 pl-12 pr-4 border border-white/50 dark:border-white/10 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary shadow-sm placeholder:text-on-surface-variant/50 transition-all" />
-                </div>
-                <button id="filter-btn" onclick="toggleFilterSheet()"
-                    class="w-[48px] h-[48px] flex-shrink-0 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm border border-white/50 dark:border-white/10 active:scale-95 transition-all relative">
-                    <span class="material-symbols-outlined text-primary dark:text-blue-400">tune</span>
-                    <span id="filter-dot" class="absolute top-2 right-2 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-[#f8f9ff] dark:border-slate-900 hidden"></span>
-                </button>
-            </div>
-
-            <!-- コンテキストハッシュタグピル -->
-            <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
-                <button id="ctx-pill-all" onclick="applyContextPill(this,'')"
-                    class="ctx-pill flex-shrink-0 px-4 py-2 rounded-full bg-primary text-white text-[11px] font-extrabold shadow-sm active:scale-95 transition-all">#ALL</button>
-                <button onclick="applyContextPill(this,'CampusStyle')"
-                    class="ctx-pill flex-shrink-0 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 border border-black/8 dark:border-white/10 text-[11px] font-bold dark:text-white active:scale-95 transition-all">#CampusStyle</button>
-                <button onclick="applyContextPill(this,'DateNight')"
-                    class="ctx-pill flex-shrink-0 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 border border-black/8 dark:border-white/10 text-[11px] font-bold dark:text-white active:scale-95 transition-all">#DateNight</button>
-                <button onclick="applyContextPill(this,'RainyDay')"
-                    class="ctx-pill flex-shrink-0 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 border border-black/8 dark:border-white/10 text-[11px] font-bold dark:text-white active:scale-95 transition-all">#RainyDay</button>
-                <button onclick="applyContextPill(this,'20Degree')"
-                    class="ctx-pill flex-shrink-0 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 border border-black/8 dark:border-white/10 text-[11px] font-bold dark:text-white active:scale-95 transition-all">#20Degree</button>
-                <button onclick="applyContextPill(this,'StreetMix')"
-                    class="ctx-pill flex-shrink-0 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 border border-black/8 dark:border-white/10 text-[11px] font-bold dark:text-white active:scale-95 transition-all">#StreetMix</button>
-                <button onclick="applyContextPill(this,'MinimalWork')"
-                    class="ctx-pill flex-shrink-0 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 border border-black/8 dark:border-white/10 text-[11px] font-bold dark:text-white active:scale-95 transition-all">#MinimalWork</button>
-            </div>
-
-            <!-- アクティブフィルタータグ -->
-            <div id="active-filter-tags" class="hidden flex flex-wrap gap-2"></div>
-
-            <!-- ジャンルピル + ソートトグル（programmatic use） -->
-            <div class="flex items-center justify-between -mt-2">
-                <div class="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
-                    <button id="genre-pill-all" onclick="quickGenreFilter('')"
-                        class="genre-pill flex-shrink-0 px-3 py-1 rounded-full bg-primary text-white text-[9px] font-bold shadow-sm active:scale-95 transition-all">ALL</button>
-                    <button onclick="quickGenreFilter('ストリート')" class="genre-pill flex-shrink-0 px-3 py-1 rounded-full bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-[9px] font-bold dark:text-white active:scale-95 transition-all">🛹 ストリート</button>
-                    <button onclick="quickGenreFilter('カジュアル')"  class="genre-pill flex-shrink-0 px-3 py-1 rounded-full bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-[9px] font-bold dark:text-white active:scale-95 transition-all">👕 カジュアル</button>
-                    <button onclick="quickGenreFilter('モード')"     class="genre-pill flex-shrink-0 px-3 py-1 rounded-full bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-[9px] font-bold dark:text-white active:scale-95 transition-all">🖤 モード</button>
-                    <button onclick="quickGenreFilter('古着')"      class="genre-pill flex-shrink-0 px-3 py-1 rounded-full bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-[9px] font-bold dark:text-white active:scale-95 transition-all">🧥 古着</button>
-                    <button onclick="quickGenreFilter('ミニマル')"   class="genre-pill flex-shrink-0 px-3 py-1 rounded-full bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-[9px] font-bold dark:text-white active:scale-95 transition-all">⬜ ミニマル</button>
-                </div>
-                <div class="flex-shrink-0 flex bg-black/5 dark:bg-white/10 rounded-full p-0.5 ml-2">
-                    <button id="sort-btn-hot" onclick="setSortMode('hot')" class="px-2.5 py-1 rounded-full bg-white dark:bg-slate-700 text-primary dark:text-blue-300 text-[9px] font-bold shadow-sm transition-all">🔥</button>
-                    <button id="sort-btn-new" onclick="setSortMode('new')" class="px-2.5 py-1 rounded-full text-on-surface-variant dark:text-white/50 text-[9px] font-bold transition-all">✨</button>
-                </div>
-            </div>
-
-            <!-- ===== Trending Now ===== -->
-            <div class="space-y-3">
-                <div class="flex justify-between items-baseline">
-                    <h3 class="font-headline font-black text-2xl dark:text-white">Trending Now</h3>
-                    <button class="text-[11px] font-bold text-primary dark:text-blue-400 tracking-wider">SEE ARCHIVE</button>
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Trend Card 1 -->
+                <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[20px] overflow-hidden border border-white/50 dark:border-white/10 shadow-sm relative group flex flex-col">
+                    <div class="relative cursor-pointer">
+                        <img class="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqvBlbyppfUMTJedHiMwUKAMrhIvvvF5DkYEv6g8wA3XB6pwIOrP144xnsxB5vtmAU3sYOi0kPEKqTcBtb_ibzvv6d0_QeyXAawb97eQaGUI8_08YQ-5N3XYpCWJ-LbSYdDQNz_zvwY_1XCYEFjntnVFjs6H0rcX1tbCVZFjbC1IFxhLEAHrrGOCsWIkg4zsrJp4F1V_VUnqvs0ymjRPPMFRuHLByu-kLBpOfgK5eGq0IZToRRyHQtRHD9C01ScAknmPLV57YoXQ" />
+                        <div class="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[8px] font-extrabold shadow-md tracking-wider">TREND 🔥</div>
+                        <button onclick="copyToCloset(this,'https://lh3.googleusercontent.com/aida-public/AB6AXuCqvBlbyppfUMTJedHiMwUKAMrhIvvvF5DkYEv6g8wA3XB6pwIOrP144xnsxB5vtmAU3sYOi0kPEKqTcBtb_ibzvv6d0_QeyXAawb97eQaGUI8_08YQ-5N3XYpCWJ-LbSYdDQNz_zvwY_1XCYEFjntnVFjs6H0rcX1tbCVZFjbC1IFxhLEAHrrGOCsWIkg4zsrJp4F1V_VUnqvs0ymjRPPMFRuHLByu-kLBpOfgK5eGq0IZToRRyHQtRHD9C01ScAknmPLV57YoXQ','トレンドコーデ 1')" class="save-closet-btn absolute top-2 left-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-primary dark:text-blue-400 w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
+                            <span class="material-symbols-outlined text-[16px]">hanger</span>
+                        </button>
+                    </div>
+                    <!-- 6 Types of Custom Reactions -->
+                    <div class="flex gap-1.5 overflow-x-auto no-scrollbar px-2 py-2.5 items-center bg-white/40 dark:bg-slate-800/50">
+                        <button onclick="toggleReaction(this,1200)" class="reaction-btn flex-shrink-0 bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-pink-200 dark:border-pink-800 active:scale-95 transition-transform shadow-sm">❤️ いいね 1.2k</button>
+                        <button onclick="toggleReaction(this,89)" class="reaction-btn flex-shrink-0 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-blue-200 dark:border-blue-800 active:scale-95 transition-transform shadow-sm">✨ 独創的！ 89</button>
+                        <button onclick="toggleReaction(this,4)" class="reaction-btn flex-shrink-0 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-yellow-200 dark:border-yellow-800 active:scale-95 transition-transform shadow-sm">😂 おもしろい！ 4</button>
+                        <button onclick="toggleReaction(this,230)" class="reaction-btn flex-shrink-0 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-purple-200 dark:border-purple-800 active:scale-95 transition-transform shadow-sm">🌙 雰囲気好き！ 230</button>
+                        <button onclick="toggleReaction(this,58)" class="reaction-btn flex-shrink-0 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-green-200 dark:border-green-800 active:scale-95 transition-transform shadow-sm">🙌 参考になる！ 58</button>
+                        <button onclick="toggleReaction(this,700)" class="reaction-btn flex-shrink-0 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-orange-200 dark:border-orange-800 active:scale-95 transition-transform shadow-sm">🔥 おしゃれ！ 700</button>
+                    </div>
                 </div>
 
-                <!-- Trending Card: Preppy -->
-                <div class="trending-card shadow-sm cursor-pointer active:scale-[0.98] transition-transform" onclick="applyContextPill(document.querySelector('.ctx-pill'),'CampusStyle')">
-                    <img src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&q=80&w=600" alt="Preppy">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
-                    <div class="label">Preppy</div>
-                    <span class="absolute top-3 right-3 context-badge">#CampusStyle</span>
+                <!-- Trend Card 2 -->
+                <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[20px] overflow-hidden border border-white/50 dark:border-white/10 shadow-sm relative group flex flex-col">
+                    <div class="relative cursor-pointer">
+                        <img class="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHrJn4azvIQYn4lCFONT_hoI1z0ERDeYSabXsJQ9YBkFC9m2umBqgPX4wToLBtaAPw_WgFtrKBG-pqiXkTkrvkilDHFi5P2nD1hvJtYYtleBPVKql4r5ZnHTg9tyBTv1UbyCEMI92jw6XvNinXiktmCwggqli2bnF8emsRPuBfB-wWwhpdKQO4iSMPQjgET9NuSL6EgOQJHnWAZ8GXZPvWrfQrc9GjywkB0bcGWMTELruQXifNdCqOjJwdLw3MrfG8oVqw8OF4uw" />
+                        <div class="absolute top-2 right-2 bg-gradient-to-r from-orange-400 to-red-500 text-white px-2 py-0.5 rounded text-[8px] font-extrabold shadow-md tracking-wider">HOT</div>
+                        <button onclick="copyToCloset(this,'https://lh3.googleusercontent.com/aida-public/AB6AXuAHrJn4azvIQYn4lCFONT_hoI1z0ERDeYSabXsJQ9YBkFC9m2umBqgPX4wToLBtaAPw_WgFtrKBG-pqiXkTkrvkilDHFi5P2nD1hvJtYYtleBPVKql4r5ZnHTg9tyBTv1UbyCEMI92jw6XvNinXiktmCwggqli2bnF8emsRPuBfB-wWwhpdKQO4iSMPQjgET9NuSL6EgOQJHnWAZ8GXZPvWrfQrc9GjywkB0bcGWMTELruQXifNdCqOjJwdLw3MrfG8oVqw8OF4uw','トレンドコーデ 2')" class="save-closet-btn absolute top-2 left-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-primary dark:text-blue-400 w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
+                            <span class="material-symbols-outlined text-[16px]">hanger</span>
+                        </button>
+                    </div>
+                    <div class="flex gap-1.5 overflow-x-auto no-scrollbar px-2 py-2.5 items-center bg-white/40 dark:bg-slate-800/50">
+                        <button onclick="toggleReaction(this,800)" class="reaction-btn flex-shrink-0 bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-pink-200 dark:border-pink-800 active:scale-95 transition-transform shadow-sm">❤️ いいね 800</button>
+                        <button onclick="toggleReaction(this,320)" class="reaction-btn flex-shrink-0 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-green-200 dark:border-green-800 active:scale-95 transition-transform shadow-sm">🙌 参考になる！ 320</button>
+                        <button onclick="toggleReaction(this,12)" class="reaction-btn flex-shrink-0 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-blue-200 dark:border-blue-800 active:scale-95 transition-transform shadow-sm">✨ 独創的！ 12</button>
+                        <button onclick="toggleReaction(this,150)" class="reaction-btn flex-shrink-0 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-orange-200 dark:border-orange-800 active:scale-95 transition-transform shadow-sm">🔥 おしゃれ！ 150</button>
+                        <button onclick="toggleReaction(this,60)" class="reaction-btn flex-shrink-0 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-purple-200 dark:border-purple-800 active:scale-95 transition-transform shadow-sm">🌙 雰囲気好き！ 60</button>
+                        <button onclick="toggleReaction(this,0)" class="reaction-btn flex-shrink-0 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-yellow-200 dark:border-yellow-800 active:scale-95 transition-transform shadow-sm">😂 おもしろい！ 0</button>
+                    </div>
                 </div>
 
-                <!-- Trending Card: Minimalist -->
-                <div class="trending-card shadow-sm cursor-pointer active:scale-[0.98] transition-transform" onclick="quickGenreFilter('ミニマル')">
-                    <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&q=80&w=600" alt="Minimalist">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
-                    <div class="label">Minimalist</div>
-                    <span class="absolute top-3 right-3 context-badge">#MinimalWork</span>
+                <!-- Trend Card 3 -->
+                <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[20px] overflow-hidden border border-white/50 dark:border-white/10 shadow-sm relative group flex flex-col">
+                    <div class="relative cursor-pointer">
+                        <img class="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDO1-G-h_h4J5KleH68soFOFkso3Q5wKO11N_jXN0cWsuSrFTKQ274LcEbnFXIyVO37pAhlcvayP4a5hkN7GkLwAicGefxka2LcLCqAFVxKTTEGQsRMDzlgb6MKcvhGyflK571Bu_gPYp9A2QI8sMbjLNLcfPZ7PnrSg5wFuCTd9y50P1EEUycgkWX5AJdez-cz1o9QipSbmomDZ1XtPbLNhMDLrn44hChz9ZRkNnYqDhpUzbQlLow2J11TeWeJoronMfdoKuxiKA" />
+                        <button onclick="copyToCloset(this,'https://lh3.googleusercontent.com/aida-public/AB6AXuDO1-G-h_h4J5KleH68soFOFkso3Q5wKO11N_jXN0cWsuSrFTKQ274LcEbnFXIyVO37pAhlcvayP4a5hkN7GkLwAicGefxka2LcLCqAFVxKTTEGQsRMDzlgb6MKcvhGyflK571Bu_gPYp9A2QI8sMbjLNLcfPZ7PnrSg5wFuCTd9y50P1EEUycgkWX5AJdez-cz1o9QipSbmomDZ1XtPbLNhMDLrn44hChz9ZRkNnYqDhpUzbQlLow2J11TeWeJoronMfdoKuxiKA','トレンドコーデ 3')" class="save-closet-btn absolute top-2 left-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-primary dark:text-blue-400 w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
+                            <span class="material-symbols-outlined text-[16px]">hanger</span>
+                        </button>
+                    </div>
+                    <div class="flex gap-1.5 overflow-x-auto no-scrollbar px-2 py-2.5 items-center bg-white/40 dark:bg-slate-800/50">
+                        <button onclick="toggleReaction(this,720)" class="reaction-btn flex-shrink-0 bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-pink-200 dark:border-pink-800 active:scale-95 transition-transform shadow-sm">❤️ いいね 720</button>
+                        <button onclick="toggleReaction(this,500)" class="reaction-btn flex-shrink-0 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-blue-200 dark:border-blue-800 active:scale-95 transition-transform shadow-sm">✨ 独創的！ 500</button>
+                        <button onclick="toggleReaction(this,200)" class="reaction-btn flex-shrink-0 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-orange-200 dark:border-orange-800 active:scale-95 transition-transform shadow-sm">🔥 おしゃれ！ 200</button>
+                        <button onclick="toggleReaction(this,110)" class="reaction-btn flex-shrink-0 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-purple-200 dark:border-purple-800 active:scale-95 transition-transform shadow-sm">🌙 雰囲気好き！ 110</button>
+                        <button onclick="toggleReaction(this,30)" class="reaction-btn flex-shrink-0 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-green-200 dark:border-green-800 active:scale-95 transition-transform shadow-sm">🙌 参考になる！ 30</button>
+                        <button onclick="toggleReaction(this,5)" class="reaction-btn flex-shrink-0 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-yellow-200 dark:border-yellow-800 active:scale-95 transition-transform shadow-sm">😂 おもしろい！ 5</button>
+                    </div>
+                </div>
+
+                <!-- Trend Card 4 (Add post) -->
+                <div onclick="openPostModal('trend')" class="bg-primary/5 dark:bg-blue-500/10 backdrop-blur-md rounded-[20px] overflow-hidden border-2 border-dashed border-primary/30 dark:border-blue-500/30 shadow-sm flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-primary/10 active:scale-95 transition-all h-40">
+                    <span class="material-symbols-outlined text-3xl text-primary dark:text-blue-400" data-icon="add_circle">add_circle</span>
+                    <span class="font-bold text-[10px] text-primary dark:text-blue-400">コーデをシェア</span>
                 </div>
             </div>
-
-            <!-- ===== Curated Feed ===== -->
-            <div class="space-y-3">
-                <h3 class="font-headline font-black text-2xl dark:text-white">Curated Feed</h3>
-
-                <div id="curated-feed-grid" class="grid grid-cols-2 gap-3">
-
-                    <!-- Card 1: #UNIVERSITY / ストリート (大学生向け) -->
-                    <div class="bg-white dark:bg-slate-800 rounded-[20px] overflow-hidden shadow-sm flex flex-col"
-                         data-reactions="2400" data-scene="カフェ" data-genre="カジュアル" data-posted-at="1000"
-                         data-context="CampusStyle">
-                        <div class="relative">
-                            <span class="context-badge absolute top-2.5 left-2.5 z-10">#UNIVERSITY</span>
-                            <img class="w-full h-48 object-cover cursor-pointer"
-                                 data-desc="図書館前で撮影。ニットベスト × シャツのアカデミックスタイル。気温16°C前後に最適。"
-                                 data-tags="ニットベスト,アカデミック,大学,16°C,着回し"
-                                 onclick="openCardDetail(this.parentElement)"
-                                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHrJn4azvIQYn4lCFONT_hoI1z0ERDeYSabXsJQ9YBkFC9m2umBqgPX4wToLBtaAPw_WgFtrKBG-pqiXkTkrvkilDHFi5P2nD1hvJtYYtleBPVKql4r5ZnHTg9tyBTv1UbyCEMI92jw6XvNinXiktmCwggqli2bnF8emsRPuBfB-wWwhpdKQO4iSMPQjgET9NuSL6EgOQJHnWAZ8GXZPvWrfQrc9GjywkB0bcGWMTELruQXifNdCqOjJwdLw3MrfG8oVqw8OF4uw" alt="コーデ1"/>
-                            <button onclick="copyToCloset(this,'https://lh3.googleusercontent.com/aida-public/AB6AXuAHrJn4azvIQYn4lCFONT_hoI1z0ERDeYSabXsJQ9YBkFC9m2umBqgPX4wToLBtaAPw_WgFtrKBG-pqiXkTkrvkilDHFi5P2nD1hvJtYYtleBPVKql4r5ZnHTg9tyBTv1UbyCEMI92jw6XvNinXiktmCwggqli2bnF8emsRPuBfB-wWwhpdKQO4iSMPQjgET9NuSL6EgOQJHnWAZ8GXZPvWrfQrc9GjywkB0bcGWMTELruQXifNdCqOjJwdLw3MrfG8oVqw8OF4uw','アカデミックコーデ')" class="save-closet-btn absolute top-2 right-2 bg-white/90 dark:bg-slate-900/90 text-primary dark:text-blue-400 w-7 h-7 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
-                                <span class="material-symbols-outlined text-[14px]">hanger</span>
-                            </button>
-                        </div>
-                        <div class="px-2.5 pt-2.5 pb-1 space-y-2 flex-1 flex flex-col">
-                            <div id="react-display-0" class="flex gap-1 flex-wrap">
-                                <span class="reacted-badge" style="background:#FFE4F0;color:#FF69B4;">💖 かわいい 45</span>
-                                <span class="reacted-badge" style="background:#F0E6FF;color:#8A2BE2;">🎨 エモい 12</span>
-                            </div>
-                            <div class="flex items-center justify-between mt-auto">
-                                <span class="text-[9px] font-black text-on-surface-variant dark:text-white/40 tracking-wider">2.4K CURATIONS</span>
-                                <button class="reaction-plus-btn w-8 h-8 bg-primary dark:bg-blue-500 text-white rounded-full flex items-center justify-center text-lg shadow-md active:scale-90 transition-transform" data-display-id="react-display-0" data-card-idx="0">👍</button>
-                            </div>
-                            <button onclick="openCardDetail(this.closest('[data-reactions]').querySelector('.relative'))" class="quick-dig-btn w-full py-2 rounded-xl bg-white dark:bg-slate-900 dark:text-white">QUICK DIG</button>
-                        </div>
-                    </div>
-
-                    <!-- Card 2: #STREET / ストリート (大学生向け) -->
-                    <div class="bg-white dark:bg-slate-800 rounded-[20px] overflow-hidden shadow-sm flex flex-col"
-                         data-reactions="4100" data-scene="フェス" data-genre="ストリート" data-posted-at="950"
-                         data-context="StreetMix">
-                        <div class="relative">
-                            <span class="context-badge absolute top-2.5 left-2.5 z-10">#STREET</span>
-                            <img class="w-full h-48 object-cover cursor-pointer"
-                                 data-desc="渋谷バックグラウンドでストリートスナップ。ビッグシルエット × ワークパンツ。圧倒的な存在感。"
-                                 data-tags="ビッグシルエット,ワークパンツ,ストリート,渋谷,18°C対応"
-                                 onclick="openCardDetail(this.parentElement)"
-                                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqvBlbyppfUMTJedHiMwUKAMrhIvvvF5DkYEv6g8wA3XB6pwIOrP144xnsxB5vtmAU3sYOi0kPEKqTcBtb_ibzvv6d0_QeyXAawb97eQaGUI8_08YQ-5N3XYpCWJ-LbSYdDQNz_zvwY_1XCYEFjntnVFjs6H0rcX1tbCVZFjbC1IFxhLEAHrrGOCsWIkg4zsrJp4F1V_VUnqvs0ymjRPPMFRuHLByu-kLBpOfgK5eGq0IZToRRyHQtRHD9C01ScAknmPLV57YoXQ" alt="コーデ2"/>
-                            <button onclick="copyToCloset(this,'https://lh3.googleusercontent.com/aida-public/AB6AXuCqvBlbyppfUMTJedHiMwUKAMrhIvvvF5DkYEv6g8wA3XB6pwIOrP144xnsxB5vtmAU3sYOi0kPEKqTcBtb_ibzvv6d0_QeyXAawb97eQaGUI8_08YQ-5N3XYpCWJ-LbSYdDQNz_zvwY_1XCYEFjntnVFjs6H0rcX1tbCVZFjbC1IFxhLEAHrrGOCsWIkg4zsrJp4F1V_VUnqvs0ymjRPPMFRuHLByu-kLBpOfgK5eGq0IZToRRyHQtRHD9C01ScAknmPLV57YoXQ','ストリートコーデ')" class="save-closet-btn absolute top-2 right-2 bg-white/90 dark:bg-slate-900/90 text-primary dark:text-blue-400 w-7 h-7 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
-                                <span class="material-symbols-outlined text-[14px]">hanger</span>
-                            </button>
-                        </div>
-                        <div class="px-2.5 pt-2.5 pb-1 space-y-2 flex-1 flex flex-col">
-                            <div id="react-display-1" class="flex gap-1 flex-wrap">
-                                <span class="reacted-badge" style="background:#E8E8E8;color:#1A1A1A;">😎 クール 56</span>
-                                <span class="reacted-badge" style="background:#E6F3FF;color:#1E90FF;">⛏️ ディグる 14</span>
-                            </div>
-                            <div class="flex items-center justify-between mt-auto">
-                                <span class="text-[9px] font-black text-on-surface-variant dark:text-white/40 tracking-wider">4.1K CURATIONS</span>
-                                <button class="reaction-plus-btn w-8 h-8 bg-primary dark:bg-blue-500 text-white rounded-full flex items-center justify-center text-lg shadow-md active:scale-90 transition-transform" data-display-id="react-display-1" data-card-idx="1">👍</button>
-                            </div>
-                            <button onclick="openCardDetail(this.closest('[data-reactions]').querySelector('.relative'))" class="quick-dig-btn w-full py-2 rounded-xl bg-white dark:bg-slate-900 dark:text-white">QUICK DIG</button>
-                        </div>
-                    </div>
-
-                    <!-- Card 3: #CAFE / カジュアル (大学生向け) -->
-                    <div class="bg-white dark:bg-slate-800 rounded-[20px] overflow-hidden shadow-sm flex flex-col"
-                         data-reactions="1800" data-scene="カフェ" data-genre="カジュアル" data-posted-at="900"
-                         data-context="CampusStyle">
-                        <div class="relative">
-                            <span class="context-badge absolute top-2.5 left-2.5 z-10">#CAFE</span>
-                            <img class="w-full h-48 object-cover cursor-pointer"
-                                 data-desc="カフェのあたたかい光に映えるベージュ系コーデ。リネンシャツ × テーパードで着回し力抜群。"
-                                 data-tags="リネンシャツ,ベージュ,カフェ映え,着回し,ナチュラル"
-                                 onclick="openCardDetail(this.parentElement)"
-                                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuDO1-G-h_h4J5KleH68soFOFkso3Q5wKO11N_jXN0cWsuSrFTKQ274LcEbnFXIyVO37pAhlcvayP4a5hkN7GkLwAicGefxka2LcLCqAFVxKTTEGQsRMDzlgb6MKcvhGyflK571Bu_gPYp9A2QI8sMbjLNLcfPZ7PnrSg5wFuCTd9y50P1EEUycgkWX5AJdez-cz1o9QipSbmomDZ1XtPbLNhMDLrn44hChz9ZRkNnYqDhpUzbQlLow2J11TeWeJoronMfdoKuxiKA" alt="コーデ3"/>
-                            <button onclick="copyToCloset(this,'https://lh3.googleusercontent.com/aida-public/AB6AXuDO1-G-h_h4J5KleH68soFOFkso3Q5wKO11N_jXN0cWsuSrFTKQ274LcEbnFXIyVO37pAhlcvayP4a5hkN7GkLwAicGefxka2LcLCqAFVxKTTEGQsRMDzlgb6MKcvhGyflK571Bu_gPYp9A2QI8sMbjLNLcfPZ7PnrSg5wFuCTd9y50P1EEUycgkWX5AJdez-cz1o9QipSbmomDZ1XtPbLNhMDLrn44hChz9ZRkNnYqDhpUzbQlLow2J11TeWeJoronMfdoKuxiKA','カフェカジュアル')" class="save-closet-btn absolute top-2 right-2 bg-white/90 dark:bg-slate-900/90 text-primary dark:text-blue-400 w-7 h-7 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
-                                <span class="material-symbols-outlined text-[14px]">hanger</span>
-                            </button>
-                        </div>
-                        <div class="px-2.5 pt-2.5 pb-1 space-y-2 flex-1 flex flex-col">
-                            <div id="react-display-2" class="flex gap-1 flex-wrap">
-                                <span class="reacted-badge" style="background:#F0E6FF;color:#8A2BE2;">🎨 エモい 26</span>
-                                <span class="reacted-badge" style="background:#E8E8E8;color:#1A1A1A;">😎 クール 8</span>
-                            </div>
-                            <div class="flex items-center justify-between mt-auto">
-                                <span class="text-[9px] font-black text-on-surface-variant dark:text-white/40 tracking-wider">1.8K CURATIONS</span>
-                                <button class="reaction-plus-btn w-8 h-8 bg-primary dark:bg-blue-500 text-white rounded-full flex items-center justify-center text-lg shadow-md active:scale-90 transition-transform" data-display-id="react-display-2" data-card-idx="2">👍</button>
-                            </div>
-                            <button onclick="openCardDetail(this.closest('[data-reactions]').querySelector('.relative'))" class="quick-dig-btn w-full py-2 rounded-xl bg-white dark:bg-slate-900 dark:text-white">QUICK DIG</button>
-                        </div>
-                    </div>
-
-                    <!-- Card 4: #GALLERY / モード (大学生向け) -->
-                    <div class="bg-white dark:bg-slate-800 rounded-[20px] overflow-hidden shadow-sm flex flex-col"
-                         data-reactions="920" data-scene="デート" data-genre="モード" data-posted-at="850"
-                         data-context="DateNight">
-                        <div class="relative">
-                            <span class="context-badge absolute top-2.5 left-2.5 z-10">#GALLERY</span>
-                            <img class="w-full h-48 object-cover cursor-pointer"
-                                 data-desc="アートギャラリー背景のモードコーデ。オールホワイト × トレンチで洗練された世界観を演出。"
-                                 data-tags="オールホワイト,トレンチ,モード,ギャラリー,デート映え"
-                                 onclick="openCardDetail(this.parentElement)"
-                                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3YR_I64C8zxTh08bT84ZdHElXd5QP9pcF-X4pu4nYJm_r4AULDbvZGq6GMXuOS02mPutDjlqbuNSs_FgkzMyGgwPEPcKoVL9cey4mI1nCA9U72TUn-xPeSZLQLYSf_Zuafohjr0sAjywjci8J9lPWJt_TZp4XJN73_K1UxSe74Kjc5cIn1DXxKSonigGP1ChXRtHLDPEzSbogOCole26aLZ63dSF45VzvbqMZyf4Hg2TyggfVE1iay93m576IcHbTNtMtPoapEQ" alt="コーデ4"/>
-                            <button onclick="copyToCloset(this,'https://lh3.googleusercontent.com/aida-public/AB6AXuC3YR_I64C8zxTh08bT84ZdHElXd5QP9pcF-X4pu4nYJm_r4AULDbvZGq6GMXuOS02mPutDjlqbuNSs_FgkzMyGgwPEPcKoVL9cey4mI1nCA9U72TUn-xPeSZLQLYSf_Zuafohjr0sAjywjci8J9lPWJt_TZp4XJN73_K1UxSe74Kjc5cIn1DXxKSonigGP1ChXRtHLDPEzSbogOCole26aLZ63dSF45VzvbqMZyf4Hg2TyggfVE1iay93m576IcHbTNtMtPoapEQ','モードコーデ')" class="save-closet-btn absolute top-2 right-2 bg-white/90 dark:bg-slate-900/90 text-primary dark:text-blue-400 w-7 h-7 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
-                                <span class="material-symbols-outlined text-[14px]">hanger</span>
-                            </button>
-                        </div>
-                        <div class="px-2.5 pt-2.5 pb-1 space-y-2 flex-1 flex flex-col">
-                            <div id="react-display-3" class="flex gap-1 flex-wrap">
-                                <span class="reacted-badge" style="background:#E6F3FF;color:#1E90FF;">⛏️ ディグる 32</span>
-                                <span class="reacted-badge" style="background:#E8E8E8;color:#1A1A1A;">😎 クール 19</span>
-                            </div>
-                            <div class="flex items-center justify-between mt-auto">
-                                <span class="text-[9px] font-black text-on-surface-variant dark:text-white/40 tracking-wider">920 CURATIONS</span>
-                                <button class="reaction-plus-btn w-8 h-8 bg-primary dark:bg-blue-500 text-white rounded-full flex items-center justify-center text-lg shadow-md active:scale-90 transition-transform" data-display-id="react-display-3" data-card-idx="3">👍</button>
-                            </div>
-                            <button onclick="openCardDetail(this.closest('[data-reactions]').querySelector('.relative'))" class="quick-dig-btn w-full py-2 rounded-xl bg-white dark:bg-slate-900 dark:text-white">QUICK DIG</button>
-                        </div>
-                    </div>
-
-                    <!-- Card 5: #DATE_NIGHT / モード (大学生向け) -->
-                    <div class="bg-white dark:bg-slate-800 rounded-[20px] overflow-hidden shadow-sm flex flex-col"
-                         data-reactions="3200" data-scene="デート" data-genre="モード" data-posted-at="820"
-                         data-context="DateNight">
-                        <div class="relative">
-                            <span class="context-badge absolute top-2.5 left-2.5 z-10">#DATE_NIGHT</span>
-                            <img class="w-full h-48 object-cover cursor-pointer"
-                                 data-desc="夜景バックのオールブラック。ロングコートで縦ラインを強調、デートシーンで圧倒的な存在感。"
-                                 data-tags="オールブラック,ロングコート,縦ライン,夜景,デート"
-                                 onclick="openCardDetail(this.parentElement)"
-                                 src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=400" alt="コーデ5"/>
-                            <button onclick="copyToCloset(this,'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=400','デートナイトコーデ')" class="save-closet-btn absolute top-2 right-2 bg-white/90 dark:bg-slate-900/90 text-primary dark:text-blue-400 w-7 h-7 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
-                                <span class="material-symbols-outlined text-[14px]">hanger</span>
-                            </button>
-                        </div>
-                        <div class="px-2.5 pt-2.5 pb-1 space-y-2 flex-1 flex flex-col">
-                            <div id="react-display-4" class="flex gap-1 flex-wrap">
-                                <span class="reacted-badge" style="background:#FFE4F0;color:#FF69B4;">💖 かわいい 88</span>
-                                <span class="reacted-badge" style="background:#E8E8E8;color:#1A1A1A;">😎 クール 34</span>
-                            </div>
-                            <div class="flex items-center justify-between mt-auto">
-                                <span class="text-[9px] font-black text-on-surface-variant dark:text-white/40 tracking-wider">3.2K CURATIONS</span>
-                                <button class="reaction-plus-btn w-8 h-8 bg-primary dark:bg-blue-500 text-white rounded-full flex items-center justify-center text-lg shadow-md active:scale-90 transition-transform" data-display-id="react-display-4" data-card-idx="4">👍</button>
-                            </div>
-                            <button onclick="openCardDetail(this.closest('[data-reactions]').querySelector('.relative'))" class="quick-dig-btn w-full py-2 rounded-xl bg-white dark:bg-slate-900 dark:text-white">QUICK DIG</button>
-                        </div>
-                    </div>
-
-                    <!-- Card 6: #RAINY_DAY / ミニマル (会社員向け) -->
-                    <div class="bg-white dark:bg-slate-800 rounded-[20px] overflow-hidden shadow-sm flex flex-col"
-                         data-reactions="5100" data-scene="オフィス" data-genre="ミニマル" data-posted-at="800"
-                         data-context="RainyDay">
-                        <div class="relative">
-                            <span class="context-badge absolute top-2.5 left-2.5 z-10">#RAINY_DAY</span>
-                            <img class="w-full h-48 object-cover cursor-pointer"
-                                 data-desc="雨の日のオフィスコーデ。撥水ナイロンジャケット × スラックスで快適通勤。15°C対応の完璧な実用コーデ。"
-                                 data-tags="ナイロンジャケット,撥水,オフィス,通勤,15°C対応,実用"
-                                 onclick="openCardDetail(this.parentElement)"
-                                 src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=400" alt="コーデ6"/>
-                            <button onclick="copyToCloset(this,'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=400','雨の日コーデ')" class="save-closet-btn absolute top-2 right-2 bg-white/90 dark:bg-slate-900/90 text-primary dark:text-blue-400 w-7 h-7 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
-                                <span class="material-symbols-outlined text-[14px]">hanger</span>
-                            </button>
-                        </div>
-                        <div class="px-2.5 pt-2.5 pb-1 space-y-2 flex-1 flex flex-col">
-                            <div id="react-display-5" class="flex gap-1 flex-wrap">
-                                <span class="reacted-badge" style="background:#E0FAFA;color:#00CED1;">☔ 助かる 127</span>
-                                <span class="reacted-badge" style="background:#E6FFE6;color:#32CD32;">✅ これ着る 89</span>
-                            </div>
-                            <div class="flex items-center justify-between mt-auto">
-                                <span class="text-[9px] font-black text-on-surface-variant dark:text-white/40 tracking-wider">5.1K CURATIONS</span>
-                                <button class="reaction-plus-btn w-8 h-8 bg-primary dark:bg-blue-500 text-white rounded-full flex items-center justify-center text-lg shadow-md active:scale-90 transition-transform" data-display-id="react-display-5" data-card-idx="5">👍</button>
-                            </div>
-                            <button onclick="openCardDetail(this.closest('[data-reactions]').querySelector('.relative'))" class="quick-dig-btn w-full py-2 rounded-xl bg-white dark:bg-slate-900 dark:text-white">QUICK DIG</button>
-                        </div>
-                    </div>
-
-                    <!-- Add post card -->
-                    <div onclick="openPostModal('trend')" class="add-post-card bg-primary/5 dark:bg-blue-500/10 rounded-[20px] border-2 border-dashed border-primary/30 dark:border-blue-500/30 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-primary/10 active:scale-95 transition-all h-48">
-                        <span class="material-symbols-outlined text-3xl text-primary dark:text-blue-400">add_circle</span>
-                        <span class="font-bold text-[10px] text-primary dark:text-blue-400">コーデをシェア</span>
-                    </div>
-
-                </div><!-- /curated-feed-grid -->
-            </div><!-- /Curated Feed -->
-
-        </div><!-- /discover-trend -->
+        </div>
     </section>
-    
-    <!-- TikTok-style Vertical Snap Detail Container (Logic in community.js) -->
-    <div id="tiktok-detail-shell" class="hidden fixed inset-0 z-[500] bg-white dark:bg-slate-900 overflow-hidden">
-        <div id="card-detail-snap" class="h-[100dvh] overflow-y-scroll scroll-snap-y-mandatory overscroll-contain"></div>
-    </div>
 
-    <!-- ===== 投稿モーダル（Discover 専用 / fixed で全画面オーバーレイ） ===== -->
+    <!-- ===== 投稿モーダル (ボトムシート) ===== -->
     <div id="post-modal-overlay" onclick="closePostModal()" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] transition-opacity duration-300 opacity-0"></div>
     <div id="post-modal" class="hidden fixed bottom-0 left-0 w-full z-[70] max-w-2xl mx-auto" style="left:50%;transform:translateX(-50%) translateY(100%);">
         <div class="bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl border border-white/30 dark:border-white/10 overflow-hidden">
-            <div class="flex justify-center pt-3 pb-1"><div class="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full"></div></div>
+            <!-- ドラッグハンドル -->
+            <div class="flex justify-center pt-3 pb-1">
+                <div class="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full"></div>
+            </div>
+
+            <!-- タブ切り替え -->
             <div class="flex items-center justify-between px-5 pt-2 pb-4">
                 <h2 class="font-headline font-extrabold text-xl dark:text-white">新しい投稿</h2>
                 <button onclick="closePostModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-800 active:scale-90 transition-transform">
                     <span class="material-symbols-outlined text-[18px] dark:text-white">close</span>
                 </button>
             </div>
+
             <div class="flex bg-gray-100 dark:bg-slate-800 mx-5 rounded-full p-1 mb-5">
                 <button id="modal-tab-qa" onclick="switchModalTab('qa')" class="flex-1 py-2 rounded-full bg-primary dark:bg-blue-500 text-white text-[11px] font-bold shadow-sm transition-all">
                     <span class="material-symbols-outlined text-[14px] align-middle mr-1">help</span>知恵袋
@@ -367,6 +224,8 @@
                         class="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:outline-none resize-none transition-all"></textarea>
                     <p id="qa-char" class="text-[9px] text-right text-on-surface-variant dark:text-white/40 mt-1">0 / 200</p>
                 </div>
+
+                <!-- 気温バッジ -->
                 <div>
                     <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block">当日の気温</label>
                     <div class="flex gap-2 flex-wrap">
@@ -377,6 +236,8 @@
                         <button type="button" onclick="selectTemp(this,'26°C〜')" class="temp-btn px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 dark:text-white/80 active:scale-95 transition-all">26°C〜</button>
                     </div>
                 </div>
+
+                <!-- シーンタグ -->
                 <div>
                     <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block">シーン (複数選択可)</label>
                     <div class="flex gap-2 flex-wrap">
@@ -388,6 +249,8 @@
                         <button type="button" onclick="toggleTag(this)" class="tag-btn px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 dark:text-white/80 active:scale-95 transition-all">普段着</button>
                     </div>
                 </div>
+
+                <!-- 投稿ボタン -->
                 <button onclick="submitPost('qa')" class="w-full bg-primary dark:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all text-[13px]">
                     <span class="material-symbols-outlined text-[16px] align-middle mr-1">send</span>質問を投稿する
                 </button>
@@ -401,6 +264,8 @@
                         class="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:outline-none resize-none transition-all"></textarea>
                     <p id="trend-char" class="text-[9px] text-right text-on-surface-variant dark:text-white/40 mt-1">0 / 150</p>
                 </div>
+
+                <!-- 写真追加 -->
                 <div>
                     <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block">コーデ写真</label>
                     <label for="photo-input" class="flex flex-col items-center justify-center gap-2 h-32 border-2 border-dashed border-primary/30 dark:border-blue-500/30 rounded-2xl bg-primary/5 dark:bg-blue-500/10 cursor-pointer hover:bg-primary/10 transition-all" id="photo-upload-area">
@@ -413,39 +278,10 @@
                         <button onclick="removePhoto()" class="absolute top-2 right-2 bg-black/60 text-white w-7 h-7 rounded-full flex items-center justify-center">
                             <span class="material-symbols-outlined text-[14px]">close</span>
                         </button>
-                        <div id="post-bg-overlay-label" class="hidden absolute bottom-2 left-2 bg-black/60 text-white text-[9px] font-bold px-2 py-0.5 rounded-full"></div>
                     </div>
                 </div>
-                <div>
-                    <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block flex items-center gap-1">
-                        <span class="material-symbols-outlined text-[12px]">landscape</span>
-                        撮影シーン（背景）<span class="font-normal text-on-surface-variant/50 ml-1">カードに表示されます</span>
-                    </label>
-                    <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                        <button type="button" onclick="selectPostBg(this,'none','なし')" class="post-bg-btn flex-shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform" data-bg="none">
-                            <div class="w-14 h-14 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center border-2 border-primary shadow-sm">
-                                <span class="material-symbols-outlined text-[20px] text-on-surface-variant dark:text-white/50">hide_image</span>
-                            </div>
-                            <span class="text-[8px] font-bold text-primary dark:text-blue-300">なし</span>
-                        </button>
-                        <button type="button" onclick="selectPostBg(this,'office','オフィス街')" class="post-bg-btn flex-shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform" data-bg="office">
-                            <div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-transparent" style="background:url('背景/背景：オフィス街.png') center/cover no-repeat"></div>
-                            <span class="text-[8px] font-bold text-on-surface-variant dark:text-white/50">オフィス</span>
-                        </button>
-                        <button type="button" onclick="selectPostBg(this,'park','公園')" class="post-bg-btn flex-shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform" data-bg="park">
-                            <div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-transparent" style="background:url('背景/背景：公園.png') center/cover no-repeat"></div>
-                            <span class="text-[8px] font-bold text-on-surface-variant dark:text-white/50">公園</span>
-                        </button>
-                        <button type="button" onclick="selectPostBg(this,'beach','海辺')" class="post-bg-btn flex-shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform" data-bg="beach">
-                            <div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-transparent" style="background:url('背景/背景：海辺の観光地.jpg') center/cover no-repeat"></div>
-                            <span class="text-[8px] font-bold text-on-surface-variant dark:text-white/50">海辺</span>
-                        </button>
-                        <button type="button" onclick="selectPostBg(this,'room','白い部屋')" class="post-bg-btn flex-shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform" data-bg="room">
-                            <div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-transparent" style="background:url('背景/背景：白い部屋.jpg') center/cover no-repeat"></div>
-                            <span class="text-[8px] font-bold text-on-surface-variant dark:text-white/50">白い部屋</span>
-                        </button>
-                    </div>
-                </div>
+
+                <!-- 気温バッジ（コーデ用） -->
                 <div>
                     <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block">対応気温</label>
                     <div class="flex gap-2 flex-wrap">
@@ -456,95 +292,11 @@
                         <button type="button" onclick="selectTemp(this,'26°C〜')" class="temp-btn px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 dark:text-white/80 active:scale-95 transition-all">26°C〜</button>
                     </div>
                 </div>
+
+                <!-- 投稿ボタン -->
                 <button onclick="submitPost('trend')" class="w-full bg-primary dark:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all text-[13px]">
                     <span class="material-symbols-outlined text-[16px] align-middle mr-1">share</span>コーデをシェアする
                 </button>
             </div>
         </div>
     </div>
-
-    <!-- ===== Smart Filter シート（Discover 専用） ===== -->
-    <div id="filter-bottom-sheet" class="fixed inset-0 z-[100] hidden items-end justify-center">
-        <div id="filter-sheet-overlay" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0" onclick="toggleFilterSheet()"></div>
-        <div id="filter-sheet-body" class="relative w-full max-w-2xl bg-[#f8f9ff] dark:bg-slate-900 rounded-t-[2.5rem] p-7 shadow-2xl space-y-7 transform transition-transform duration-300 translate-y-full">
-            <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto -mt-3 mb-1"></div>
-            <div class="flex justify-between items-center">
-                <h3 class="font-headline font-black text-2xl dark:text-white">Smart Filter</h3>
-                <button onclick="toggleFilterSheet()" class="text-on-surface-variant dark:text-white/40 hover:text-primary transition-colors active:scale-90">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <!-- シーン（TPO）別 -->
-            <div class="space-y-3">
-                <p class="text-[10px] font-black text-on-surface-variant/60 dark:text-white/40 uppercase tracking-widest flex items-center gap-2">
-                    <span class="material-symbols-outlined text-xs">location_on</span> シーン（TPO）別
-                </p>
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="toggleSheetFilter(this,'sheet-scene')" class="sheet-scene px-5 py-2.5 rounded-full bg-primary text-white font-bold text-[11px] shadow-sm active:scale-95 transition-transform" data-value="すべて">すべて</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-scene')" class="sheet-scene px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="オフィス">🏢 オフィス</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-scene')" class="sheet-scene px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="デート">💑 デート</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-scene')" class="sheet-scene px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="カフェ">☕ カフェ</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-scene')" class="sheet-scene px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="アウトドア">🏕️ アウトドア</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-scene')" class="sheet-scene px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="フェス">🎵 フェス</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-scene')" class="sheet-scene px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="冠婚葬祭">👗 冠婚葬祭</button>
-                </div>
-            </div>
-            <!-- ジャンル別 -->
-            <div class="space-y-3">
-                <p class="text-[10px] font-black text-on-surface-variant/60 dark:text-white/40 uppercase tracking-widest flex items-center gap-2">
-                    <span class="material-symbols-outlined text-xs">style</span> ジャンル別
-                </p>
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="toggleSheetFilter(this,'sheet-genre')" class="sheet-genre px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="ストリート">🛹 ストリート</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-genre')" class="sheet-genre px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="カジュアル">👕 カジュアル</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-genre')" class="sheet-genre px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="モード">🖤 モード</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-genre')" class="sheet-genre px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="古着">🧥 古着</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-genre')" class="sheet-genre px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="ミニマル">⬜ ミニマル</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-genre')" class="sheet-genre px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="スポーティ">⚡ スポーティ</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-genre')" class="sheet-genre px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="ガーリー">🌸 ガーリー</button>
-                </div>
-            </div>
-            <!-- リアクション別 -->
-            <div class="space-y-3">
-                <p class="text-[10px] font-black text-on-surface-variant/60 dark:text-white/40 uppercase tracking-widest flex items-center gap-2">
-                    <span class="material-symbols-outlined text-xs">favorite</span> リアクション別（多い順にソート）
-                </p>
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="toggleSheetFilter(this,'sheet-reaction')" class="sheet-reaction px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="オシャレ">🔥 オシャレ</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-reaction')" class="sheet-reaction px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="かわいい">😊 かわいい</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-reaction')" class="sheet-reaction px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="かっこいい">💪 かっこいい</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-reaction')" class="sheet-reaction px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="独創的">🎨 独創的</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-reaction')" class="sheet-reaction px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="雰囲気好き">✨ 雰囲気好き</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-reaction')" class="sheet-reaction px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="参考になる">🙌 参考になる</button>
-                </div>
-            </div>
-            <!-- 温度帯 -->
-            <div class="space-y-3">
-                <p class="text-[10px] font-black text-on-surface-variant/60 dark:text-white/40 uppercase tracking-widest flex items-center gap-2">
-                    <span class="material-symbols-outlined text-xs">device_thermostat</span> TEMPERATURE
-                </p>
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="toggleSheetFilter(this,'sheet-temp')" class="sheet-temp px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="20up">20°C以上</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-temp')" class="sheet-temp px-5 py-2.5 rounded-full bg-primary text-white font-bold text-[11px] shadow-sm ring-2 ring-primary/30 active:scale-95 transition-transform" data-value="15mid">15°C前後</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-temp')" class="sheet-temp px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform" data-value="10low">10°C以下</button>
-                </div>
-            </div>
-            <!-- 着回し目的 -->
-            <div class="space-y-3">
-                <p class="text-[10px] font-black text-on-surface-variant/60 dark:text-white/40 uppercase tracking-widest flex items-center gap-2">
-                    <span class="material-symbols-outlined text-xs">change_circle</span> 着回し目的
-                </p>
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="toggleSheetFilter(this,'sheet-purpose')" class="sheet-purpose px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform flex items-center gap-1" data-value="trend"><span class="material-symbols-outlined text-[12px]">local_fire_department</span> トレンド</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-purpose')" class="sheet-purpose px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform flex items-center gap-1" data-value="recycle"><span class="material-symbols-outlined text-[12px]">repeat</span> 着回しやすい</button>
-                    <button onclick="toggleSheetFilter(this,'sheet-purpose')" class="sheet-purpose px-5 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 dark:text-white font-bold text-[11px] active:scale-95 transition-transform flex items-center gap-1" data-value="unique"><span class="material-symbols-outlined text-[12px]">diamond</span> かぶりにくい</button>
-                </div>
-            </div>
-            <button onclick="applyFilters()" class="w-full py-4 bg-primary dark:bg-blue-600 text-white rounded-2xl font-black shadow-[0_8px_20px_rgba(0,96,173,0.3)] active:scale-95 transition-all text-sm tracking-widest">
-                APPLY FILTERS
-            </button>
-        </div>
-    </div>
-
-<script src="js/community.js"></script>
-<script>initCommunity();</script>

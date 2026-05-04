@@ -1,35 +1,12 @@
 // ===== シーン管理・シーン別コーデ選択 =====
 
-// --- グローバル変数 ---
-var paths = {
-    default: 'none',
-    office: 'url("背景/背景：オフィス街.png")',
-    park:   'url("背景/背景：公園.png")',
-    beach:  'url("背景/背景：海辺の観光地.jpg")',
-    room:   'url("背景/背景：白い部屋.jpg")',
-};
+// ===== シーン管理・シーン別コーデ選択 =====
 
-var sceneLabels = {
-    default: 'Standard',
-    office:  'オフィス街',
-    park:    '公園',
-    beach:   '海辺の観光地',
-    room:    '白い部屋',
-};
-
-var currentScene = 'default';
-
-const SCENE_OUTFIT_KEY = 'kion_scene_outfits';
-function loadSceneOutfits() {
-    try { return JSON.parse(localStorage.getItem(SCENE_OUTFIT_KEY)) || {}; } catch(e) { return {}; }
-}
-function saveSceneOutfits(obj) {
-    localStorage.setItem(SCENE_OUTFIT_KEY, JSON.stringify(obj));
-}
 
 function switchScene(sceneName, el) {
     currentScene = sceneName;
-    document.body.style.backgroundImage = paths[sceneName];
+    // 背景画像の設定を削除 (背景画像は不要との要望に基づく)
+    // document.body.style.backgroundImage = paths[sceneName];
 
     document.querySelectorAll('.scene-card').forEach(card => {
         card.classList.remove('active');
@@ -57,10 +34,9 @@ function switchScene(sceneName, el) {
 
 function renderSceneOutfitPreview(sceneName) {
     const preview = document.getElementById('scene-outfit-preview');
-    const label   = document.getElementById('scene-outfit-label');
+    const label = document.getElementById('scene-outfit-label');
     const itemsEl = document.getElementById('scene-outfit-items');
     const emptyEl = document.getElementById('scene-outfit-empty');
-    if (!preview || !label || !itemsEl || !emptyEl) return;
 
     if (sceneName === 'default') {
         preview.classList.add('hidden');
@@ -112,8 +88,7 @@ function openSceneOutfitModal() {
         modal.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)';
     });
 
-    const titleEl = document.getElementById('scene-outfit-modal-title');
-    if (titleEl) titleEl.textContent = `「${sceneLabels[currentScene]}」のコーデ`;
+    document.getElementById('scene-outfit-modal-title').textContent = `「${sceneLabels[currentScene]}」のコーデ`;
 
     const outfits = loadSceneOutfits();
     sceneOutfitTemp = [...(outfits[currentScene] || [])];
@@ -149,9 +124,8 @@ function filterSceneCloset(cat, el) {
 }
 
 function renderSceneClosetGrid() {
-    const grid    = document.getElementById('scene-closet-grid');
+    const grid = document.getElementById('scene-closet-grid');
     const emptyEl = document.getElementById('scene-closet-empty');
-    if (!grid || !emptyEl) return;
     grid.innerHTML = '';
 
     const filtered = sceneClosetFilter === 'all'
@@ -202,8 +176,7 @@ function toggleSceneOutfitItem(id) {
 }
 
 function updateSceneSelectedCount() {
-    const el = document.getElementById('scene-selected-count');
-    if (el) el.textContent = sceneOutfitTemp.length;
+    document.getElementById('scene-selected-count').textContent = sceneOutfitTemp.length;
 }
 
 function clearSceneOutfit() {

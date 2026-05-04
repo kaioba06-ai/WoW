@@ -1,19 +1,7 @@
 // ===== クローゼット管理 =====
 
-// ===== 共有状態（index.html / community.js からも参照される） =====
-var CLOSET_KEY = 'kion_closet_items';
-var closetItems = JSON.parse(localStorage.getItem(CLOSET_KEY) || '[]');
-var closetSelectedCategory = '';
-var closetSelectedColor    = '';
-var closetSelectedColorName = '';
-var currentFilter  = 'all';
-var editingItemId  = null;
-var pendingDeleteId = null;
-const CATEGORY_LABELS = { tops:'トップス', bottoms:'ボトムス', outer:'アウター', shoes:'シューズ', bag:'バッグ', other:'その他' };
-const CATEGORY_ICONS  = { tops:'apparel', bottoms:'accessibility_new', outer:'dry_cleaning', shoes:'steps', bag:'shopping_bag', other:'more_horiz' };
-
 // クイック追加アイテム定義
-var QUICK_ADD_ITEMS = [
+const QUICK_ADD_ITEMS = [
     { section: 'トップス', icon: 'apparel', items: [
         { name: 'Tシャツ（白）',     category: 'tops', color: '#f8f8f8', colorName: 'ホワイト' },
         { name: 'Tシャツ（黒）',     category: 'tops', color: '#111111', colorName: 'ブラック' },
@@ -66,7 +54,6 @@ var QUICK_ADD_ITEMS = [
 
 function renderQuickAddGrid() {
     const grid = document.getElementById('quick-add-grid');
-    if (!grid) return;
     grid.innerHTML = '';
     QUICK_ADD_ITEMS.forEach(section => {
         const header = document.createElement('div');
@@ -133,19 +120,13 @@ function quickAddClosetItem(item, btn) {
 
 function switchClosetTab(tab) {
     const isQuick = tab === 'quick';
-    const quickContent  = document.getElementById('closet-tab-quick-content');
-    const customContent = document.getElementById('closet-tab-custom-content');
-    const quickBtn      = document.getElementById('closet-tab-quick');
-    const customBtn     = document.getElementById('closet-tab-custom');
-    if (!quickContent || !customContent || !quickBtn || !customBtn) return;
+    document.getElementById('closet-tab-quick-content').classList.toggle('hidden', !isQuick);
+    document.getElementById('closet-tab-custom-content').classList.toggle('hidden', isQuick);
 
-    quickContent.classList.toggle('hidden', !isQuick);
-    customContent.classList.toggle('hidden', isQuick);
-
-    const activeClass   = 'flex-1 py-2 rounded-full bg-primary dark:bg-blue-500 text-white text-[11px] font-bold shadow-sm transition-all flex items-center justify-center gap-1';
+    const activeClass = 'flex-1 py-2 rounded-full bg-primary dark:bg-blue-500 text-white text-[11px] font-bold shadow-sm transition-all flex items-center justify-center gap-1';
     const inactiveClass = 'flex-1 py-2 rounded-full text-on-surface-variant dark:text-white/60 text-[11px] font-bold transition-all flex items-center justify-center gap-1';
-    quickBtn.className  = isQuick ? activeClass : inactiveClass;
-    customBtn.className = isQuick ? inactiveClass : activeClass;
+    document.getElementById('closet-tab-quick').className = isQuick ? activeClass : inactiveClass;
+    document.getElementById('closet-tab-custom').className = isQuick ? inactiveClass : activeClass;
 
     if (isQuick) renderQuickAddGrid();
 }
@@ -153,20 +134,13 @@ function switchClosetTab(tab) {
 function openClosetModal() {
     if(navigator.vibrate) navigator.vibrate([10]);
     editingItemId = null;
+    document.getElementById('closet-modal-title').textContent = '服を追加';
+    document.getElementById('closet-submit-icon').textContent = 'checkroom';
+    document.getElementById('closet-submit-label').textContent = 'クローゼットに追加する';
+    document.querySelector('.flex.bg-gray-100.dark\\:bg-slate-800.mx-5.rounded-full').style.display = '';
 
-    const overlay   = document.getElementById('closet-modal-overlay');
-    const modal     = document.getElementById('closet-modal');
-    const titleEl   = document.getElementById('closet-modal-title');
-    const iconEl    = document.getElementById('closet-submit-icon');
-    const labelEl   = document.getElementById('closet-submit-label');
-    const tabRow    = document.querySelector('.flex.bg-gray-100.dark\\:bg-slate-800.mx-5.rounded-full');
-    if (!overlay || !modal || !titleEl || !iconEl || !labelEl) return;
-
-    titleEl.textContent = '服を追加';
-    iconEl.textContent  = 'checkroom';
-    labelEl.textContent = 'クローゼットに追加する';
-    if (tabRow) tabRow.style.display = '';
-
+    const overlay = document.getElementById('closet-modal-overlay');
+    const modal = document.getElementById('closet-modal');
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
     requestAnimationFrame(() => {
@@ -348,7 +322,14 @@ function saveCloset() {
         const lite = closetItems.map(i => ({...i, img: i.img ? '[photo]' : ''}));
         localStorage.setItem(CLOSET_KEY, JSON.stringify(lite));
     }
+    
+    // クラウド自動同期を実行
+    if (typeof sendToCloud === 'function') {
+        sendToCloud(true);
+    }
 }
+
+let pendingDeleteId = null;
 
 function deleteClosetItem(id) {
     const item = closetItems.find(i => i.id === id);
@@ -376,7 +357,6 @@ function cancelDeleteCloset() {
 function renderClosetGrid(filter) {
     if(filter !== undefined) currentFilter = filter;
     const grid = document.getElementById('closet-grid');
-    if (!grid) return;
     Array.from(grid.children).forEach(child => {
         if(child.id !== 'closet-add-card') child.remove();
     });
@@ -411,167 +391,17 @@ function renderClosetGrid(filter) {
         grid.insertBefore(card, addCard);
     });
 
-    const countEl = document.getElementById('closet-count');
-    if (countEl) countEl.textContent = `${closetItems.length} アイテム`;
-    updateColorProportions(filtered);
-}
-
-function updateColorProportions(items) {
-    const statsContainer = document.getElementById('closet-color-stats');
-    const bar = document.getElementById('color-proportion-bar');
-    const labels = document.getElementById('color-proportion-labels');
-    const totalCountEl = document.getElementById('color-stats-total');
-
-    if (!statsContainer) return;
-    statsContainer.classList.remove('hidden');
-
-    if (!items || items.length === 0) {
-        if (totalCountEl) totalCountEl.textContent = `0 items`;
-        if (bar) bar.innerHTML = '<div class="w-full h-full bg-gray-200 dark:bg-slate-700/50"></div>';
-        if (labels) labels.innerHTML = '<p class="text-[9px] text-on-surface-variant/40 dark:text-white/30 italic">アイテムを追加して分析を開始して下さい</p>';
-        updateAdvancedAnalysis([]);
-        return;
-    }
-    if (totalCountEl) totalCountEl.textContent = `${items.length} items`;
-
-    const counts = {};
-    items.forEach(item => {
-        const color = item.color || '#888';
-        const name = item.colorName || 'その他';
-        if (!counts[color]) counts[color] = { count: 0, name };
-        counts[color].count++;
-    });
-
-    const sortedColors = Object.keys(counts).sort((a, b) => counts[b].count - counts[a].count);
-    const total = items.length;
-
-    if (bar) bar.innerHTML = '';
-    if (labels) labels.innerHTML = '';
-
-    sortedColors.forEach(color => {
-        const data = counts[color];
-        const percent = Math.round((data.count / total) * 100);
-
-        if (bar) {
-            const segment = document.createElement('div');
-            segment.style.flex = data.count;
-            segment.style.backgroundColor = color;
-            segment.className = 'h-full transition-all duration-500';
-            segment.title = `${data.name}: ${percent}%`;
-            bar.appendChild(segment);
-        }
-
-        if (labels) {
-            const label = document.createElement('div');
-            label.className = 'flex items-center gap-1.5 text-[10px] font-bold text-on-surface-variant dark:text-white/60';
-            label.innerHTML = `
-                <span class="w-2 h-2 rounded-full border border-black/10 dark:border-white/10" style="background:${color}"></span>
-                <span>${data.name}</span>
-                <span class="opacity-50 text-[9px] font-medium">${percent}%</span>
-            `;
-            labels.appendChild(label);
-        }
-    });
-
-    updateAdvancedAnalysis(items);
-}
-
-function updateAdvancedAnalysis(items) {
-    const analysisContainer = document.getElementById('color-analysis-report');
-    if (!analysisContainer) return;
-
-    if (!items || items.length === 0) {
-        document.getElementById('analysis-basic-ratio').style.width = `0%`;
-        document.getElementById('analysis-color-ratio').style.width = `0%`;
-        document.getElementById('analysis-pattern-ratio').style.width = `0%`;
-        document.getElementById('analysis-basic-text').textContent = `0%`;
-        document.getElementById('analysis-color-text').textContent = `0%`;
-        document.getElementById('analysis-pattern-text').textContent = `0%`;
-        document.getElementById('wardrobe-impression').textContent = "アイテムを追加してワードローブの傾向を診断してみましょう✨";
-        document.getElementById('analysis-category-list').innerHTML = '';
-        return;
-    }
-
-    const CATEGORIES = [
-        { id: 1,  name: 'ホワイト',       colors: ['#f8f8f8','#ffffff','ホワイト','アイボリー','オフ白'], group: 'basic' },
-        { id: 2,  name: 'ライトグレー',   colors: ['#d1d5db','ライトグレー'], group: 'basic' },
-        { id: 3,  name: 'チャコールグレー', colors: ['#4b5563','#6b7280','チャコールグレー','グレー'], group: 'basic' },
-        { id: 4,  name: 'ブラック',       colors: ['#111111','#000000','ブラック'], group: 'basic' },
-        { id: 5,  name: 'ネイビー',       colors: ['#1e3a8a','#1e40af','ネイビー','デニム'], group: 'basic' },
-        { id: 6,  name: 'ベージュ',       colors: ['#e8d5b7','#f5f5dc','ベージュ','生成り','キャメル'], group: 'basic' },
-        { id: 7,  name: 'ブラウン',       colors: ['#92400e','#78350f','ブラウン','焦げ茶','テラコッタ'], group: 'basic' },
-        { id: 8,  name: 'カーキ',         colors: ['#16a34a','#4b5320','カーキ','オリーブ','モスグリーン'], group: 'basic' },
-        { id: 9,  name: 'レッド',         colors: ['#dc2626','レッド','真っ赤','ボルドー'], group: 'color' },
-        { id: 10, name: 'ピンク',         colors: ['#fda4af','ピンク','ラベンダー'], group: 'color' },
-        { id: 11, name: 'オレンジ',       colors: ['#f97316','オレンジ'], group: 'color' },
-        { id: 12, name: 'イエロー',       colors: ['#facc15','イエロー','レモン','マスタード'], group: 'color' },
-        { id: 13, name: 'ライトグリーン', colors: ['#86efac','ライトグリーン','ミント','若草色'], group: 'color' },
-        { id: 14, name: 'グリーン',       colors: ['#15803d','グリーン','深緑','エメラルド'], group: 'color' },
-        { id: 15, name: 'サックスブルー', colors: ['#7dd3fc','サックスブルー','水色','空色'], group: 'color' },
-        { id: 16, name: 'ロイヤルブルー', colors: ['#2563eb','ロイヤルブルー','ブルー'], group: 'color' },
-        { id: 17, name: 'パープル',       colors: ['#a855f7','パープル'], group: 'color' },
-        { id: 18, name: '柄・マルチカラー', colors: ['柄','マルチ','ボーダー','チェック','ストライプ'], group: 'pattern' }
-    ];
-
-    const groupCounts = { basic: 0, color: 0, pattern: 0 };
-    const catCounts = {};
-
-    items.forEach(item => {
-        const name = (item.name + (item.colorName || '')).toLowerCase();
-        const hex = (item.color || '').toLowerCase();
-        let found = CATEGORIES.find(c =>
-            c.colors.some(v => name.includes(v.toLowerCase()) || hex === v.toLowerCase())
-        );
-        if (!found) found = CATEGORIES[17];
-        catCounts[found.id] = (catCounts[found.id] || 0) + 1;
-        groupCounts[found.group]++;
-    });
-
-    const total = items.length;
-    const basicRatio   = Math.round((groupCounts.basic   / total) * 100);
-    const colorRatio   = Math.round((groupCounts.color   / total) * 100);
-    const patternRatio = 100 - basicRatio - colorRatio;
-
-    document.getElementById('analysis-basic-ratio').style.width   = `${basicRatio}%`;
-    document.getElementById('analysis-color-ratio').style.width   = `${colorRatio}%`;
-    document.getElementById('analysis-pattern-ratio').style.width = `${patternRatio}%`;
-    document.getElementById('analysis-basic-text').textContent    = `${basicRatio}%`;
-    document.getElementById('analysis-color-text').textContent    = `${colorRatio}%`;
-    document.getElementById('analysis-pattern-text').textContent  = `${patternRatio}%`;
-
-    let impression = '';
-    if (patternRatio > 30) impression = '個性的でリズムのあるワードローブです。';
-    else if (colorRatio > 40) impression = '華やかで色彩豊かなワードローブです。自分らしさを楽しんでいますね！';
-    else if (basicRatio > 70) impression = '非常に落ち着いた、着回し力の高いミニマルなワードローブです。';
-    else impression = 'ベーシックと彩りのバランスが取れた、使い勝手の良い構成です。';
-    document.getElementById('wardrobe-impression').textContent = impression;
-
-    const listEl = document.getElementById('analysis-category-list');
-    listEl.innerHTML = '';
-    CATEGORIES.filter(c => catCounts[c.id]).sort((a,b) => catCounts[b.id] - catCounts[a.id]).slice(0, 6).forEach(c => {
-        const li = document.createElement('div');
-        li.className = 'flex justify-between items-center text-[10px] font-bold py-1 border-b border-black/5 dark:border-white/5';
-        li.innerHTML = `<span>${c.name}</span> <span class="text-on-surface-variant dark:text-white/50">${catCounts[c.id]}点 (${Math.round(catCounts[c.id]/total*100)}%)</span>`;
-        listEl.appendChild(li);
-    });
+    document.getElementById('closet-count').textContent = `${closetItems.length} アイテム`;
 }
 
 function filterCloset(cat, el) {
     if(navigator.vibrate) navigator.vibrate([8]);
-    document.querySelectorAll('.closet-filter-btn').forEach(b => {
-        b.classList.remove('bg-primary','dark:bg-blue-500','text-white','shadow-sm');
-        b.classList.add('bg-white/70','dark:bg-slate-800/70','border','border-white/50','dark:border-white/10','text-on-surface-variant','dark:text-white/70');
-    });
-    el.classList.add('bg-primary','dark:bg-blue-500','text-white','shadow-sm');
-    el.classList.remove('bg-white/70','dark:bg-slate-800/70','border','border-white/50','dark:border-white/10','text-on-surface-variant','dark:text-white/70');
+    document.querySelectorAll('.closet-filter-btn').forEach(b => b.classList.remove('active-filter'));
+    el.classList.add('active-filter');
     renderClosetGrid(cat);
 }
 
-// 公開インターフェース
-window.KionCloset = {
-    renderClosetGrid,
-    saveCloset,
-    openClosetModal,
-    closeClosetModal,
-    filterCloset,
-};
+// 初期レンダリング
+window.addEventListener('sectionsLoaded', () => {
+    renderClosetGrid();
+});

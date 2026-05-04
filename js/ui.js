@@ -1,12 +1,9 @@
+// ===== UI・タブ切り替え・スワイプ・ダークモード・初期化 =====
+
 // 14. 戻るボタンキャッチ
 window.addEventListener('popstate', (e) => {
     if(e.state && e.state.tab) switchTabReal(e.state.tab, null, true);
 });
-
-// アニメーション用強制リフローヘルパー
-function forceReflow(el) {
-    void el.offsetWidth;
-}
 
 function switchTab(tabId, el) {
     if(navigator.vibrate) navigator.vibrate([10]);
@@ -14,60 +11,105 @@ function switchTab(tabId, el) {
 }
 
 function switchTabReal(tabId, el, isPopState) {
+    console.log(`[UI] switchTabReal called: tabId=${tabId}, isPopState=${isPopState}`);
     if(!isPopState) history.pushState({tab: tabId}, '', '#' + tabId);
+    
+    // 最後に開いていたタブを保存
+    localStorage.setItem('kion_current_tab', tabId);
 
-    document.querySelectorAll('.page-section').forEach(section => {
-        section.classList.add('hidden-section');
-        forceReflow(section);
+    const containerIds = ['home-container', 'weekly-container', 'closet-container', 'discover-container', 'profile-container'];
+    
+    // すべてのページを非表示にする
+    containerIds.forEach(id => {
+        const container = document.getElementById(id);
+        if (container) {
+            container.classList.add('hidden-page');
+            container.classList.remove('active-page');
+            // CSSの!importantを確実に効かせるためインラインスタイルは除去
+            container.style.display = '';
+        }
     });
-    document.getElementById('page-' + tabId).classList.remove('hidden-section');
 
-    let targetEl = el;
-    if(!targetEl) {
-       const map = {home:0, weekly:1, closet:2, discover:3, profile:4};
-       targetEl = document.querySelectorAll('.nav-item')[map[tabId]];
+    // 選択されたページを表示
+    const targetContainer = document.getElementById(tabId + '-container');
+    if (targetContainer) {
+        targetContainer.classList.remove('hidden-page');
+        targetContainer.classList.add('active-page');
+        targetContainer.style.display = ''; // CSSの!importantに任せる
+        
+        // 内部のセクションを可視化
+        const section = targetContainer.querySelector('.page-section');
+        if (section) {
+            section.classList.remove('hidden-section');
+        } else {
+            // セクションがない場合（読み込み失敗時など）でも中身が見えるように
+            const errorDiv = targetContainer.querySelector('div');
+            if (errorDiv) errorDiv.style.display = 'block';
+        }
     }
-    if(targetEl) {
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.classList.remove('active-nav-item');
-            item.querySelector('.material-symbols-outlined').style.fontVariationSettings = "'FILL' 0";
-        });
-        targetEl.classList.add('active-nav-item');
-        targetEl.querySelector('.material-symbols-outlined').style.fontVariationSettings = "'FILL' 1";
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // スクロール位置の復元
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
+
+    // サブページが開いている場合は閉じる
+    closeSubPage('social');
+
+    // ナビゲーションバーの表示更新 (インデックスに基づく安定した方式)
+    const navItems = document.querySelectorAll('.nav-item');
+    const tabIndexMap = {home: 0, weekly: 1, closet: 2, discover: 3, profile: 4};
+    const index = tabIndexMap[tabId];
+
+    navItems.forEach((item, i) => {
+        item.classList.remove('active-nav-item');
+        const icon = item.querySelector('.material-symbols-outlined');
+        if (icon) {
+            if (i === index) {
+                item.classList.add('active-nav-item');
+                icon.style.fontVariationSettings = "'FILL' 1";
+            } else {
+                icon.style.fontVariationSettings = "'FILL' 0";
+            }
+        }
+    });
+
+    window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+// ===== サブページ (Following/Followers) 制御 =====
+function openSubPage(id) {
+    if(navigator.vibrate) navigator.vibrate([10]);
+    const el = document.getElementById('page-' + id);
+    if (!el) return;
+    
+    el.classList.remove('hidden-section');
+    requestAnimationFrame(() => {
+        el.style.transform = 'translateX(0)';
+    });
+}
+
+function closeSubPage(id) {
+    const el = document.getElementById('page-' + id);
+    if (!el) return;
+    
+    el.style.transform = 'translateX(100%)';
+    setTimeout(() => {
+        el.classList.add('hidden-section');
+    }, 300);
 }
 
 // 5. スワイプによるタブ・ 1. プル・トゥ・リフレッシュ
 let tsX = 0, tsY = 0;
 const tabArr = ['home', 'weekly', 'closet', 'discover', 'profile'];
-document.addEventListener('touchstart', e => {
-    tsX = e.touches[0].clientX;
-    tsY = e.touches[0].clientY;
-}, {passive: true});
-
+document.addEventListener('touchstart', e => { tsX = e.touches[0].clientX; tsY = e.touches[0].clientY; }, {passive: true});
 document.addEventListener('touchend', e => {
     let teX = e.changedTouches[0].clientX;
     let teY = e.changedTouches[0].clientY;
     let diffX = tsX - teX;
     let diffY = teY - tsY;
 
-    // 横スワイプ (5) — ジェスチャー排他制御
+    // 横スワイプ (5)
     if(Math.abs(diffX) > 100 && Math.abs(diffY) < 50) {
-
-        // ① Elastic Pull が進行中なら Tab 切り替えを実行しない
-        if (window._kionElasticActive) return;
-
-        // ② タッチ開始点がカード要素の内部ならば Tab 切り替えをスキップ
-        //    ただし画面端 15% 以内から始まったスワイプは Tab 切り替え優先
-        const edgeMargin = window.innerWidth * 0.15;
-        const isFromEdge = tsX < edgeMargin || tsX > window.innerWidth - edgeMargin;
-        if (!isFromEdge) {
-            const startEl = document.elementFromPoint(tsX, tsY);
-            if (startEl?.closest('[data-reactions]')) return;
-        }
-
-        // ③ スロープ判定はすでに |diffY| < 50 で担保済み
         let active = document.querySelector('.nav-item.active-nav-item');
         if(active) {
             let idx = Array.from(document.querySelectorAll('.nav-item')).indexOf(active);
@@ -79,11 +121,7 @@ document.addEventListener('touchend', e => {
     if(window.scrollY === 0 && diffY > 120 && Math.abs(diffX) < 50) {
         if(navigator.vibrate) navigator.vibrate([20,10,20]);
         document.body.classList.add('pulling');
-        setTimeout(() => { 
-            document.body.classList.remove('pulling'); 
-            alert('気象＆コーデ情報を最新化しました！'); 
-            if (typeof initWeather === 'function') initWeather();
-        }, 1200);
+        setTimeout(() => { document.body.classList.remove('pulling'); alert('気象＆コーデ情報を最新化しました！'); }, 1200);
     }
 }, {passive: true});
 
@@ -102,20 +140,62 @@ document.addEventListener('click', (e) => {
 });
 
 // ダークモード
+const DARK_MODE_KEY = 'kion_dark_mode';
+
 function toggleDarkMode() {
     const icon = document.getElementById('theme-icon');
-    icon.classList.add('theme-ripple');
-    setTimeout(() => icon.classList.remove('theme-ripple'), 500);
+    if (icon) {
+        icon.classList.add('theme-ripple');
+        setTimeout(() => icon.classList.remove('theme-ripple'), 500);
+    }
 
     document.documentElement.classList.toggle('dark');
-    if (document.documentElement.classList.contains('dark')) {
-        icon.setAttribute('data-icon', 'light_mode');
-        icon.textContent = 'light_mode';
-    } else {
-        icon.setAttribute('data-icon', 'dark_mode');
-        icon.textContent = 'dark_mode';
+    const isDark = document.documentElement.classList.contains('dark');
+
+    // localStorage に保存
+    localStorage.setItem(DARK_MODE_KEY, isDark ? '1' : '0');
+
+    // ヘッダーアイコン更新
+    if (icon) {
+        icon.setAttribute('data-icon', isDark ? 'light_mode' : 'dark_mode');
+        icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+    }
+
+    // 設定モーダル内の表示を同期
+    syncSettingsThemeUI(isDark);
+}
+
+function syncSettingsThemeUI(isDark) {
+    const settingsIcon = document.getElementById('settings-theme-icon');
+    const settingsLabel = document.getElementById('settings-theme-label');
+    if (settingsIcon) {
+        settingsIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
+    }
+    if (settingsLabel) {
+        settingsLabel.textContent = isDark ? 'ダークモード使用中' : 'ライトモード使用中';
     }
 }
+
+// ページロード時にダークモード復元
+function restoreDarkMode() {
+    const saved = localStorage.getItem(DARK_MODE_KEY);
+    // 保存された設定がない（初回）または '1' の場合はダークモード
+    const isDark = (saved === null || saved === '1');
+
+    if (isDark) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+
+    const icon = document.getElementById('theme-icon');
+    if (icon) {
+        icon.setAttribute('data-icon', isDark ? 'light_mode' : 'dark_mode');
+        icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+    }
+}
+
+
 
 // ドラッグスクロール
 function initDragScroll() {
@@ -137,27 +217,25 @@ function initDragScroll() {
     });
 }
 
-// セクション動的ロード
-async function loadSections() {
-    const sections = ['home', 'weekly', 'closet', 'discover', 'profile'];
-    await Promise.all(sections.map(async name => {
-        const res  = await fetch(`${name}.html`);
-        const html = await res.text();
-        const frag = document.createRange().createContextualFragment(html);
-        document.getElementById(`${name}-container`).appendChild(frag);
-    }));
-}
-
 // 初期化
-window.onload = async () => {
-    await loadSections();
+window.addEventListener('sectionsLoaded', () => {
+    console.log('[UI] sectionsLoaded event received. Starting page layout setup...');
+    
+    // 最後にいたページを復元 (hash > localStorage > home)
+    const hash = window.location.hash.replace('#', '');
+    const savedTab = localStorage.getItem('kion_current_tab');
+    const tabArr = ['home', 'weekly', 'closet', 'discover', 'profile'];
+    const initialTab = (tabArr.includes(hash)) ? hash : (tabArr.includes(savedTab) ? savedTab : 'home');
 
-    // 設定UI・クローゼット初期レンダリング
-    if(typeof _syncSettingsUI === 'function') _syncSettingsUI();
-    renderClosetGrid();
+    console.log(`[UI] Initial tab determined: ${initialTab}`);
 
-    document.getElementById('page-home').classList.remove('hidden-section');
-    history.replaceState({tab: 'home'}, '', '#home');
+    // 初期タブを表示
+    switchTabReal(initialTab, null, true);
+    history.replaceState({tab: initialTab}, '', '#' + initialTab);
+
+    // ダークモードを復元 & 設定UI同期
+    restoreDarkMode();
+    syncSettingsThemeUI(document.documentElement.classList.contains('dark'));
 
     // プロフィールデータを復元
     const savedProfile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
@@ -165,26 +243,28 @@ window.onload = async () => {
         applyProfileDisplay(savedProfile);
     }
 
-    // 今日のポイントを復元
-    const savedTips = JSON.parse(localStorage.getItem('kion_tips') || '{}');
-    if(savedTips.summary || savedTips.bullet1 || savedTips.bullet2) {
-        applyTipDisplay(savedTips);
-    }
-
     // ドラッグスクロール初期化
     initDragScroll();
 
-    // 初期ロードフェイク・チュートリアル
+    // 6 & 2. 初期ロードフェイク
     setTimeout(() => {
         const loader = document.getElementById('global-loader');
-        if(loader) {
+        if (loader) {
             loader.style.opacity = '0';
-            setTimeout(() => loader.style.display = 'none', 500);
+            loader.style.pointerEvents = 'none'; // クリックを阻害しないように
+            setTimeout(() => loader.style.display = 'none', 700);
         }
+
+        // 読み込み完了後に表示を開始 (必須)
+        document.body.classList.remove('loading-app');
+        console.log('App hydration complete.');
+
+        // 13. 初回チュートリアルの表示判定
         if(!localStorage.getItem('kion_tut')) {
             const tut = document.getElementById('tutorial-modal');
-            if(tut) tut.style.display = 'flex';
+            if (tut) tut.style.display = 'flex';
             localStorage.setItem('kion_tut', '1');
         }
-    }, 1200);
-};
+    }, 600);
+});
+

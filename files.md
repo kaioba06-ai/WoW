@@ -1,4 +1,4 @@
-# Kion Project: File Map & Navigation Guide
+# Wear for Weather Project: File Map & Navigation Guide
 
 ## 1. Core System Files
 | File | Role | Responsibility Boundaries |
@@ -33,17 +33,17 @@
 
 ### ① ファイル責務の絶対遵守 (Strict Boundaries)
 * **Logic Isolation:** 計算ロジック（`weather.js`）に DOM 操作を混入させない。データを受け取り、計算結果を返す責務に徹する。
-* **Shell Purity:** `index.html` に特定のタブ専用の HTML やロジックを直接追加しない。変更は必ず各タブの `.html` / `.js` で行う。
+* **Shell Purity:** index.html に特定のタブ専用の HTML やロジックを直接追加しない。変更は必ず各タブの .html / .js で行う。
 
 ### ② コンポーネント指向の維持 (Component First)
-* **UI の追加:** 該当セクションの `.html` を編集し、スタイルは Tailwind または `styles.css` を利用する。
-* **非同期ロードの考慮:** `loadSections()` 後の初期化（`init` 関数）の流れを維持し、要素未存在エラーを徹底的に防ぐ。
+* **UI の追加:** 該当セクションの .html を編集し、スタイルは Tailwind または styles.css を利用する。
+* **非同期ロードの考慮:** loadSections() 後の初期化（`init` 関数）の流れを維持し、要素未存在エラーを徹底的に防ぐ。
 
 ### ③ ユーザー体験とロジックの優先順位 (UX Priority)
 * **Health x Style:** 推奨ロジック変更時は、「おしゃれは我慢」を排除し、個人の体感（暑がり・寒がり）を最優先する。
-* **Emotional Delight:** リアクション演出（巨大絵文字の落下等）は、`community.js` と `styles.css` のアニメーション定義に従って実装する。
+* **Emotional Delight:** リアクション演出（巨大絵文字の落下等）は、`community.js` と styles.css のアニメーション定義に従って実装する。
 
 ### ④ 変更時の自動チェック要件 (Self-Audit)
 変更・追加後、CLIツール（LLM）は以下のチェックを自動実行すること。
-1. **Index 汚染確認:** `index.html` が軽量なシェルの状態を維持しているか。
+1. **Index 汚染確認:** index.html が軽量なシェルの状態を維持しているか。
 2. **整合性確認:** タブ切り替え時のイベントリスナーが正常に動作し、二重登録（メモリリーク）を起こしていないか。
