@@ -57,7 +57,7 @@ function switchTabReal(tabId, el, isPopState) {
 
     // ナビゲーションバーの表示更新 (インデックスに基づく安定した方式)
     const navItems = document.querySelectorAll('.nav-item');
-    const tabIndexMap = {home: 0, weekly: 1, closet: 2, discover: 3, profile: 4};
+    const tabIndexMap = {home: 0, weekly: 1, discover: 2, closet: 3, profile: 4};
     const index = tabIndexMap[tabId];
 
     navItems.forEach((item, i) => {
@@ -100,7 +100,7 @@ function closeSubPage(id) {
 
 // 5. スワイプによるタブ・ 1. プル・トゥ・リフレッシュ
 let tsX = 0, tsY = 0;
-const tabArr = ['home', 'weekly', 'closet', 'discover', 'profile'];
+const tabArr = ['home', 'weekly', 'discover', 'closet', 'profile'];
 document.addEventListener('touchstart', e => { tsX = e.touches[0].clientX; tsY = e.touches[0].clientY; }, {passive: true});
 document.addEventListener('touchend', e => {
     let teX = e.changedTouches[0].clientX;
@@ -224,7 +224,7 @@ window.addEventListener('sectionsLoaded', () => {
     // 最後にいたページを復元 (hash > localStorage > home)
     const hash = window.location.hash.replace('#', '');
     const savedTab = localStorage.getItem('kion_current_tab');
-    const tabArr = ['home', 'weekly', 'closet', 'discover', 'profile'];
+    const tabArr = ['home', 'weekly', 'discover', 'closet', 'profile'];
     const initialTab = (tabArr.includes(hash)) ? hash : (tabArr.includes(savedTab) ? savedTab : 'home');
 
     console.log(`[UI] Initial tab determined: ${initialTab}`);
