@@ -1,8 +1,8 @@
     <!-- ⑤ コミュニティ (Discover / 知恵袋) -->
-    <section id="page-discover" class="page-section hidden-section px-6 pb-32 space-y-6 relative">
+    <section id="page-discover" class="page-section hidden-section space-y-0 relative pb-20">
 
         <!-- タイトル行 -->
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center mb-4">
             <h2 class="font-headline font-extrabold text-4xl tracking-tight dark:text-white">Community</h2>
             <button class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-2.5 rounded-full border border-white/50 dark:border-white/10 shadow-sm active:scale-90 transition-transform">
                 <span class="material-symbols-outlined text-primary dark:text-blue-400">map</span>
@@ -10,203 +10,62 @@
         </div>
 
         <!-- スティッキータブ -->
-        <div class="flex border-b border-black/5 dark:border-white/10 sticky top-[64px] bg-[#f8f9ff]/90 dark:bg-[#0f172a]/90 backdrop-blur-md z-30 -mx-6 px-6 pt-1">
-            <button id="tab-btn-trend" onclick="switchCommunityTab('trend')"
-                class="flex-1 py-3 border-b-[3px] border-primary dark:border-blue-400 text-primary dark:text-blue-400 font-extrabold text-[12px] tracking-widest text-center transition-all">
+        <div class="flex border-b border-black/[0.06] dark:border-white/[0.07] sticky top-[88px] bg-[#f8f9ff]/92 dark:bg-[#0f172a]/92 backdrop-blur-md z-30 -mx-6 px-6 pt-1 mb-4">
+            <button id="tab-btn-discover" onclick="switchCommunityTabVue('discover')"
+                class="flex-1 py-3 border-b border-black/10 dark:border-white/10 text-black/30 dark:text-white/30 font-bold text-[10px] tracking-[0.18em] uppercase text-center hover:text-black/60 dark:hover:text-white/60 transition-all">
                 DISCOVER
             </button>
-            <button id="tab-btn-qa" onclick="switchCommunityTab('qa')"
-                class="flex-1 py-3 border-b-[3px] border-transparent text-on-surface-variant dark:text-white/50 font-bold text-[12px] tracking-widest text-center hover:bg-black/5 dark:hover:bg-white/5 rounded-t-lg transition-all">
-                相談箱 (Q&amp;A)
+            <button id="tab-btn-trending" onclick="switchCommunityTabVue('trending')"
+                class="flex-1 py-3 border-b-2 border-black dark:border-white text-black dark:text-white font-black text-[10px] tracking-[0.18em] uppercase text-center transition-all">
+                TRENDING
+            </button>
+            <button id="tab-btn-qa" onclick="switchCommunityTabVue('qa')"
+                class="flex-1 py-3 border-b border-black/10 dark:border-white/10 text-black/30 dark:text-white/30 font-bold text-[10px] tracking-[0.18em] uppercase text-center hover:text-black/60 dark:hover:text-white/60 transition-all">
+                Q&amp;A
             </button>
         </div>
 
-        <!-- 検索バー + フィルターボタン -->
-        <div class="space-y-4">
-            <div class="flex gap-3 items-center">
-                <div class="relative flex-grow">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant dark:text-white/40 text-[18px]">search</span>
-                    <input type="text" id="community-search-input" placeholder="キーワードで探す..."
-                        class="w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full py-3.5 pl-12 pr-4 border border-white/50 dark:border-white/10 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary shadow-sm placeholder:text-on-surface-variant/50 transition-all" />
-                </div>
-                <!-- フィルターボタン（アクティブ時はピンクドット表示） -->
-                <button id="filter-btn" onclick="toggleFilterSheet()"
-                    class="w-[48px] h-[48px] flex-shrink-0 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm border border-white/50 dark:border-white/10 active:scale-95 transition-all relative">
-                    <span class="material-symbols-outlined text-primary dark:text-blue-400">tune</span>
-                    <span id="filter-dot" class="absolute top-2 right-2 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-[#f8f9ff] dark:border-slate-900 hidden"></span>
-                </button>
-            </div>
-
-            <!-- Browse by Vibe -->
-            <div class="flex gap-3 overflow-x-auto no-scrollbar drag-scroll-container pb-2 -mx-2 px-2">
-                <button onclick="applyVibeFilter('Tokyo Night')" class="relative w-32 h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm border border-white/20 active:scale-95 transition-transform">
-                    <img src="https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&q=80&w=300" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                    <p class="absolute bottom-2 left-2 text-white text-[10px] font-black drop-shadow-md text-left">Tokyo Night 🌃</p>
-                </button>
-                <button onclick="applyVibeFilter('Office Minimal')" class="relative w-32 h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm border border-white/20 active:scale-95 transition-transform">
-                    <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=300" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                    <p class="absolute bottom-2 left-2 text-white text-[10px] font-black drop-shadow-md text-left">Office Minimal 💻</p>
-                </button>
-                <button onclick="applyVibeFilter('Cafe Casual')" class="relative w-32 h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm border border-white/20 active:scale-95 transition-transform">
-                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                    <p class="absolute bottom-2 left-2 text-white text-[10px] font-black drop-shadow-md text-left">Cafe Casual ☕</p>
-                </button>
-                <button onclick="applyVibeFilter('Street Mix')" class="relative w-32 h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm border border-white/20 active:scale-95 transition-transform">
-                    <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=300" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                    <p class="absolute bottom-2 left-2 text-white text-[10px] font-black drop-shadow-md text-left">Street Mix 🛹</p>
-                </button>
-            </div>
-        </div>
+        <section id="discover-main" class="transition-opacity duration-300">
+            <!-- AppController/Vue で描画 -->
+        </section>
 
         <!-- Floating Post Button -->
         <button onclick="openPostModal()" class="fixed bottom-28 right-6 z-40 bg-primary dark:bg-blue-500 text-white w-14 h-14 rounded-full shadow-[0_8px_20px_rgba(0,96,173,0.4)] flex items-center justify-center hover:scale-105 active:scale-95 transition-transform animate-float">
             <span class="material-symbols-outlined text-3xl" style="font-variation-settings:'FILL' 1">add</span>
         </button>
 
-        <!-- QA Post (知恵袋) View -->
-        <div id="discover-qa" class="space-y-4 transition-opacity duration-300">
-            <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[28px] p-5 border border-white/50 dark:border-white/10 shadow-sm space-y-4">
-                <div class="flex justify-between items-start">
-                   <div class="flex gap-3 items-center">
-                       <div class="w-8 h-8 rounded-full bg-gray-200 overflow-hidden"><img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHrJn4azvIQYn4lCFONT_hoI1z0ERDeYSabXsJQ9YBkFC9m2umBqgPX4wToLBtaAPw_WgFtrKBG-pqiXkTkrvkilDHFi5P2nD1hvJtYYtleBPVKql4r5ZnHTg9tyBTv1UbyCEMI92jw6XvNinXiktmCwggqli2bnF8emsRPuBfB-wWwhpdKQO4iSMPQjgET9NuSL6EgOQJHnWAZ8GXZPvWrfQrc9GjywkB0bcGWMTELruQXifNdCqOjJwdLw3MrfG8oVqw8OF4uw" alt="Avatar"/></div>
-                       <div>
-                           <p class="font-bold text-xs dark:text-white">ユウキ</p>
-                           <p class="text-[9px] text-on-surface-variant dark:text-white/50">1時間前 • 明日のフェス</p>
-                       </div>
-                   </div>
-                   <span class="bg-tertiary-container dark:bg-[#7e4239] text-on-tertiary-container dark:text-white px-3 py-1 rounded-full text-[9px] font-bold flex items-center gap-1 shadow-sm"><span class="material-symbols-outlined text-[12px]" data-icon="rainy">rainy</span> 15°C</span>
-                </div>
-                <p class="font-bold text-sm dark:text-white leading-relaxed">
-                   明日、海沿いの野外フェスに右のコーデで行く予定ですが、雨で15度だと寒いですかね...？アウターの相談に乗ってください🙏
-                </p>
+        <!-- Transition Overlay -->
+        <div id="transition-overlay"></div>
+        <!-- Focus & Burst Overlay Elements -->
+        <div id="dim-overlay" class="dim-overlay"></div>
+        <div id="radial-layer" class="radial-gradient-burst"></div>
+        <div id="giant-emoji-actor" class="giant-emoji"></div>
+        <div id="fountain-container"></div>
 
-                <div class="flex gap-2 items-center">
-                    <img class="w-16 h-20 object-cover rounded-lg shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaRkINi2JduqKmvssw9miN06u7pb-ZuC_Q42FVre3Twr4oOMbcjBGq_33TB5SHubWOPm6SMovnvO6-Qsh5EQhAN-AwmZ5OcEiHwOWBLdTLmymGEGyaVaVJVBPLWIbJjQAuzVsttLOhgFkyyqAd3UHSSSdEG7xY_NhYtwN4bQfWURuUm5T9qbLWpbapIc0kVwzqttnhGewK6VrZ0wO21ikiDFBVN5TMA9HNhCMkKrN_wyq47tzB_sSbivYUJq3X9fUqM-v3-1aehA" alt="投稿コーデ"/>
-                    <button onclick="openReplyForm(this)" class="bg-white/50 dark:bg-slate-700 h-20 px-4 rounded-lg flex flex-col justify-center items-center gap-1 text-[10px] font-bold text-primary dark:text-blue-400 border border-white/50 dark:border-white/10 active:scale-95 transition-transform"><span class="material-symbols-outlined text-lg">add_comment</span> 回答する</button>
-                </div>
-                <!-- インライン返信フォーム（初期非表示） -->
-                <div class="reply-form hidden mt-1 space-y-2 animate-[fadeSlideIn_0.3s_ease_forwards]">
-                    <textarea placeholder="アドバイスを入力してください..." rows="2" class="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-2xl px-3 py-2 text-xs font-bold dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:outline-none resize-none transition-all"></textarea>
-                    <div class="flex gap-2 justify-end">
-                        <button onclick="closeReplyForm(this)" class="px-3 py-1.5 rounded-full text-[10px] font-bold text-on-surface-variant dark:text-white/60 bg-gray-100 dark:bg-slate-700 active:scale-95 transition-transform">キャンセル</button>
-                        <button onclick="submitReply(this)" class="px-4 py-1.5 rounded-full text-[10px] font-bold bg-primary dark:bg-blue-500 text-white shadow-sm active:scale-95 transition-transform">送信する</button>
-                    </div>
-                </div>
+        <!-- Global DIG Reaction Button & Palette (Demo based integration) - REMOVED PER REQUIREMENT -->
 
-                <div class="w-full h-[1px] bg-black/5 dark:bg-white/10 my-3"></div>
 
-                <!-- Best Answer -->
-                <div class="bg-primary/5 dark:bg-blue-500/10 rounded-[20px] p-4 border border-primary/20 dark:border-blue-500/30 relative">
-                   <div class="absolute -top-3 left-4 bg-primary dark:bg-blue-500 text-white text-[8px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-md">
-                       <span class="material-symbols-outlined text-[10px]" data-icon="workspace_premium">workspace_premium</span> ベストアンサー
-                   </div>
-                   <div class="flex gap-2 items-center mb-2 mt-1">
-                       <div class="w-6 h-6 rounded-full bg-gray-200 overflow-hidden"><img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3YR_I64C8zxTh08bT84ZdHElXd5QP9pcF-X4pu4nYJm_r4AULDbvZGq6GMXuOS02mPutDjlqbuNSs_FgkzMyGgwPEPcKoVL9cey4mI1nCA9U72TUn-xPeSZLQLYSf_Zuafohjr0sAjywjci8J9lPWJt_TZp4XJN73_K1UxSe74Kjc5cIn1DXxKSonigGP1ChXRtHLDPEzSbogOCole26aLZ63dSF45VzvbqMZyf4Hg2TyggfVE1iay93m576IcHbTNtMtPoapEQ" alt="回答者"/></div>
-                       <p class="font-bold text-[10px] dark:text-white">WoW Stylist / リサ</p>
-                   </div>
-                   <p class="text-xs dark:text-white/90 leading-relaxed text-on-surface-variant font-bold">
-                       海沿いで雨の15度は体感10度近くなります！そのアウターだと確実に冷えるので、GORE-TEXなどの防風・撥水マウンテンパーカーへの変更をオススメします💡
-                   </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Trend (トレンド) View -->
-        <div id="discover-trend" class="hidden space-y-5 transition-opacity duration-300">
-            <h3 class="font-headline font-bold text-lg flex items-center gap-2 dark:text-white">
-                <span class="material-symbols-outlined text-primary dark:text-blue-400" data-icon="local_fire_department">local_fire_department</span>
-                18°Cのみんなのコーデ
-                <span class="h-[1px] flex-grow bg-white/40 dark:bg-white/10 ml-2"></span>
-            </h3>
-
-            <div class="grid grid-cols-2 gap-3">
-                <!-- Trend Card 1 -->
-                <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[20px] overflow-hidden border border-white/50 dark:border-white/10 shadow-sm relative group flex flex-col">
-                    <div class="relative cursor-pointer">
-                        <img class="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqvBlbyppfUMTJedHiMwUKAMrhIvvvF5DkYEv6g8wA3XB6pwIOrP144xnsxB5vtmAU3sYOi0kPEKqTcBtb_ibzvv6d0_QeyXAawb97eQaGUI8_08YQ-5N3XYpCWJ-LbSYdDQNz_zvwY_1XCYEFjntnVFjs6H0rcX1tbCVZFjbC1IFxhLEAHrrGOCsWIkg4zsrJp4F1V_VUnqvs0ymjRPPMFRuHLByu-kLBpOfgK5eGq0IZToRRyHQtRHD9C01ScAknmPLV57YoXQ" />
-                        <div class="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[8px] font-extrabold shadow-md tracking-wider">TREND 🔥</div>
-                        <button onclick="copyToCloset(this,'https://lh3.googleusercontent.com/aida-public/AB6AXuCqvBlbyppfUMTJedHiMwUKAMrhIvvvF5DkYEv6g8wA3XB6pwIOrP144xnsxB5vtmAU3sYOi0kPEKqTcBtb_ibzvv6d0_QeyXAawb97eQaGUI8_08YQ-5N3XYpCWJ-LbSYdDQNz_zvwY_1XCYEFjntnVFjs6H0rcX1tbCVZFjbC1IFxhLEAHrrGOCsWIkg4zsrJp4F1V_VUnqvs0ymjRPPMFRuHLByu-kLBpOfgK5eGq0IZToRRyHQtRHD9C01ScAknmPLV57YoXQ','トレンドコーデ 1')" class="save-closet-btn absolute top-2 left-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-primary dark:text-blue-400 w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
-                            <span class="material-symbols-outlined text-[16px]">hanger</span>
-                        </button>
-                    </div>
-                    <!-- 6 Types of Custom Reactions -->
-                    <div class="flex gap-1.5 overflow-x-auto no-scrollbar px-2 py-2.5 items-center bg-white/40 dark:bg-slate-800/50">
-                        <button onclick="toggleReaction(this,1200)" class="reaction-btn flex-shrink-0 bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-pink-200 dark:border-pink-800 active:scale-95 transition-transform shadow-sm">❤️ いいね 1.2k</button>
-                        <button onclick="toggleReaction(this,89)" class="reaction-btn flex-shrink-0 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-blue-200 dark:border-blue-800 active:scale-95 transition-transform shadow-sm">✨ 独創的！ 89</button>
-                        <button onclick="toggleReaction(this,4)" class="reaction-btn flex-shrink-0 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-yellow-200 dark:border-yellow-800 active:scale-95 transition-transform shadow-sm">😂 おもしろい！ 4</button>
-                        <button onclick="toggleReaction(this,230)" class="reaction-btn flex-shrink-0 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-purple-200 dark:border-purple-800 active:scale-95 transition-transform shadow-sm">🌙 雰囲気好き！ 230</button>
-                        <button onclick="toggleReaction(this,58)" class="reaction-btn flex-shrink-0 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-green-200 dark:border-green-800 active:scale-95 transition-transform shadow-sm">🙌 参考になる！ 58</button>
-                        <button onclick="toggleReaction(this,700)" class="reaction-btn flex-shrink-0 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-orange-200 dark:border-orange-800 active:scale-95 transition-transform shadow-sm">🔥 おしゃれ！ 700</button>
-                    </div>
-                </div>
-
-                <!-- Trend Card 2 -->
-                <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[20px] overflow-hidden border border-white/50 dark:border-white/10 shadow-sm relative group flex flex-col">
-                    <div class="relative cursor-pointer">
-                        <img class="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHrJn4azvIQYn4lCFONT_hoI1z0ERDeYSabXsJQ9YBkFC9m2umBqgPX4wToLBtaAPw_WgFtrKBG-pqiXkTkrvkilDHFi5P2nD1hvJtYYtleBPVKql4r5ZnHTg9tyBTv1UbyCEMI92jw6XvNinXiktmCwggqli2bnF8emsRPuBfB-wWwhpdKQO4iSMPQjgET9NuSL6EgOQJHnWAZ8GXZPvWrfQrc9GjywkB0bcGWMTELruQXifNdCqOjJwdLw3MrfG8oVqw8OF4uw" />
-                        <div class="absolute top-2 right-2 bg-gradient-to-r from-orange-400 to-red-500 text-white px-2 py-0.5 rounded text-[8px] font-extrabold shadow-md tracking-wider">HOT</div>
-                        <button onclick="copyToCloset(this,'https://lh3.googleusercontent.com/aida-public/AB6AXuAHrJn4azvIQYn4lCFONT_hoI1z0ERDeYSabXsJQ9YBkFC9m2umBqgPX4wToLBtaAPw_WgFtrKBG-pqiXkTkrvkilDHFi5P2nD1hvJtYYtleBPVKql4r5ZnHTg9tyBTv1UbyCEMI92jw6XvNinXiktmCwggqli2bnF8emsRPuBfB-wWwhpdKQO4iSMPQjgET9NuSL6EgOQJHnWAZ8GXZPvWrfQrc9GjywkB0bcGWMTELruQXifNdCqOjJwdLw3MrfG8oVqw8OF4uw','トレンドコーデ 2')" class="save-closet-btn absolute top-2 left-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-primary dark:text-blue-400 w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
-                            <span class="material-symbols-outlined text-[16px]">hanger</span>
-                        </button>
-                    </div>
-                    <div class="flex gap-1.5 overflow-x-auto no-scrollbar px-2 py-2.5 items-center bg-white/40 dark:bg-slate-800/50">
-                        <button onclick="toggleReaction(this,800)" class="reaction-btn flex-shrink-0 bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-pink-200 dark:border-pink-800 active:scale-95 transition-transform shadow-sm">❤️ いいね 800</button>
-                        <button onclick="toggleReaction(this,320)" class="reaction-btn flex-shrink-0 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-green-200 dark:border-green-800 active:scale-95 transition-transform shadow-sm">🙌 参考になる！ 320</button>
-                        <button onclick="toggleReaction(this,12)" class="reaction-btn flex-shrink-0 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-blue-200 dark:border-blue-800 active:scale-95 transition-transform shadow-sm">✨ 独創的！ 12</button>
-                        <button onclick="toggleReaction(this,150)" class="reaction-btn flex-shrink-0 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-orange-200 dark:border-orange-800 active:scale-95 transition-transform shadow-sm">🔥 おしゃれ！ 150</button>
-                        <button onclick="toggleReaction(this,60)" class="reaction-btn flex-shrink-0 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-purple-200 dark:border-purple-800 active:scale-95 transition-transform shadow-sm">🌙 雰囲気好き！ 60</button>
-                        <button onclick="toggleReaction(this,0)" class="reaction-btn flex-shrink-0 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-yellow-200 dark:border-yellow-800 active:scale-95 transition-transform shadow-sm">😂 おもしろい！ 0</button>
-                    </div>
-                </div>
-
-                <!-- Trend Card 3 -->
-                <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[20px] overflow-hidden border border-white/50 dark:border-white/10 shadow-sm relative group flex flex-col">
-                    <div class="relative cursor-pointer">
-                        <img class="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDO1-G-h_h4J5KleH68soFOFkso3Q5wKO11N_jXN0cWsuSrFTKQ274LcEbnFXIyVO37pAhlcvayP4a5hkN7GkLwAicGefxka2LcLCqAFVxKTTEGQsRMDzlgb6MKcvhGyflK571Bu_gPYp9A2QI8sMbjLNLcfPZ7PnrSg5wFuCTd9y50P1EEUycgkWX5AJdez-cz1o9QipSbmomDZ1XtPbLNhMDLrn44hChz9ZRkNnYqDhpUzbQlLow2J11TeWeJoronMfdoKuxiKA" />
-                        <button onclick="copyToCloset(this,'https://lh3.googleusercontent.com/aida-public/AB6AXuDO1-G-h_h4J5KleH68soFOFkso3Q5wKO11N_jXN0cWsuSrFTKQ274LcEbnFXIyVO37pAhlcvayP4a5hkN7GkLwAicGefxka2LcLCqAFVxKTTEGQsRMDzlgb6MKcvhGyflK571Bu_gPYp9A2QI8sMbjLNLcfPZ7PnrSg5wFuCTd9y50P1EEUycgkWX5AJdez-cz1o9QipSbmomDZ1XtPbLNhMDLrn44hChz9ZRkNnYqDhpUzbQlLow2J11TeWeJoronMfdoKuxiKA','トレンドコーデ 3')" class="save-closet-btn absolute top-2 left-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-primary dark:text-blue-400 w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50">
-                            <span class="material-symbols-outlined text-[16px]">hanger</span>
-                        </button>
-                    </div>
-                    <div class="flex gap-1.5 overflow-x-auto no-scrollbar px-2 py-2.5 items-center bg-white/40 dark:bg-slate-800/50">
-                        <button onclick="toggleReaction(this,720)" class="reaction-btn flex-shrink-0 bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-pink-200 dark:border-pink-800 active:scale-95 transition-transform shadow-sm">❤️ いいね 720</button>
-                        <button onclick="toggleReaction(this,500)" class="reaction-btn flex-shrink-0 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-blue-200 dark:border-blue-800 active:scale-95 transition-transform shadow-sm">✨ 独創的！ 500</button>
-                        <button onclick="toggleReaction(this,200)" class="reaction-btn flex-shrink-0 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-orange-200 dark:border-orange-800 active:scale-95 transition-transform shadow-sm">🔥 おしゃれ！ 200</button>
-                        <button onclick="toggleReaction(this,110)" class="reaction-btn flex-shrink-0 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-purple-200 dark:border-purple-800 active:scale-95 transition-transform shadow-sm">🌙 雰囲気好き！ 110</button>
-                        <button onclick="toggleReaction(this,30)" class="reaction-btn flex-shrink-0 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-green-200 dark:border-green-800 active:scale-95 transition-transform shadow-sm">🙌 参考になる！ 30</button>
-                        <button onclick="toggleReaction(this,5)" class="reaction-btn flex-shrink-0 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 px-2.5 py-1 rounded-full text-[9px] font-bold border border-yellow-200 dark:border-yellow-800 active:scale-95 transition-transform shadow-sm">😂 おもしろい！ 5</button>
-                    </div>
-                </div>
-
-                <!-- Trend Card 4 (Add post) -->
-                <div onclick="openPostModal('trend')" class="bg-primary/5 dark:bg-blue-500/10 backdrop-blur-md rounded-[20px] overflow-hidden border-2 border-dashed border-primary/30 dark:border-blue-500/30 shadow-sm flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-primary/10 active:scale-95 transition-all h-40">
-                    <span class="material-symbols-outlined text-3xl text-primary dark:text-blue-400" data-icon="add_circle">add_circle</span>
-                    <span class="font-bold text-[10px] text-primary dark:text-blue-400">コーデをシェア</span>
-                </div>
-            </div>
-        </div>
+        <!-- ===== Community Vue App Mount Point ===== -->
+        <div id="community-app" class="space-y-6 transition-opacity duration-300">
+        </div><!-- /community-app -->
     </section>
+    
+    <!-- TikTok-style Vertical Snap Detail Container (Logic in community.js) -->
+    <div id="tiktok-detail-shell" class="hidden fixed inset-0 z-[500] bg-white dark:bg-slate-900 overflow-hidden">
+        <div id="card-detail-snap" class="h-[100dvh] overflow-y-scroll scroll-snap-y-mandatory overscroll-contain"></div>
+    </div>
 
-    <!-- ===== 投稿モーダル (ボトムシート) ===== -->
+    <!-- ===== 投稿モーダル（Discover 専用 / fixed で全画面オーバーレイ） ===== -->
     <div id="post-modal-overlay" onclick="closePostModal()" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] transition-opacity duration-300 opacity-0"></div>
     <div id="post-modal" class="hidden fixed bottom-0 left-0 w-full z-[70] max-w-2xl mx-auto" style="left:50%;transform:translateX(-50%) translateY(100%);">
         <div class="bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl border border-white/30 dark:border-white/10 overflow-hidden">
-            <!-- ドラッグハンドル -->
-            <div class="flex justify-center pt-3 pb-1">
-                <div class="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full"></div>
-            </div>
-
-            <!-- タブ切り替え -->
+            <div class="flex justify-center pt-3 pb-1"><div class="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full"></div></div>
             <div class="flex items-center justify-between px-5 pt-2 pb-4">
                 <h2 class="font-headline font-extrabold text-xl dark:text-white">新しい投稿</h2>
                 <button onclick="closePostModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-slate-800 active:scale-90 transition-transform">
                     <span class="material-symbols-outlined text-[18px] dark:text-white">close</span>
                 </button>
             </div>
-
             <div class="flex bg-gray-100 dark:bg-slate-800 mx-5 rounded-full p-1 mb-5">
                 <button id="modal-tab-qa" onclick="switchModalTab('qa')" class="flex-1 py-2 rounded-full bg-primary dark:bg-blue-500 text-white text-[11px] font-bold shadow-sm transition-all">
                     <span class="material-symbols-outlined text-[14px] align-middle mr-1">help</span>知恵袋
@@ -224,8 +83,6 @@
                         class="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:outline-none resize-none transition-all"></textarea>
                     <p id="qa-char" class="text-[9px] text-right text-on-surface-variant dark:text-white/40 mt-1">0 / 200</p>
                 </div>
-
-                <!-- 気温バッジ -->
                 <div>
                     <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block">当日の気温</label>
                     <div class="flex gap-2 flex-wrap">
@@ -236,8 +93,6 @@
                         <button type="button" onclick="selectTemp(this,'26°C〜')" class="temp-btn px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 dark:text-white/80 active:scale-95 transition-all">26°C〜</button>
                     </div>
                 </div>
-
-                <!-- シーンタグ -->
                 <div>
                     <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block">シーン (複数選択可)</label>
                     <div class="flex gap-2 flex-wrap">
@@ -249,8 +104,6 @@
                         <button type="button" onclick="toggleTag(this)" class="tag-btn px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 dark:text-white/80 active:scale-95 transition-all">普段着</button>
                     </div>
                 </div>
-
-                <!-- 投稿ボタン -->
                 <button onclick="submitPost('qa')" class="w-full bg-primary dark:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all text-[13px]">
                     <span class="material-symbols-outlined text-[16px] align-middle mr-1">send</span>質問を投稿する
                 </button>
@@ -264,8 +117,6 @@
                         class="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:outline-none resize-none transition-all"></textarea>
                     <p id="trend-char" class="text-[9px] text-right text-on-surface-variant dark:text-white/40 mt-1">0 / 150</p>
                 </div>
-
-                <!-- 写真追加 -->
                 <div>
                     <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block">コーデ写真</label>
                     <label for="photo-input" class="flex flex-col items-center justify-center gap-2 h-32 border-2 border-dashed border-primary/30 dark:border-blue-500/30 rounded-2xl bg-primary/5 dark:bg-blue-500/10 cursor-pointer hover:bg-primary/10 transition-all" id="photo-upload-area">
@@ -278,10 +129,39 @@
                         <button onclick="removePhoto()" class="absolute top-2 right-2 bg-black/60 text-white w-7 h-7 rounded-full flex items-center justify-center">
                             <span class="material-symbols-outlined text-[14px]">close</span>
                         </button>
+                        <div id="post-bg-overlay-label" class="hidden absolute bottom-2 left-2 bg-black/60 text-white text-[9px] font-bold px-2 py-0.5 rounded-full"></div>
                     </div>
                 </div>
-
-                <!-- 気温バッジ（コーデ用） -->
+                <div>
+                    <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[12px]">landscape</span>
+                        撮影シーン（背景）<span class="font-normal text-on-surface-variant/50 ml-1">カードに表示されます</span>
+                    </label>
+                    <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                        <button type="button" onclick="selectPostBg(this,'none','なし')" class="post-bg-btn flex-shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform" data-bg="none">
+                            <div class="w-14 h-14 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center border-2 border-primary shadow-sm">
+                                <span class="material-symbols-outlined text-[20px] text-on-surface-variant dark:text-white/50">hide_image</span>
+                            </div>
+                            <span class="text-[8px] font-bold text-primary dark:text-blue-300">なし</span>
+                        </button>
+                        <button type="button" onclick="selectPostBg(this,'office','オフィス街')" class="post-bg-btn flex-shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform" data-bg="office">
+                            <div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-transparent" style="background:url('背景/背景：オフィス街.png') center/cover no-repeat"></div>
+                            <span class="text-[8px] font-bold text-on-surface-variant dark:text-white/50">オフィス</span>
+                        </button>
+                        <button type="button" onclick="selectPostBg(this,'park','公園')" class="post-bg-btn flex-shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform" data-bg="park">
+                            <div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-transparent" style="background:url('背景/背景：公園.png') center/cover no-repeat"></div>
+                            <span class="text-[8px] font-bold text-on-surface-variant dark:text-white/50">公園</span>
+                        </button>
+                        <button type="button" onclick="selectPostBg(this,'beach','海辺')" class="post-bg-btn flex-shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform" data-bg="beach">
+                            <div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-transparent" style="background:url('背景/背景：海辺の観光地.jpg') center/cover no-repeat"></div>
+                            <span class="text-[8px] font-bold text-on-surface-variant dark:text-white/50">海辺</span>
+                        </button>
+                        <button type="button" onclick="selectPostBg(this,'room','白い部屋')" class="post-bg-btn flex-shrink-0 flex flex-col items-center gap-1 active:scale-95 transition-transform" data-bg="room">
+                            <div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-transparent" style="background:url('背景/背景：白い部屋.jpg') center/cover no-repeat"></div>
+                            <span class="text-[8px] font-bold text-on-surface-variant dark:text-white/50">白い部屋</span>
+                        </button>
+                    </div>
+                </div>
                 <div>
                     <label class="text-[10px] font-bold text-on-surface-variant dark:text-white/60 mb-2 block">対応気温</label>
                     <div class="flex gap-2 flex-wrap">
@@ -292,11 +172,70 @@
                         <button type="button" onclick="selectTemp(this,'26°C〜')" class="temp-btn px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 dark:text-white/80 active:scale-95 transition-all">26°C〜</button>
                     </div>
                 </div>
-
-                <!-- 投稿ボタン -->
                 <button onclick="submitPost('trend')" class="w-full bg-primary dark:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all text-[13px]">
                     <span class="material-symbols-outlined text-[16px] align-middle mr-1">share</span>コーデをシェアする
                 </button>
             </div>
         </div>
     </div>
+
+    <!-- ===== Smart Filter シート（Discover 専用） ===== -->
+    <!-- ===== Smart Filter シート（Discover 専用） ===== -->
+    <div id="filter-bottom-sheet" class="fixed inset-0 z-[100] hidden items-end justify-center">
+        <!-- 省略。モーダル等の処理は元のものを維持 -->
+    </div>
+
+    <!-- ===== Full Screen Effects UI ===== -->
+    <div id="dimOverlay" class="fixed inset-0 bg-black/80 z-[9900] opacity-0 pointer-events-none transition-opacity duration-300"></div>
+    <div id="radialLayer" class="fixed inset-0 z-[9905] opacity-0 pointer-events-none transition-opacity duration-300"></div>
+    <div id="hashtagContainer" class="fixed inset-0 pointer-events-none z-[9910]"></div>
+    <div id="giantEmoji" class="big-emoji-actor opacity-0 pointer-events-none"></div>
+
+<script src="js/FountainComponent.js"></script>
+<script src="js/community.js"></script>
+<script type="module">
+    import { CommunityView } from './js/components/CommunityView.js';
+
+    // Vueの初期化。discover.html が読み込まれた後に実行される。
+    function setupVueCommunity() {
+        if (window.communityApp) return;
+
+        const app = Vue.createApp({
+            components: {
+                CommunityView
+            },
+            data() {
+                return {
+                    currentTab: 'trending'
+                }
+            },
+            template: `
+                <KeepAlive>
+                    <component :is="'CommunityView'" :key="currentTab" :type="currentTab" />
+                </KeepAlive>
+            `
+        });
+        
+        window.communityApp = app;
+        const vm = app.mount('#community-app');
+        
+        // global function to change tab from outside vue
+        window.switchCommunityTabVue = function(tab) {
+            vm.currentTab = tab;
+            // update vanilla UI active states
+            const ACTIVE   = 'flex-1 py-3 border-b-2 border-black dark:border-white text-black dark:text-white font-black text-[10px] tracking-[0.18em] uppercase text-center transition-all';
+            const INACTIVE = 'flex-1 py-3 border-b border-black/10 dark:border-white/10 text-black/30 dark:text-white/30 font-bold text-[10px] tracking-[0.18em] uppercase text-center hover:text-black/60 dark:hover:text-white/60 transition-all';
+
+            document.getElementById('tab-btn-discover').className = tab === 'discover' ? ACTIVE : INACTIVE;
+            document.getElementById('tab-btn-trending').className = tab === 'trending' ? ACTIVE : INACTIVE;
+            document.getElementById('tab-btn-qa').className      = tab === 'qa' ? ACTIVE : INACTIVE;
+        };
+
+        initCommunity();
+    }
+    
+    // Call on original structure load
+    document.addEventListener('DOMContentLoaded', setupVueCommunity);
+    // Execute immediately in case DOMContentLoaded has already fired in SPA flow
+    setupVueCommunity();
+</script>
