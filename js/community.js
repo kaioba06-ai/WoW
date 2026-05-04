@@ -659,30 +659,7 @@ function applyContextPill(btn, context) {
 }
 
 // ===== リアクションテーマのマスターデータ =====
-const REACTION_THEME_MASTER = {
-    dig: {
-        id: 'dig', label: 'ディグる', emoji: '🕳️', icon: '⛏️', color: '#1A1A2E', rgb: '26,26,46', bg: 'rgba(26,26,46,0.18)', effects: ['💎','🔷','🌟']
-    },
-    emoi: {
-        id: 'emoi', label: 'エモい', emoji: '🌙', icon: '🌇', color: '#FF7F50', rgb: '255,127,80', bg: 'rgba(255,127,80,0.18)', effects: ['🌆','📸','✨']
-    },
-    cool: {
-        id: 'cool', label: 'かっこいい', emoji: '😎', icon: '⚡', color: '#4A90E2', rgb: '74,144,226', bg: 'rgba(74,144,226,0.18)', effects: ['🔥','⚡','😎']
-    },
-    dress: {
-        id: 'dress', label: 'これ着る', emoji: '👕', icon: '👗', color: '#FF4757', rgb: '255,71,87', bg: 'rgba(255,71,87,0.18)', effects: ['👗','🛍️','✨']
-    },
-    useful: {
-        id: 'useful', label: '役に立つ', emoji: '💡', icon: '✅', color: '#2ECC71', rgb: '46,204,113', bg: 'rgba(46,204,113,0.18)', effects: ['💡','✅','📝']
-    },
-    sense: {
-        id: 'sense', label: 'センス', emoji: '🎨', icon: '👑', color: '#F1C40F', rgb: '241,196,15', bg: 'rgba(241,196,15,0.18)', effects: ['🎨','👑','🌟']
-    },
-    cute: {
-        id: 'cute', label: 'かわいい', emoji: '💖', icon: '🎀', color: '#FF80AB', rgb: '255,128,171', bg: 'rgba(255,128,171,0.18)', effects: ['💖','🎀','🌸']
-    },
-};
-
+const REACTION_THEME_MASTER = WOW_CONSTANTS.REACTION_THEME_MASTER;
 const NEW_REACTIONS = Object.values(REACTION_THEME_MASTER);
 
 // 扇形オフセット (px) — 6ボタンを弧状に配置

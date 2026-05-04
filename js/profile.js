@@ -705,36 +705,18 @@ function addProfileTag(btn, type) {
     
     if(type === 'material') {
         title = '素材の好みを追加';
-        options = ['コットン', 'リネン', 'シルク', 'カシミヤ', 'カーフスキン', 'スエード', 'デニム', 'ツイード', 'サテン', 'アクリル', 'ポリエステル', 'ナイロン', 'ウール', 'レーヨン', '麻', '本革', 'スウェット'];
+        options = WOW_CONSTANTS.PROFILE_OPTIONS.materials;
     } else if(type === 'inspiration') {
         title = 'インスピレーションを選択';
         className = 'px-3 py-1.5 rounded-full bg-black/80 dark:bg-white/80 text-white dark:text-slate-900 font-bold text-[10px] flex items-center gap-1 shadow-sm';
-        options = ['Steve McQueen', 'Audrey Hepburn', 'City Boy', 'Minimalist', 'K-Pop Style', 'French Chic', 'Quiet Luxury', 'Techwear'];
+        options = WOW_CONSTANTS.PROFILE_OPTIONS.inspirations;
     } else if(type === 'brand') {
         title = 'レギュラーブランドを選択';
         className = 'px-3 py-1.5 rounded-lg bg-white/80 dark:bg-slate-700 border border-black/5 dark:border-white/10 text-on-surface dark:text-white font-bold text-[10px] shadow-sm flex items-center gap-1';
-        options = ['Ralph Lauren', 'Jil Sander', 'AURALEE', 'COMOLI', 'ZARA', 'H&M', 'Maison Margiela', 'Prada', 'GU', 'THE NORTH FACE'];
+        options = WOW_CONSTANTS.PROFILE_OPTIONS.brands;
     } else if(type === 'color-pref') {
         title = '好きな色を追加';
-        options = [
-            { name: 'ホワイト', color: '#FFFFFF' },
-            { name: 'ブラック', color: '#000000' },
-            { name: 'グレー', color: '#808080' },
-            { name: 'ネイビー', color: '#000080' },
-            { name: 'ベージュ', color: '#F5F5DC' },
-            { name: 'ブラウン', color: '#8B4513' },
-            { name: 'カーキ', color: '#F0E68C' },
-            { name: 'オリーブ', color: '#808000' },
-            { name: 'レッド', color: '#FF0000' },
-            { name: 'ブルー', color: '#0000FF' },
-            { name: 'グリーン', color: '#008000' },
-            { name: 'イエロー', color: '#FFFF00' },
-            { name: 'オレンジ', color: '#FFA500' },
-            { name: 'ピンク', color: '#FFC0CB' },
-            { name: 'サックスブルー', color: '#7BA6D5' },
-            { name: 'ラベンダー', color: '#E6E6FA' },
-            { name: 'ミント', color: '#98FFED' }
-        ];
+        options = WOW_CONSTANTS.PROFILE_OPTIONS.favoriteColors;
     }
 
     // カスタムモーダル作成

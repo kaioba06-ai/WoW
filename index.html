@@ -7,41 +7,14 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#0060ad",
-                        "on-primary": "#f8f8ff",
-                        "secondary": "#426751",
-                        "on-secondary": "#e7ffed",
-                        "tertiary": "#8a4f46",
-                        "on-tertiary": "#fff7f6",
-                        "on-surface": "#173355",
-                        "on-surface-variant": "#466084",
-                        "surface-container-low": "#eff3ff",
-                        "surface-container-high": "#dde9ff",
-                        "surface-container-highest": "#d4e3ff",
-                        "surface-container-lowest": "#ffffff/80",
-                    },
-                    fontFamily: {
-                        "headline": ["Plus Jakarta Sans", "Noto Sans JP", "sans-serif"],
-                        "body": ["Manrope", "Noto Sans JP", "sans-serif"],
-                    },
-                    borderRadius: {"DEFAULT": "0.25rem", "lg": "1rem", "xl": "1.5rem", "2xl": "2.5rem", "full": "9999px"},
-                },
-            },
-        }
-    </script>
+    <script src="js/config.js?v=1"></script>
+    <script src="js/constants.js?v=1"></script>
+    <script src="js/utils.js?v=1"></script>
     <link rel="stylesheet" href="styles.css"/>
     <!-- Vue.js -->
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Modular Scripts -->
-    <script src="js/config.js?v=1"></script>
     <script src="js/app.js?v=6" defer></script>
     <script src="js/ui.js?v=6" defer></script>
     <script src="js/outfits.js?v=1" defer></script>
@@ -152,10 +125,8 @@
 
     <!-- Supabase Client Initialization -->
     <script>
-        const SUPABASE_URL = 'https://bjqfmfiqzmwezlkjbgfn.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_Olj5M55D1DnHjua7UZkHHA_u49S6Z2O';
         const { createClient } = window.supabase;
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabase = createClient(WOW_CONFIG.supabase.url, WOW_CONFIG.supabase.anonKey);
 
         async function initializeAuth() {
             const { data, error } = await supabase.auth.getSession();

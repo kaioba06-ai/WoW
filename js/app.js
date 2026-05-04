@@ -1,21 +1,8 @@
 // ===== 共有データ・定数・ユーティリティ =====
 
 // シーンパス設定
-const paths = {
-    default: 'none',
-    office: 'url("assets/backgrounds/office.png")',
-    park:   'url("assets/backgrounds/park.png")',
-    beach:  'url("assets/backgrounds/beach.jpg")',
-    room:   'url("assets/backgrounds/room.jpg")',
-};
-
-const sceneLabels = {
-    default: 'Standard',
-    office:  'オフィス街',
-    park:    '公園',
-    beach:   '海辺の観光地',
-    room:    '白い部屋',
-};
+const paths = WOW_CONSTANTS.SCENE_PATHS;
+const sceneLabels = WOW_CONSTANTS.SCENE_LABELS;
 
 let currentScene = 'default';
 
@@ -37,25 +24,18 @@ let closetSelectedColorName = '';
 let currentFilter = 'all';
 let editingItemId = null;
 
-const CATEGORY_LABELS = { tops:'トップス', bottoms:'ボトムス', outer:'アウター', shoes:'シューズ', bag:'バッグ', other:'その他' };
-const CATEGORY_ICONS  = { tops:'apparel', bottoms:'accessibility_new', outer:'dry_cleaning', shoes:'steps', bag:'shopping_bag', other:'more_horiz' };
+const CATEGORY_LABELS = WOW_CONSTANTS.CATEGORY_LABELS;
+const CATEGORY_ICONS  = WOW_CONSTANTS.CATEGORY_ICONS;
 
 // 4. トースト通知UI (Overriding alert globally for elegance)
-window.originalAlert = window.alert;
 window.alert = function(msg) {
-    if(navigator.vibrate) navigator.vibrate([15]);
-    const t = document.createElement('div');
-    t.className = `toast-notif fixed bottom-32 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-5 py-3 rounded-full shadow-2xl z-[100] text-[12px] font-bold flex items-center gap-2 whitespace-nowrap border border-white/10`;
-    t.innerHTML = `<span class="material-symbols-outlined text-[16px]">info</span> ${msg}`;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 3000);
+    if (window.WowUtils && window.WowUtils.showToast) {
+        window.WowUtils.showToast(msg);
+    } else {
+        console.log('Toast:', msg);
+    }
 };
 
-// 15. エラーシェイク
-function shakeElement(el) {
-    el.classList.add('shake-err');
-    setTimeout(()=> el.classList.remove('shake-err'), 600);
-}
 
 // 曜日ラベル
 const DAY_NAMES = ['日','月','火','水','木','金','土'];
