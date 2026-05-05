@@ -85,8 +85,10 @@ function syncProfileData(data) {
       sheet.getRange(6, 2).setValue(imageUrl);   // B6: 画像リンク
       logDebug('Image Generation Success', imageUrl);
     } catch (imgErr) {
+      var errorTime = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
       sheet.getRange(5, 1).setValue("画像生成エラー");
-      sheet.getRange(6, 1).setValue(imgErr.toString());
+      sheet.getRange(6, 1).setValue(errorTime);   // A6: エラー発生時刻
+      sheet.getRange(6, 2).setValue(imgErr.toString()); // B6: エラー内容
       logDebug('Image Generation Error', imgErr.toString());
     }
     
@@ -97,39 +99,71 @@ function syncProfileData(data) {
 }
 
 /**
- * AI画像生成API（Imagen 4.0）を呼び出し
+ * 初期設定用：実行するとAPIキーを自動的にスクリプトプロパティに保存します
+ * GASエディタ上でこの関数を選択して「実行」してください
+ */
+function setupApiKeys() {
+  var scriptProperties = PropertiesService.getScriptProperties();
+  
+  // あなたが発行した新しいAPIキーを設定（AIzaから始まるキー）
+  scriptProperties.setProperty('GOOGLE_API_KEY', 'AIzaSyDIlDBKtxhi5OtrgmKjP3TIkMicWSLET0s');
+  
+  // Webhook認証用のキー（固定）
+  scriptProperties.setProperty('SYNC_API_KEY', 'kion_sync_99');
+  
+  console.log('APIキーの設定が完了しました。');
+}
+
+/**
+ * AI画像生成API（Imagen 3.0）を呼び出し
  */
 function generateAvatarImage(prompt) {
-  // APIキーをスクリプトプロパティから取得
   var API_KEY = PropertiesService.getScriptProperties().getProperty('GOOGLE_API_KEY');
   
   if (!API_KEY) {
+    logDebug('Error', 'API_KEY is NULL in PropertiesService');
     throw new Error("API_KEY is not set in Script Properties (GOOGLE_API_KEY)");
   }
   
-  // 2026年5月時点の最新エンドポイント
-  var url = "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict";
+  logDebug('System Check', 'API_KEY length: ' + API_KEY.length + ' chars. Starts with: ' + API_KEY.substring(0, 4));
+
+  // 検証済み：あなたの環境で動作が確認されたモデル
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=" + API_KEY;
   
   var payload = {
-    "instances": [{ "prompt": prompt }],
-    "parameters": { 
+    "instances": [
+      {
+        "prompt": prompt
+      }
+    ],
+    "parameters": {
       "sampleCount": 1,
-      "aspectRatio": "1:1"
+      "aspectRatio": "1:1",
+      "outputMimeType": "image/png"
     }
   };
   
   var options = {
     "method": "post",
     "contentType": "application/json",
-    "headers": {
-      "x-goog-api-key": API_KEY
-    },
     "payload": JSON.stringify(payload),
     "muteHttpExceptions": true
   };
   
+  logDebug('API Call Start', 'Model: imagen-4.0-generate-001');
   var response = UrlFetchApp.fetch(url, options);
-  var json = JSON.parse(response.getContentText());
+  var responseCode = response.getResponseCode();
+  var responseText = response.getContentText();
+  
+  logDebug('API Response Received', 'Code: ' + responseCode);
+  
+  var json;
+  try {
+    json = JSON.parse(responseText);
+  } catch(e) {
+    logDebug('JSON Parse Error', responseText);
+    throw new Error("Invalid JSON response from API");
+  }
   
   if (json.predictions && json.predictions.length > 0) {
     var base64Image = json.predictions[0].bytesBase64Encoded;
@@ -144,7 +178,8 @@ function generateAvatarImage(prompt) {
     
     return file.getUrl();
   } else {
-    throw new Error("Image Generation Failed: " + (json.error ? json.error.message : response.getContentText()));
+    logDebug('API Response Error', responseText);
+    throw new Error("Image Generation Failed: " + (json.error ? json.error.message : responseText));
   }
 }
 
