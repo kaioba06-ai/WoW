@@ -367,24 +367,15 @@ function removeProfilePhoto() {
     document.getElementById('profile-photo-input').value = '';
 }
 
+/**
+ * プロフィール編集の保存と同期
+ * スプレッドシート（GAS）への自動抽出を優先します
+ */
 function saveProfileEdit(e) {
-    console.log('[SyncDebug] saveProfileEdit triggered');
+    console.log('[Sync] Starting Spreadsheet sync...');
     try {
         const saved = JSON.parse(localStorage.getItem('kion_profile') || '{}');
-        const nameInput = document.getElementById('profile-edit-name');
-        const handleInput = document.getElementById('profile-edit-handle');
-        const bioInput = document.getElementById('profile-edit-bio');
-        
-        const name  = nameInput ? nameInput.value.trim() : (saved.name || 'Alessandro Riva');
-        const handle = handleInput ? handleInput.value.trim().replace(/^@/, '') : (saved.handle || 'alessandro_riva');
-        const bio   = bioInput ? bioInput.value.trim() : (saved.bio || '');
-
-        const birthY = document.getElementById('profile-edit-birth-y')?.value || '';
-        const birthM = document.getElementById('profile-edit-birth-m')?.value || '';
-        const birthD = document.getElementById('profile-edit-birth-d')?.value || '';
-        const birthday = { y: birthY, m: birthM, d: birthD };
-
-        // 値とラベルの両方を取得するヘルパー
+        const getVal = (id) => document.getElementById(id)?.value || '';
         const getSelected = (group) => {
             const btn = document.querySelector(`.profile-opt-${group}[data-active="true"]`);
             if (!btn) return { value: '', label: '' };
@@ -394,25 +385,30 @@ function saveProfileEdit(e) {
             };
         };
 
-        const birthdayVisibility = document.querySelector('.birth-v-btn[data-active="true"]')?.id.replace('birth-v-', '') || 'public';
+        // フォームデータの収集
+        saved.name = getVal('profile-edit-name') || saved.name;
+        saved.handle = getVal('profile-edit-handle').replace(/^@/, '') || saved.handle;
+        saved.bio = getVal('profile-edit-bio') || saved.bio;
+        saved.birthday = {
+            y: getVal('profile-edit-birth-y'),
+            m: getVal('profile-edit-birth-m'),
+            d: getVal('profile-edit-birth-d')
+        };
+        saved.birthday_visibility = document.querySelector('.birth-v-btn[data-active="true"]')?.id.replace('birth-v-', '') || 'public';
 
-        // パーソナライズ項目を収集
-        const personalize = {
-            // 内部的には value (ID) を優先保存するが、後でエクスポート時に label を使う
-            gender: getSelected('gender').value,
-            gender_label: getSelected('gender').label,
+        saved.personalize = {
+            gender: 'mens',
+            gender_label: 'メンズ',
             temp_sensitivity: document.getElementById('temp-label')?.innerText?.trim() || '普通',
-            rain_sensitivity: document.getElementById('rain-label')?.innerText?.trim() || '普通',
-            fit_upper: getSelected('fit-upper').value,
-            fit_upper_label: getSelected('fit-upper').label,
-            fit_lower: getSelected('fit-lower').value,
-            fit_lower_label: getSelected('fit-lower').label,
-
+            rain_sensitivity: '普通',
+            fit_upper: 'regular',
+            fit_upper_label: 'レギュラー',
+            fit_lower: 'regular',
+            fit_lower_label: 'レギュラー',
             skeletal_type: getSelected('body-skeletal').value,
             skeletal_type_label: getSelected('body-skeletal').label,
             skin_tone: getSelected('skin-tone').value,
             skin_tone_label: getSelected('skin-tone').label,
-
             face_shape: getSelected('face-shape').value,
             face_shape_label: getSelected('face-shape').label,
             body_gender: getSelected('body-gender').value,
@@ -423,135 +419,58 @@ function saveProfileEdit(e) {
             hair_style_label: getSelected('hair-style').label,
             hair_color: getSelected('hair-color').value,
             hair_color_label: getSelected('hair-color').label,
-            // 年代 (select)
-            body_age: document.getElementById('body-age')?.value || '',
+            body_age: getVal('body-age'),
             body_age_label: document.getElementById('body-age')?.options[document.getElementById('body-age')?.selectedIndex]?.text || '',
-            // タグ類
             scene_tags: Array.from(document.querySelectorAll('.profile-opt-scenes[data-active="true"]')).map(t => t.innerText.trim()),
         };
 
-        if(_profilePhotoPending === '__remove__') {
-            saved.photo = null;
-        } else if(_profilePhotoPending) {
-            saved.photo = _profilePhotoPending;
-        }
-        saved.name = name;
-        saved.handle = handle;
-        saved.bio  = bio;
-        saved.birthday = birthday;
-        saved.birthday_visibility = birthdayVisibility;
-        saved.personalize = personalize;
-
-        // 身体データを保存対象に追加（数値として確実に取得）
         const getNum = (id) => document.getElementById(id)?.value || '';
-        saved.height = getNum('settings-height');
-        saved.weight = getNum('settings-weight');
-        saved.shoulder = getNum('settings-shoulder');
-        saved.chest = getNum('settings-chest');
-        saved.neck = getNum('settings-neck');
-        saved.sleeve = getNum('settings-sleeve');
-        saved.belly = getNum('settings-belly');
-        saved.waist = getNum('settings-waist');
-        saved.hip = getNum('settings-hip');
-        saved.inseam = getNum('settings-inseam');
-        saved.thigh = getNum('settings-thigh');
-        saved.shoes = getNum('settings-shoes');
-        saved.wrist = getNum('settings-wrist');
+        const fields = ['height','weight','shoulder','chest','neck','sleeve','belly','waist','hip','inseam','thigh','shoes','wrist'];
+        fields.forEach(f => saved[f] = getNum(`settings-${f}`));
 
+        // LocalStorageに保存
         localStorage.setItem('kion_profile', JSON.stringify(saved));
-        console.log('[SyncDebug] Local save complete.');
+        applyProfileDisplay(saved);
 
-        // バックグラウンド同期 (カテゴリー 3, 4, 5: 体格・採寸・外見)
-        try {
-            const syncData = {
-                user_id: saved.handle || 'unknown',
-                body_gender: saved.personalize?.body_gender_label || '',
-                body_age: saved.personalize?.body_age_label || '',
-                height: saved.height,
-                weight: saved.weight,
-                body_type: saved.personalize?.body_type_label || '',
-                skeletal_type: saved.personalize?.skeletal_type_label || '',
-                shoulder: saved.shoulder,
-                chest: saved.chest,
-                neck: saved.neck,
-                sleeve: saved.sleeve,
-                belly: saved.belly,
-                waist: saved.waist,
-                hip: saved.hip,
-                inseam: saved.inseam,
-                thigh: saved.thigh,
-                shoes: saved.shoes,
-                wrist: saved.wrist,
-                skin_tone: saved.personalize?.skin_tone_label || '',
-                face_shape: saved.personalize?.face_shape_label || '',
-                hair_style: saved.personalize?.hair_style_label || '',
-                hair_color: saved.personalize?.hair_color_label || ''
-            };
-            console.log('[SyncDebug] Data prepared:', syncData);
+        // クラウド(GAS/スプレッドシート)への同期データ
+        const syncData = {
+            user_id: saved.handle || 'unknown',
+            body_gender: saved.personalize?.body_gender_label || '',
+            body_age: saved.personalize?.body_age_label || '',
+            height: saved.height, weight: saved.weight,
+            body_type: saved.personalize?.body_type_label || '',
+            skeletal_type: saved.personalize?.skeletal_type_label || '',
+            shoulder: saved.shoulder, chest: saved.chest, neck: saved.neck, sleeve: saved.sleeve,
+            belly: saved.belly, waist: saved.waist, hip: saved.hip, inseam: saved.inseam, thigh: saved.thigh,
+            shoes: saved.shoes, wrist: saved.wrist,
+            skin_tone: saved.personalize?.skin_tone_label || '',
+            face_shape: saved.personalize?.face_shape_label || '',
+            hair_style: saved.personalize?.hair_style_label || '',
+            hair_color: saved.personalize?.hair_color_label || ''
+        };
 
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                console.log('[SyncDebug] Environment: GAS. Calling syncProfileData...');
-                google.script.run
-                    .withSuccessHandler(res => console.log('[SyncDebug] GAS Success:', res))
-                    .withFailureHandler(err => console.error('[SyncDebug] GAS Failure:', err))
-                    .syncProfileData(syncData);
-            } else if (typeof WOW_CONFIG !== 'undefined' && WOW_CONFIG.cloudUrl) {
-                console.log('[SyncDebug] Environment: Local. Fetching via text/plain to bypass CORS...');
-                const payload = JSON.stringify({
-                    apiKey: WOW_CONFIG.apiKey,
-                    data: syncData
-                });
-                fetch(WOW_CONFIG.cloudUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: payload
-                })
-                .then(() => console.log('[SyncDebug] Fetch request dispatched.'))
-                .catch(err => console.error('[SyncDebug] Fetch error:', err));
-            } else {
-                console.warn('[SyncDebug] No sync environment or URL found.');
-            }
-        } catch (syncErr) {
-            console.error('[SyncDebug] Error during sync preparation:', syncErr);
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run.syncProfileData(syncData);
+        } else if (typeof WOW_CONFIG !== 'undefined' && WOW_CONFIG.cloudUrl) {
+            const payload = JSON.stringify({ apiKey: WOW_CONFIG.apiKey, data: syncData });
+            fetch(WOW_CONFIG.cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload });
         }
 
-        applyProfileDisplay(saved);
-        _profilePhotoPending = null;
-
-        // 保存された設定を即座に提案ロジックに反映させる
         if (typeof window.refreshWeatherUI === 'function') {
             window.refreshWeatherUI();
         }
 
-        // 保存完了のポップアップ
-        if (typeof window.showToast === 'function') {
-            window.showToast('設定を保存しました');
-        }
-
-        // 保存完了のフィードバック（必要に応じて）
-        const eventObj = e || window.event;
-        const btn = eventObj?.target || document.querySelector('button[onclick*="saveProfileEdit"]');
-        if (btn && btn.id !== 'profile-edit-name' && btn.id !== 'profile-edit-handle') {
-            // 自動保存の場合はメインのボタンにフィードバックを出す
-            const saveBtn = document.querySelector('button[onclick*="saveProfileEdit"]');
-            if (saveBtn) {
-                const orig = saveBtn.textContent;
-                if (!orig.includes('✓')) {
-                    saveBtn.innerHTML = '<span class="material-symbols-outlined text-sm">done</span> 保存済み';
-                    saveBtn.classList.add('bg-green-500', 'dark:bg-green-500');
-                    saveBtn.classList.remove('bg-primary', 'dark:bg-blue-500');
-                    setTimeout(() => {
-                        saveBtn.textContent = '完了';
-                        saveBtn.classList.remove('bg-green-500', 'dark:bg-green-500');
-                        saveBtn.classList.add('bg-primary', 'dark:bg-blue-500');
-                    }, 1200);
-                }
-            }
-        }
+        // 通知やボタンのフィードバックをすべて削除
     } catch (err) {
         console.error('[Profile] Save Error:', err);
     }
+}
+
+/**
+ * 入力中の自動保存（内部用）
+ */
+function debouncedSaveProfile() {
+    saveProfileEdit();
 }
 
 // ===== 過去の投稿ギャラリー =====

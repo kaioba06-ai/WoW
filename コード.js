@@ -106,7 +106,7 @@ function setupApiKeys() {
   var scriptProperties = PropertiesService.getScriptProperties();
   
   // あなたが発行した新しいAPIキーを設定（AIzaから始まるキー）
-  scriptProperties.setProperty('GOOGLE_API_KEY', 'AIzaSyDIlDBKtxhi5OtrgmKjP3TIkMicWSLET0s');
+  scriptProperties.setProperty('GOOGLE_API_KEY', 'AIzaSyAvxpLcKQUZvhowaoHvJFhCKMGvv-tGVyk');
   
   // Webhook認証用のキー（固定）
   scriptProperties.setProperty('SYNC_API_KEY', 'kion_sync_99');

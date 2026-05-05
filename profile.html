@@ -246,75 +246,26 @@
                     </h4>
                     
                     <div id="personalize-settings-content" class="hidden wow-settings-card space-y-6">
-                        <!-- 0. スタイル（性別） -->
-                        <div class="space-y-3">
-                            <label class="font-headline font-bold flex items-center gap-2 text-[11px] text-on-surface-variant dark:text-white/60">
-                                <span class="material-symbols-outlined text-base">wc</span>対象スタイル
-                            </label>
-                            <div class="segmented-control">
-                                <button onclick="selectProfileOption(this, 'gender')" class="profile-opt-gender segmented-control-btn" data-active="false" data-value="mens">メンズ</button>
-                                <button onclick="selectProfileOption(this, 'gender')" class="profile-opt-gender segmented-control-btn" data-active="false" data-value="ladies">レディース</button>
-                                <button onclick="selectProfileOption(this, 'gender')" class="profile-opt-gender segmented-control-btn" data-active="true" data-value="none">こだわらない</button>
-                            </div>
-                        </div>
 
-                        <div class="w-full h-[1px] bg-black/5 dark:bg-white/5"></div>
-
-                        <!-- 1. 暑がり/寒がり & 天候警戒度 -->
+                        <!-- 1. 暑がり/寒がり -->
                         <div class="space-y-5">
                             <label class="font-headline font-bold flex items-center gap-2 text-[11px] text-on-surface-variant dark:text-white/60">
-                                <span class="material-symbols-outlined text-base">thermostat</span>気温・天候への感度
+                                <span class="material-symbols-outlined text-base">thermostat</span>気温への感度
                             </label>
                             
                             <div class="space-y-1">
                                 <div class="flex justify-between items-center mb-1">
                                     <span class="text-[9px] font-bold dark:text-white">暑がり / 寒がり</span>
-                                    <span id="temp-label" class="bg-primary/10 dark:bg-blue-400/20 text-primary dark:text-blue-300 px-2.5 py-0.5 rounded text-[8px] font-bold">寒がり</span>
+                                    <span id="temp-label" class="bg-primary/10 dark:bg-blue-400/20 text-primary dark:text-blue-300 px-2.5 py-0.5 rounded text-[8px] font-bold">普通</span>
                                 </div>
-                                <input class="w-full h-1 bg-black/10 dark:bg-slate-700 rounded-full appearance-none cursor-pointer accent-primary dark:accent-blue-400" max="5" min="1" step="1" type="range" value="2" onchange="saveProfileEdit()" oninput="document.getElementById('temp-label').innerText = ['極度の寒がり','寒がり','普通','暑がり','極度の暑がり'][this.value-1]"/>
+                                <input id="settings-temp-sensitivity" class="w-full h-1 bg-black/10 dark:bg-slate-700 rounded-full appearance-none cursor-pointer accent-primary dark:accent-blue-400" max="5" min="1" step="1" type="range" value="3" onchange="saveProfileEdit()" oninput="document.getElementById('temp-label').innerText = ['極度の寒がり','寒がり','普通','暑がり','極度の暑がり'][this.value-1]"/>
                                 <div class="flex justify-between text-[7px] font-bold text-on-surface-variant dark:text-white/40 px-1 pt-1 opacity-70">
                                     <span>寒がり</span><span>暑がり</span>
                                 </div>
                             </div>
-
-                            <div class="space-y-1 mt-4">
-                                <div class="flex justify-between items-center mb-1">
-                                    <span class="text-[9px] font-bold dark:text-white">雨・汚れへの警戒度</span>
-                                    <span id="rain-label" class="bg-primary/10 dark:bg-blue-400/20 text-primary dark:text-blue-300 px-2.5 py-0.5 rounded text-[8px] font-bold">小雨でも防水優先</span>
-                                </div>
-                                <input class="w-full h-1 bg-black/10 dark:bg-slate-700 rounded-full appearance-none cursor-pointer accent-primary dark:accent-blue-400" max="3" min="1" step="1" type="range" value="3" onchange="saveProfileEdit()" oninput="document.getElementById('rain-label').innerText = ['気にしない（デザイン重視）','普通','小雨でも防水優先'][this.value-1]"/>
-                                <div class="flex justify-between text-[7px] font-bold text-on-surface-variant dark:text-white/40 px-1 pt-1 opacity-70">
-                                    <span>気にしない</span><span>水濡れ絶対NG</span>
-                                </div>
-                            </div>
                         </div>
-
-                        <div class="w-full h-[1px] bg-black/5 dark:bg-white/5 my-1"></div>
                         
-                        <!-- 3. 好みのサイズ感・シルエット -->
-                        <div class="space-y-4">
-                            <label class="font-headline font-bold flex items-center gap-2 text-[11px] text-on-surface-variant dark:text-white/60">
-                                <span class="material-symbols-outlined text-base">straighten</span>好みのサイズ感
-                            </label>
-                            <div class="space-y-3">
-                                <div class="space-y-2">
-                                    <span class="text-[8px] font-bold text-on-surface-variant/70 dark:text-white/40 flex items-center gap-1 uppercase tracking-wider">上半身</span>
-                                    <div class="segmented-control">
-                                        <button onclick="selectProfileOption(this, 'fit-upper')" class="profile-opt-fit-upper segmented-control-btn" data-active="false">タイト</button>
-                                        <button onclick="selectProfileOption(this, 'fit-upper')" class="profile-opt-fit-upper segmented-control-btn" data-active="true">レギュラー</button>
-                                        <button onclick="selectProfileOption(this, 'fit-upper')" class="profile-opt-fit-upper segmented-control-btn" data-active="false">オーバー</button>
-                                    </div>
-                                </div>
-                                <div class="space-y-2">
-                                    <span class="text-[8px] font-bold text-on-surface-variant/70 dark:text-white/40 flex items-center gap-1 uppercase tracking-wider">下半身</span>
-                                    <div class="segmented-control">
-                                        <button onclick="selectProfileOption(this, 'fit-lower')" class="profile-opt-fit-lower segmented-control-btn" data-active="false">タイト</button>
-                                        <button onclick="selectProfileOption(this, 'fit-lower')" class="profile-opt-fit-lower segmented-control-btn" data-active="true">レギュラー</button>
-                                        <button onclick="selectProfileOption(this, 'fit-lower')" class="profile-opt-fit-lower segmented-control-btn" data-active="false">オーバー</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+
                     </div>
                 </section>
 
