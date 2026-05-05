@@ -126,11 +126,12 @@
     <!-- Supabase Client Initialization & 認証ガード -->
     <script>
         const { createClient } = window.supabase;
-        const supabase = createClient(WOW_CONFIG.supabase.url, WOW_CONFIG.supabase.anonKey);
+        // クライアントをグローバルに公開（他スクリプトからアクセスできるように）
+        window.supabaseClient = createClient(WOW_CONFIG.supabase.url, WOW_CONFIG.supabase.anonKey);
 
         // ===== 認証ガード：未ログインなら login.html へリダイレクト =====
         async function checkAuthGuard() {
-            const { data, error } = await supabase.auth.getSession();
+            const { data, error } = await window.supabaseClient.auth.getSession();
             if (error) {
                 console.error('Session error:', error);
                 return;
@@ -149,7 +150,7 @@
         window.logout = async function() {
             const confirmed = confirm('ログアウトしますか？');
             if (!confirmed) return;
-            const { error } = await supabase.auth.signOut();
+            const { error } = await window.supabaseClient.auth.signOut();
             if (error) {
                 console.error('Logout error:', error);
                 alert('ログアウトに失敗しました。');

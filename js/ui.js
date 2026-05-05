@@ -220,7 +220,31 @@ function initDragScroll() {
 // 初期化
 window.addEventListener('sectionsLoaded', () => {
     console.log('[UI] sectionsLoaded event received. Starting page layout setup...');
-    
+
+    // ===== ログアウトボタンにイベントリスナーを設定 =====
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            const confirmed = confirm('ログアウトしますか？');
+            if (!confirmed) return;
+            try {
+                if (window.supabaseClient) {
+                    const { error } = await window.supabaseClient.auth.signOut();
+                    if (error) {
+                        console.error('Logout error:', error);
+                        alert('ログアウトに失敗しました。');
+                        return;
+                    }
+                }
+                window.location.href = 'login.html';
+            } catch (err) {
+                console.error('Logout unexpected error:', err);
+                alert('ログアウトに失敗しました。');
+            }
+        });
+        console.log('[UI] Logout button listener attached');
+    }
+
     // 最後にいたページを復元 (hash > localStorage > home)
     const hash = window.location.hash.replace('#', '');
     const savedTab = localStorage.getItem('kion_current_tab');
