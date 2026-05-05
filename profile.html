@@ -1,6 +1,9 @@
     <section id="page-profile" class="page-section hidden-section pb-32 space-y-6">
         <div class="relative flex items-center gap-5 px-2">
-            <div class="absolute top-2 right-2 z-10">
+            <div class="absolute top-2 right-2 z-10 flex gap-2">
+                <button id="header-cloud-sync-btn" onclick="sendToCloud()" class="w-10 h-10 rounded-full bg-white/40 dark:bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm active:scale-90 transition-transform group">
+                    <span class="material-symbols-outlined text-primary dark:text-blue-400">cloud_sync</span>
+                </button>
                 <button onclick="openSettingsModal()" class="w-10 h-10 rounded-full bg-white/40 dark:bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm active:scale-90 transition-transform group">
                     <span class="material-symbols-outlined text-on-surface-variant dark:text-white/70 group-hover:rotate-45 transition-transform duration-500">settings</span>
                 </button>
@@ -438,11 +441,16 @@
                                 <!-- 年代 (新項目) -->
                                 <div class="space-y-2">
                                     <label class="wow-label !text-[10px]">年代</label>
-                                    <div class="segmented-control">
-                                        <button onclick="selectProfileOption(this, 'body-age')" class="profile-opt-body-age segmented-control-btn" data-active="true">20s</button>
-                                        <button onclick="selectProfileOption(this, 'body-age')" class="profile-opt-body-age segmented-control-btn" data-active="false">30s</button>
-                                        <button onclick="selectProfileOption(this, 'body-age')" class="profile-opt-body-age segmented-control-btn" data-active="false">40s+</button>
-                                    </div>
+                                    <select id="body-age" onchange="debouncedSaveProfile()" class="w-full bg-surface-container-low dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all cursor-pointer">
+                                        <option value="10s">10代</option>
+                                        <option value="20s" selected>20代</option>
+                                        <option value="30s">30代</option>
+                                        <option value="40s">40代</option>
+                                        <option value="50s">50代</option>
+                                        <option value="60s">60代</option>
+                                        <option value="70s">70代</option>
+                                        <option value="80s">80代</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -508,16 +516,7 @@
                                 </div>
                             </div>
 
-                            <!-- 系統・ルーツ -->
-                            <div class="space-y-2">
-                                <label class="wow-label !text-[10px]">系統・ルーツ</label>
-                                <div class="segmented-control flex-wrap">
-                                    <button onclick="selectProfileOption(this, 'roots')" class="profile-opt-roots segmented-control-btn" data-active="false" data-value="east-asian">東アジア</button>
-                                    <button onclick="selectProfileOption(this, 'roots')" class="profile-opt-roots segmented-control-btn" data-active="false" data-value="nordic">北欧系</button>
-                                    <button onclick="selectProfileOption(this, 'roots')" class="profile-opt-roots segmented-control-btn" data-active="false" data-value="mediterranean">地中海系</button>
-                                    <button onclick="selectProfileOption(this, 'roots')" class="profile-opt-roots segmented-control-btn" data-active="true" data-value="mixed">その他</button>
-                                </div>
-                            </div>
+
 
                             <!-- 顔の形 -->
                             <div class="space-y-2">
@@ -555,18 +554,7 @@
                                     </div>
                                 </div>
                                 
-                                <!-- 目の色 -->
-                                <div class="space-y-2">
-                                    <label class="wow-label !text-[10px]">目の色</label>
-                                    <div class="segmented-control flex-wrap">
-                                        <button onclick="selectProfileOption(this, 'eye-color')" class="profile-opt-eye-color segmented-control-btn" data-active="true" data-value="black" data-label="ブラック">ブラック</button>
-                                        <button onclick="selectProfileOption(this, 'eye-color')" class="profile-opt-eye-color segmented-control-btn" data-active="false" data-value="dark-brown" data-label="ダークブラウン">ダークブラウン</button>
-                                        <button onclick="selectProfileOption(this, 'eye-color')" class="profile-opt-eye-color segmented-control-btn" data-active="false" data-value="brown" data-label="ブラウン">ブラウン</button>
-                                        <button onclick="selectProfileOption(this, 'eye-color')" class="profile-opt-eye-color segmented-control-btn" data-active="false" data-value="blue" data-label="ブルー">ブルー</button>
-                                        <button onclick="selectProfileOption(this, 'eye-color')" class="profile-opt-eye-color segmented-control-btn" data-active="false" data-value="green" data-label="グリーン">グリーン</button>
-                                        <button onclick="selectProfileOption(this, 'eye-color')" class="profile-opt-eye-color segmented-control-btn" data-active="false" data-value="hazel" data-label="ヘーゼル">ヘーゼル</button>
-                                    </div>
-                                </div>
+
                             </div>
                         </div>
 
