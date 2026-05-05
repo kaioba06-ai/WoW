@@ -1,9 +1,6 @@
     <section id="page-profile" class="page-section hidden-section pb-32 space-y-6">
         <div class="relative flex items-center gap-5 px-2">
             <div class="absolute top-2 right-2 z-10 flex gap-2">
-                <button id="header-cloud-sync-btn" onclick="sendToCloud()" class="w-10 h-10 rounded-full bg-white/40 dark:bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm active:scale-90 transition-transform group">
-                    <span class="material-symbols-outlined text-primary dark:text-blue-400">cloud_sync</span>
-                </button>
                 <button onclick="openSettingsModal()" class="w-10 h-10 rounded-full bg-white/40 dark:bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/40 dark:border-white/10 shadow-sm active:scale-90 transition-transform group">
                     <span class="material-symbols-outlined text-on-surface-variant dark:text-white/70 group-hover:rotate-45 transition-transform duration-500">settings</span>
                 </button>
@@ -127,24 +124,13 @@
                 </div>
             </div>
             <div id="profile-posts-grid" class="grid grid-cols-2 gap-3 pb-8">
-                <div class="col-span-2 py-10 text-center opacity-30"><span class="material-symbols-outlined text-4xl">upload_file</span></div>
+                <!-- JSで動的に生成 -->
+                <div class="col-span-2 py-10 text-center opacity-10">
+                    <span class="material-symbols-outlined text-4xl">upload_file</span>
+                    <p class="text-[10px] mt-2 font-bold opacity-50">投稿がありません</p>
+                </div>
             </div>
         </section>
-    </section>                  <!-- JSで動的に生成 -->
-                    <div class="col-span-2 py-10 text-center animate-pulse">
-                        <span class="material-symbols-outlined text-4xl text-on-surface-variant/20 dark:text-white/10">upload_file</span>
-                        <p class="text-[11px] text-on-surface-variant/40 dark:text-white/30 mt-2 font-bold">投稿を読み込み中...</p>
-                    </div>
-                </div>
-            </section>
-
-
-
-
-
-
-
-        </div>
     </section>
 
     <!-- ===== プロフィール編集モーダル ===== -->
@@ -245,10 +231,7 @@
                         <button id="profile-remove-photo-btn" onclick="removeProfilePhoto()" class="w-full py-2 text-red-500 border border-red-200 dark:border-red-500/30 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 active:scale-[0.98] transition-transform hidden">
                             <span class="material-symbols-outlined text-[14px]">delete</span> プロフィール写真を削除
                         </button>
-                        <!-- 保存 -->
-                        <button onclick="saveProfileEdit(event); closeSettingsModal()" class="w-full bg-primary dark:bg-blue-500 text-white font-bold py-3 rounded-xl shadow active:scale-[0.98] transition-transform text-sm">
-                            完了
-                        </button>
+
                     </div>
                 </section>
 
@@ -306,41 +289,8 @@
                             </div>
                         </div>
 
-                        <div class="w-full h-[1px] bg-black/5 dark:bg-white/5"></div>
-
-                        <!-- 2. パーソナルカラー -->
-                        <div class="space-y-3">
-                            <label class="font-headline font-bold flex items-center gap-2 text-[11px] text-on-surface-variant dark:text-white/60">
-                                <span class="material-symbols-outlined text-base">palette</span>パーソナルカラー
-                            </label>
-                            <div class="segmented-control flex-wrap">
-                                <button onclick="selectProfileOption(this, 'color')" class="profile-opt-color segmented-control-btn" data-active="false" data-value="spring">イエベ春</button>
-                                <button onclick="selectProfileOption(this, 'color')" class="profile-opt-color segmented-control-btn" data-active="false" data-value="summer">ブルベ夏</button>
-                                <button onclick="selectProfileOption(this, 'color')" class="profile-opt-color segmented-control-btn" data-active="false" data-value="autumn">イエベ秋</button>
-                                <button onclick="selectProfileOption(this, 'color')" class="profile-opt-color segmented-control-btn" data-active="true" data-value="winter">ブルベ冬</button>
-                                <button onclick="selectProfileOption(this, 'color')" class="profile-opt-color segmented-control-btn" data-active="false" data-value="unknown">わからない</button>
-                            </div>
-                        </div>
+                        <div class="w-full h-[1px] bg-black/5 dark:bg-white/5 my-1"></div>
                         
-                        <div class="w-full h-[1px] bg-black/5 dark:bg-white/5"></div>
-
-                        <!-- 好きな色 -->
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <label class="font-headline font-bold flex items-center gap-2 text-[11px] text-on-surface-variant dark:text-white/60">
-                                    <span class="material-symbols-outlined text-base">colorize</span>好きな色
-                                </label>
-                                <button onclick="addProfileTag(this, 'color-pref')" class="text-[8px] font-bold text-primary dark:text-blue-400 flex items-center gap-0.5 hover:underline">
-                                    <span class="material-symbols-outlined text-[10px]">add</span> 追加
-                                </button>
-                            </div>
-                            <div id="profile-favorite-colors-container" class="flex flex-wrap gap-1.5 min-h-[1.5rem]">
-                                <!-- 選択された色がここに追加される -->
-                            </div>
-                        </div>
-
-                        <div class="w-full h-[1px] bg-black/5 dark:bg-white/5"></div>
-
                         <!-- 3. 好みのサイズ感・シルエット -->
                         <div class="space-y-4">
                             <label class="font-headline font-bold flex items-center gap-2 text-[11px] text-on-surface-variant dark:text-white/60">
@@ -363,54 +313,6 @@
                                         <button onclick="selectProfileOption(this, 'fit-lower')" class="profile-opt-fit-lower segmented-control-btn" data-active="false">オーバー</button>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="w-full h-[1px] bg-black/5 dark:bg-white/5"></div>
-
-                        <!-- 素材の好み -->
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <label class="font-headline font-bold flex items-center gap-2 text-[11px] text-on-surface-variant dark:text-white/60">
-                                    <span class="material-symbols-outlined text-base">texture</span>素材の好み
-                                </label>
-                                <button onclick="addProfileTag(this, 'material')" class="text-[8px] font-bold text-primary dark:text-blue-400 flex items-center gap-0.5 hover:underline">
-                                    <span class="material-symbols-outlined text-[10px]">add</span> 追加
-                                </button>
-                            </div>
-            <div class="profile-opt-material-tag-container flex flex-wrap gap-1.5 min-h-[1.5rem]">
-                                <!-- 素材タグがここに追加される -->
-                            </div>
-                        </div>
-
-                        <div class="w-full h-[1px] bg-black/5 dark:bg-white/5"></div>
-
-                        <!-- インスピレーション -->
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <label class="font-headline font-bold flex items-center gap-2 text-[11px] text-on-surface-variant dark:text-white/60">
-                                    <span class="material-symbols-outlined text-base">stars</span>インスピレーション
-                                </label>
-                                <button onclick="addProfileTag(this, 'inspiration')" class="text-[8px] font-bold text-primary dark:text-blue-400 flex items-center gap-0.5 hover:underline">
-                                    <span class="material-symbols-outlined text-[10px]">add</span> 追加
-                                </button>
-                            </div>
-                            <div class="profile-opt-inspiration-tag-container flex flex-wrap gap-1.5 min-h-[1.5rem]">
-                                <!-- インスピレーションタグがここに追加される -->
-                            </div>
-                        </div>
-
-                        <div class="w-full h-[1px] bg-black/5 dark:bg-white/5"></div>
-
-                        <!-- 予算感 -->
-                        <div class="space-y-3">
-                            <label class="font-headline font-bold flex items-center gap-2 text-[11px] text-on-surface-variant dark:text-white/60">
-                                <span class="material-symbols-outlined text-base">payments</span>予算感
-                            </label>
-                            <div class="segmented-control">
-                                <button onclick="selectProfileOption(this, 'budget')" class="profile-opt-budget segmented-control-btn" data-active="false" data-value="low" data-label="プチプラ">プチプラ</button>
-                                <button onclick="selectProfileOption(this, 'budget')" class="profile-opt-budget segmented-control-btn" data-active="true" data-value="mid" data-label="ミックス">ミックス</button>
-                                <button onclick="selectProfileOption(this, 'budget')" class="profile-opt-budget segmented-control-btn" data-active="false" data-value="high" data-label="ハイブランド">ハイブランド</button>
                             </div>
                         </div>
                     </div>
@@ -495,70 +397,7 @@
 
                         <div class="w-full h-[1px] bg-black/5 dark:bg-white/5 my-2"></div>
 
-                        <!-- 2. 肌・顔・髪 (アバター用) -->
-                        <div class="space-y-4">
-                            <!-- 肌の色 -->
-                            <div class="space-y-2">
-                                <label class="wow-label !text-[10px]">スキンカラー</label>
-                                <div class="segmented-control flex-wrap">
-                                    <button onclick="selectProfileOption(this, 'skin-tone')" class="profile-opt-skin-tone segmented-control-btn flex items-center gap-1.5" data-active="false" data-value="fair">
-                                        <span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #FFEDE4; border: 1px solid rgba(0,0,0,0.05)"></span>Fair
-                                    </button>
-                                    <button onclick="selectProfileOption(this, 'skin-tone')" class="profile-opt-skin-tone segmented-control-btn flex items-center gap-1.5" data-active="true" data-value="natural">
-                                        <span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #F7D3A2; border: 1px solid rgba(0,0,0,0.05)"></span>Natural
-                                    </button>
-                                    <button onclick="selectProfileOption(this, 'skin-tone')" class="profile-opt-skin-tone segmented-control-btn flex items-center gap-1.5" data-active="false" data-value="tan">
-                                        <span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #A67C52; border: 1px solid rgba(0,0,0,0.05)"></span>Tan
-                                    </button>
-                                    <button onclick="selectProfileOption(this, 'skin-tone')" class="profile-opt-skin-tone segmented-control-btn flex items-center gap-1.5" data-active="false" data-value="deep">
-                                        <span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #4A3228; border: 1px solid rgba(0,0,0,0.05)"></span>Deep
-                                    </button>
-                                </div>
-                            </div>
 
-
-
-                            <!-- 顔の形 -->
-                            <div class="space-y-2">
-                                <label class="wow-label !text-[10px]">顔の形</label>
-                                <div class="segmented-control flex-wrap">
-                                    <button onclick="selectProfileOption(this, 'face-shape')" class="profile-opt-face-shape segmented-control-btn" data-active="true" data-value="oval" data-label="卵型">卵型</button>
-                                    <button onclick="selectProfileOption(this, 'face-shape')" class="profile-opt-face-shape segmented-control-btn" data-active="false" data-value="round" data-label="丸顔">丸顔</button>
-                                    <button onclick="selectProfileOption(this, 'face-shape')" class="profile-opt-face-shape segmented-control-btn" data-active="false" data-value="oblong" data-label="面長">面長</button>
-                                    <button onclick="selectProfileOption(this, 'face-shape')" class="profile-opt-face-shape segmented-control-btn" data-active="false" data-value="heart" data-label="逆三角形">逆三角形</button>
-                                </div>
-                            </div>
-
-                            <!-- 髪・目 (新項目) -->
-                            <div class="space-y-4">
-                                <!-- 髪型 -->
-                                <div class="space-y-2">
-                                    <label class="wow-label !text-[10px]">髪型</label>
-                                    <div class="segmented-control flex-wrap">
-                                        <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="true" data-value="short" data-label="ショート">ショート</button>
-                                        <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="false" data-value="medium" data-label="ミディアム">ミディアム</button>
-                                        <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="false" data-value="long" data-label="ロング">ロング</button>
-                                        <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="false" data-value="bob" data-label="ボブ">ボブ</button>
-                                        <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="false" data-value="very-short" data-label="ベリーショート">ベリーショート</button>
-                                    </div>
-                                </div>
-                                <!-- 髪色 -->
-                                <div class="space-y-2">
-                                    <label class="wow-label !text-[10px]">髪色</label>
-                                    <div class="segmented-control flex-wrap">
-                                        <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="true" data-value="black" data-label="ブラック">ブラック</button>
-                                        <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="false" data-value="dark-brown" data-label="ダークブラウン">ダークブラウン</button>
-                                        <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="false" data-value="light-brown" data-label="ライトブラウン">ライトブラウン</button>
-                                        <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="false" data-value="blond" data-label="ブロンド">ブロンド</button>
-                                        <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="false" data-value="gray" data-label="グレー/白">グレー/白</button>
-                                    </div>
-                                </div>
-                                
-
-                            </div>
-                        </div>
-
-                        <div class="w-full h-[1px] bg-black/5 dark:bg-white/5 my-4"></div>
 
                         <!-- 3. 詳細採寸 -->
                         <div class="space-y-3">
@@ -639,6 +478,69 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="w-full h-[1px] bg-black/5 dark:bg-white/5 my-4"></div>
+
+                        <!-- 5. 肌・顔・髪 (アバター用) -->
+                        <div class="space-y-4">
+                            <h5 class="text-[10px] font-black text-on-surface-variant/60 dark:text-white/40 uppercase tracking-widest flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">face</span> AVATAR LOOK</h5>
+                            
+                            <!-- 肌の色 -->
+                            <div class="space-y-2">
+                                <label class="wow-label !text-[10px]">スキンカラー</label>
+                                <div class="segmented-control flex-wrap">
+                                    <button onclick="selectProfileOption(this, 'skin-tone')" class="profile-opt-skin-tone segmented-control-btn flex items-center gap-1.5" data-active="false" data-value="fair">
+                                        <span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #FFEDE4; border: 1px solid rgba(0,0,0,0.05)"></span>Fair
+                                    </button>
+                                    <button onclick="selectProfileOption(this, 'skin-tone')" class="profile-opt-skin-tone segmented-control-btn flex items-center gap-1.5" data-active="true" data-value="natural">
+                                        <span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #F7D3A2; border: 1px solid rgba(0,0,0,0.05)"></span>Natural
+                                    </button>
+                                    <button onclick="selectProfileOption(this, 'skin-tone')" class="profile-opt-skin-tone segmented-control-btn flex items-center gap-1.5" data-active="false" data-value="tan">
+                                        <span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #A67C52; border: 1px solid rgba(0,0,0,0.05)"></span>Tan
+                                    </button>
+                                    <button onclick="selectProfileOption(this, 'skin-tone')" class="profile-opt-skin-tone segmented-control-btn flex items-center gap-1.5" data-active="false" data-value="deep">
+                                        <span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #4A3228; border: 1px solid rgba(0,0,0,0.05)"></span>Deep
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 顔の形 -->
+                            <div class="space-y-2">
+                                <label class="wow-label !text-[10px]">顔の形</label>
+                                <div class="segmented-control flex-wrap">
+                                    <button onclick="selectProfileOption(this, 'face-shape')" class="profile-opt-face-shape segmented-control-btn" data-active="true" data-value="oval" data-label="卵型">卵型</button>
+                                    <button onclick="selectProfileOption(this, 'face-shape')" class="profile-opt-face-shape segmented-control-btn" data-active="false" data-value="round" data-label="丸顔">丸顔</button>
+                                    <button onclick="selectProfileOption(this, 'face-shape')" class="profile-opt-face-shape segmented-control-btn" data-active="false" data-value="oblong" data-label="面長">面長</button>
+                                    <button onclick="selectProfileOption(this, 'face-shape')" class="profile-opt-face-shape segmented-control-btn" data-active="false" data-value="heart" data-label="逆三角形">逆三角形</button>
+                                </div>
+                            </div>
+
+                            <!-- 髪・目 -->
+                            <div class="space-y-4">
+                                <!-- 髪型 -->
+                                <div class="space-y-2">
+                                    <label class="wow-label !text-[10px]">髪型</label>
+                                    <div class="segmented-control flex-wrap">
+                                        <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="true" data-value="short" data-label="ショート">ショート</button>
+                                        <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="false" data-value="medium" data-label="ミディアム">ミディアム</button>
+                                        <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="false" data-value="long" data-label="ロング">ロング</button>
+                                        <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="false" data-value="bob" data-label="ボブ">ボブ</button>
+                                        <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="false" data-value="very-short" data-label="ベリーショート">ベリーショート</button>
+                                    </div>
+                                </div>
+                                <!-- 髪色 -->
+                                <div class="space-y-2">
+                                    <label class="wow-label !text-[10px]">髪色</label>
+                                    <div class="segmented-control flex-wrap">
+                                        <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="true" data-value="black" data-label="ブラック">ブラック</button>
+                                        <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="false" data-value="dark-brown" data-label="ダークブラウン">ダークブラウン</button>
+                                        <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="false" data-value="light-brown" data-label="ライトブラウン">ライトブラウン</button>
+                                        <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="false" data-value="blond" data-label="ブロンド">ブロンド</button>
+                                        <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="false" data-value="gray" data-label="グレー/白">グレー/白</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -682,53 +584,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all" onclick="exportToSpreadsheet()">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-green-500">table_view</span>
-                            <div>
-                                <span class="text-xs font-bold dark:text-white">スプレッドシートへ抽出 (CSV)</span>
-                                <p class="text-[9px] text-on-surface-variant/60 dark:text-white/40 mt-0.5">登録データをCSV形式で出力します</p>
-                            </div>
-                        </div>
-                        <span class="material-symbols-outlined text-sm text-on-surface-variant">download</span>
-                    </div>
-                    <div class="flex items-center justify-between p-4 bg-primary/5 dark:bg-blue-400/5 hover:bg-primary/10 dark:hover:bg-blue-400/10 cursor-pointer transition-all border-y border-primary/10 dark:border-blue-400/10" onclick="sendToCloud()">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-primary dark:text-blue-400 animate-pulse">cloud_upload</span>
-                            <div>
-                                <span id="cloud-sync-btn-label" class="text-xs font-black text-primary dark:text-blue-300">クラウド同期 (API Key)</span>
-                                <p class="text-[9px] text-on-surface-variant/60 dark:text-white/40 mt-0.5">APIキー認証でスプレッドシートへ送信します</p>
-                            </div>
-                        </div>
-                        <span class="material-symbols-outlined text-sm text-primary dark:text-blue-400">sync</span>
-                    </div>
-                    <div class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all" onclick="resetCloudUrl()">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-on-surface-variant/40">link</span>
-                            <span class="text-[10px] font-bold text-on-surface-variant/60 dark:text-white/40">エンドポイントURLを設定</span>
-                        </div>
-                        <span class="material-symbols-outlined text-sm text-on-surface-variant/40">edit</span>
-                    </div>
-                    <div class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all" onclick="exportToFlatSpreadsheet()">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-blue-500">format_list_numbered</span>
-                            <div>
-                                <span class="text-xs font-bold dark:text-white">フラット抽出 (分析用)</span>
-                                <p class="text-[9px] text-on-surface-variant/60 dark:text-white/40 mt-0.5">全データを1行にまとめて出力します</p>
-                            </div>
-                        </div>
-                        <span class="material-symbols-outlined text-sm text-on-surface-variant">view_headline</span>
-                    </div>
-                    <div class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all" onclick="exportToJSON()">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-amber-500">database</span>
-                            <div>
-                                <span class="text-xs font-bold dark:text-white">データバックアップ (JSON)</span>
-                                <p class="text-[9px] text-on-surface-variant/60 dark:text-white/40 mt-0.5">全ての詳細データをJSON形式で保存します</p>
-                            </div>
-                        </div>
-                        <span class="material-symbols-outlined text-sm text-on-surface-variant">backup</span>
                     </div>
                     <div class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all">
                         <div class="flex items-center gap-3">

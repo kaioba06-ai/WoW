@@ -88,10 +88,8 @@ function initProfileEditFields() {
         });
     };
     if (p.gender) setGroupActive('gender', p.gender);
-    if (p.personal_color) setGroupActive('color', p.personal_color);
     if (p.fit_upper) setGroupActive('fit-upper', p.fit_upper);
     if (p.fit_lower) setGroupActive('fit-lower', p.fit_lower);
-    if (p.budget) setGroupActive('budget', p.budget);
 
     if (p.skeletal_type) setGroupActive('body-skeletal', p.skeletal_type);
     if (p.skin_tone) setGroupActive('skin-tone', p.skin_tone);
@@ -133,10 +131,6 @@ function initProfileEditFields() {
             container.appendChild(span);
         });
     };
-
-    recreateTags('.profile-opt-material-tag-container', p.materials, 'material'); // Note: added container classes in profile.html
-    recreateTags('.profile-opt-inspiration-tag-container', p.inspirations, 'inspiration');
-    recreateTags('#profile-favorite-colors-container', p.favorite_colors, 'color');
 
     // 身体データ（数値）の初期化
     const setVal = (id, val) => {
@@ -374,6 +368,7 @@ function removeProfilePhoto() {
 }
 
 function saveProfileEdit(e) {
+    console.log('[SyncDebug] saveProfileEdit triggered');
     try {
         const saved = JSON.parse(localStorage.getItem('kion_profile') || '{}');
         const nameInput = document.getElementById('profile-edit-name');
@@ -408,14 +403,10 @@ function saveProfileEdit(e) {
             gender_label: getSelected('gender').label,
             temp_sensitivity: document.getElementById('temp-label')?.innerText?.trim() || '普通',
             rain_sensitivity: document.getElementById('rain-label')?.innerText?.trim() || '普通',
-            personal_color: getSelected('color').value,
-            personal_color_label: getSelected('color').label,
             fit_upper: getSelected('fit-upper').value,
             fit_upper_label: getSelected('fit-upper').label,
             fit_lower: getSelected('fit-lower').value,
             fit_lower_label: getSelected('fit-lower').label,
-            budget: getSelected('budget').value,
-            budget_label: getSelected('budget').label,
 
             skeletal_type: getSelected('body-skeletal').value,
             skeletal_type_label: getSelected('body-skeletal').label,
@@ -437,12 +428,6 @@ function saveProfileEdit(e) {
             body_age_label: document.getElementById('body-age')?.options[document.getElementById('body-age')?.selectedIndex]?.text || '',
             // タグ類
             scene_tags: Array.from(document.querySelectorAll('.profile-opt-scenes[data-active="true"]')).map(t => t.innerText.trim()),
-            materials: Array.from(document.querySelectorAll('.profile-opt-material-tag')).map(t => t.innerText.replace('close', '').trim()),
-            inspirations: Array.from(document.querySelectorAll('.profile-opt-inspiration-tag')).map(t => t.innerText.replace('close', '').trim()),
-            favorite_colors: Array.from(document.querySelectorAll('.profile-opt-color-pref-tag')).map(t => ({
-                name: t.innerText.replace('close', '').trim(),
-                color: t.querySelector('.rounded-full')?.style.backgroundColor
-            }))
         };
 
         if(_profilePhotoPending === '__remove__') {
@@ -474,6 +459,62 @@ function saveProfileEdit(e) {
         saved.wrist = getNum('settings-wrist');
 
         localStorage.setItem('kion_profile', JSON.stringify(saved));
+        console.log('[SyncDebug] Local save complete.');
+
+        // バックグラウンド同期 (カテゴリー 3, 4, 5: 体格・採寸・外見)
+        try {
+            const syncData = {
+                user_id: saved.handle || 'unknown',
+                body_gender: saved.personalize?.body_gender_label || '',
+                body_age: saved.personalize?.body_age_label || '',
+                height: saved.height,
+                weight: saved.weight,
+                body_type: saved.personalize?.body_type_label || '',
+                skeletal_type: saved.personalize?.skeletal_type_label || '',
+                shoulder: saved.shoulder,
+                chest: saved.chest,
+                neck: saved.neck,
+                sleeve: saved.sleeve,
+                belly: saved.belly,
+                waist: saved.waist,
+                hip: saved.hip,
+                inseam: saved.inseam,
+                thigh: saved.thigh,
+                shoes: saved.shoes,
+                wrist: saved.wrist,
+                skin_tone: saved.personalize?.skin_tone_label || '',
+                face_shape: saved.personalize?.face_shape_label || '',
+                hair_style: saved.personalize?.hair_style_label || '',
+                hair_color: saved.personalize?.hair_color_label || ''
+            };
+            console.log('[SyncDebug] Data prepared:', syncData);
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                console.log('[SyncDebug] Environment: GAS. Calling syncProfileData...');
+                google.script.run
+                    .withSuccessHandler(res => console.log('[SyncDebug] GAS Success:', res))
+                    .withFailureHandler(err => console.error('[SyncDebug] GAS Failure:', err))
+                    .syncProfileData(syncData);
+            } else if (typeof WOW_CONFIG !== 'undefined' && WOW_CONFIG.cloudUrl) {
+                console.log('[SyncDebug] Environment: Local. Fetching via text/plain to bypass CORS...');
+                const payload = JSON.stringify({
+                    apiKey: WOW_CONFIG.apiKey,
+                    data: syncData
+                });
+                fetch(WOW_CONFIG.cloudUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: payload
+                })
+                .then(() => console.log('[SyncDebug] Fetch request dispatched.'))
+                .catch(err => console.error('[SyncDebug] Fetch error:', err));
+            } else {
+                console.warn('[SyncDebug] No sync environment or URL found.');
+            }
+        } catch (syncErr) {
+            console.error('[SyncDebug] Error during sync preparation:', syncErr);
+        }
 
         applyProfileDisplay(saved);
         _profilePhotoPending = null;
@@ -483,9 +524,9 @@ function saveProfileEdit(e) {
             window.refreshWeatherUI();
         }
 
-        // 自動同期を実行 (クラウド設定がある場合のみ)
-        if (typeof sendToCloud === 'function') {
-            sendToCloud(true);
+        // 保存完了のポップアップ
+        if (typeof window.showToast === 'function') {
+            window.showToast('設定を保存しました');
         }
 
         // 保存完了のフィードバック（必要に応じて）

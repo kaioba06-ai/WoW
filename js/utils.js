@@ -71,3 +71,4 @@ window.togglePassword = window.WowUtils.togglePassword;
 window.shakeField = window.WowUtils.shakeField;
 window.showError = window.WowUtils.showError;
 window.showErr = window.WowUtils.showError;
+window.showToast = window.WowUtils.showToast.bind(window.WowUtils);
