@@ -116,6 +116,7 @@ function syncProfileData(data) {
 
     if (allFilled) {
       var prompt = generateAvatarPrompt(data);
+      sheet.getRange(3, 1).setValue("アバター生成用プロンプト");
       sheet.getRange(4, 1).setValue(timestamp);
       sheet.getRange(4, 2).setValue(prompt);
 
