@@ -394,9 +394,9 @@ function saveProfileEdit(e) {
         const _bt = getActiveBtnInfo('body-type').label; if (_bt) saved.personalize.body_type = _bt;
         const _sk = getActiveBtnInfo('body-skeletal').label; if (_sk) saved.personalize.skeletal_type = _sk;
         const _st = getActiveBtnInfo('skin-tone').value;  if (_st) saved.personalize.skin_tone = _st;
-        const _fs = getActiveBtnInfo('face-shape').label; if (_fs) saved.personalize.face_shape = _fs;
-        const _hs = getActiveBtnInfo('hair-style').label; if (_hs) saved.personalize.hair_style = _hs;
-        const _hc = getActiveBtnInfo('hair-color').label; if (_hc) saved.personalize.hair_color = _hc;
+        const _fs = getActiveBtnInfo('face-shape').value; if (_fs) saved.personalize.face_shape = _fs;
+        const _hs = getActiveBtnInfo('hair-style').value; if (_hs) saved.personalize.hair_style = _hs;
+        const _hc = getActiveBtnInfo('hair-color').value; if (_hc) saved.personalize.hair_color = _hc;
 
         // タグデータの抽出
         const extractTags = (selector) => {

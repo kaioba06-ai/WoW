@@ -76,9 +76,6 @@ function syncProfileData(data) {
     var header = ['同期日時', '性別', '年代', '身長', '体重', '体格', '骨格', '肩幅', '胸囲', '首回り', '裄丈', '腹囲', 'ウエスト', 'ヒップ', '股下', '太もも', '靴', '手首', '肌の色', '顔の形', '髪型', '髪色'];
     sheet.getRange(1, 1, 1, header.length).setValues([header]);
 
-    // デバッグ用：届いたデータを生でA5セルに書き出し
-    sheet.getRange(5, 1).setValue("RAW_DATA: " + JSON.stringify(data));
-
     // 2行目のデータマッピング修正
     var row = [
       timestamp,
@@ -258,25 +255,49 @@ function generateAvatarImage(prompt) {
  * 物理データからAI画像生成用のプロンプトを組み立てる
  */
 function generateAvatarPrompt(data) {
-  var skinMap = {"fair":"fair skin", "natural":"natural skin", "tan":"tan skin", "deep":"dark skin",
-                 "色白":"fair skin", "普通":"natural skin", "小麦色":"tan skin", "褐色":"dark skin"};
-  var bodyMap = {"やせ型":"slender", "普通":"average", "筋肉質":"muscular", "ぽっちゃり":"plump",
-                 "slender":"slender", "average":"average", "muscular":"muscular", "plump":"plump"};
-  var skeletalMap = {"ストレート":"straight", "ウェーブ":"wave", "ナチュラル":"natural", "わからない":"unknown"};
+  var skinMap = {
+    "fair":"fair skin", "natural":"natural skin", "tan":"tan skin", "deep":"dark skin",
+    "色白":"fair skin", "普通":"natural skin", "小麦色":"tan skin", "褐色":"dark skin"
+  };
+  var bodyMap = {
+    "やせ型":"slender", "普通":"average", "筋肉質":"muscular", "ぽっちゃり":"plump", "がっちり":"athletic"
+  };
+  var skeletalMap = {
+    "ストレート":"straight", "ウェーブ":"wave", "ナチュラル":"natural", "わからない":"natural"
+  };
+  var ageMap = {
+    "10代":"10s", "20代":"20s", "30代":"30s", "40代":"40s", "50代":"50s", "60代以上":"60s and above"
+  };
+  var faceMap = {
+    "oval":"oval", "round":"round", "oblong":"long", "heart":"heart-shaped",
+    "卵型":"oval", "丸顔":"round", "面長":"long", "逆三角形":"heart-shaped"
+  };
+  var hairStyleMap = {
+    "short":"short", "medium":"medium-length", "long":"long", "bob":"bob", "very-short":"very short",
+    "ショート":"short", "ミディアム":"medium-length", "ロング":"long", "ボブ":"bob", "ベリーショート":"very short"
+  };
+  var hairColorMap = {
+    "black":"black", "dark-brown":"dark brown", "light-brown":"light brown", "blond":"blond", "gray":"gray/white",
+    "ブラック":"black", "ダークブラウン":"dark brown", "ライトブラウン":"light brown", "ブロンド":"blond", "グレー/白":"gray/white"
+  };
 
   var genderLabel = data.gender;
-  var skin = skinMap[data.skin_tone] || data.skin_tone;
-  var body = bodyMap[data.body_type] || data.body_type;
+  var skin     = skinMap[data.skin_tone]      || data.skin_tone;
+  var body     = bodyMap[data.body_type]      || data.body_type;
   var skeletal = skeletalMap[data.skeletal_type] || data.skeletal_type;
+  var age      = ageMap[data.age]             || data.age;
+  var face     = faceMap[data.face_shape]     || data.face_shape;
+  var hairSt   = hairStyleMap[data.hair_style]  || data.hair_style;
+  var hairCol  = hairColorMap[data.hair_color]  || data.hair_color;
 
   var clothing = "topless, wearing only basic minimalist neutral-colored briefs";
   if (genderLabel === "女性") {
     clothing = "wearing minimalist neutral-colored tight-fitting fitness wear, including a compression T-shirt and leggings";
   }
 
-  var prompt = "A full-body realistic 3D character model of a " + (genderLabel === "女性" ? "woman" : "man") + " in their " + data.age + ". ";
+  var prompt = "A full-body realistic 3D character model of a " + (genderLabel === "女性" ? "woman" : "man") + " in their " + age + ". ";
   prompt += "Physical details: " + data.height + "cm tall, " + data.weight + "kg, " + body + " body type, " + skeletal + " bone structure. ";
-  prompt += "Appearance: " + skin + ", " + data.face_shape + " face shape, " + data.hair_style + " hair in " + data.hair_color + " color. ";
+  prompt += "Appearance: " + skin + ", " + face + " face shape, " + hairSt + " hair in " + hairCol + " color. ";
   prompt += "Style: " + clothing + ", showing body silhouette for shape visualization, neutral standing pose, facing front, minimalist white studio background, realistic anatomical details, cinematic lighting, 8k high resolution.";
 
   return prompt;
