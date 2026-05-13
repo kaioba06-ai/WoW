@@ -152,7 +152,7 @@ function syncProfileData(data) {
       : 0;
     sheet.getRange(6, 1).setValue("気温への感度");
     sheet.getRange(7, 1).setValue(timestamp);
-    sheet.getRange(8, 1).setValue(sensitivityVal);
+    sheet.getRange(7, 2).setValue(sensitivityVal);
 
     return { success: true };
   } catch (e) {
