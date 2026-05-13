@@ -66,15 +66,20 @@ function syncProfileData(data) {
     logDebug('syncProfileData received', data);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // 「WoW_Database」シートを優先使用、なければ最初のシート
-    var sheet = ss.getSheetByName('WoW_Database') || ss.getSheets()[0]; 
-    if (!sheet) return { success: false, error: 'Sheet not found' };
-    
+    // ユーザーID（ハンドル名）をシート名にする
+    var sheetName = data.user_id || 'UnknownUser';
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
+
     var timestamp = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
-    
-    // 1行目のヘッダー（一応確認）
+
+    // 1行目のヘッダー
     var header = ['同期日時', '性別', '年代', '身長', '体重', '体格', '骨格', '肩幅', '胸囲', '首回り', '裄丈', '腹囲', 'ウエスト', 'ヒップ', '股下', '太もも', '靴', '手首', '肌の色', '顔の形', '髪型', '髪色'];
     sheet.getRange(1, 1, 1, header.length).setValues([header]);
+    sheet.getRange(1, 1, 1, header.length).setFontWeight('bold').setBackground('#f3f3f3');
+    sheet.setFrozenRows(1);
 
     // 2行目のデータマッピング修正
     var row = [
