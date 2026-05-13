@@ -365,32 +365,38 @@ function saveProfileEdit(e) {
         }
 
         
-        // 身体データ (Basic)
+        // 身体データ (Basic) — DOM が空の場合は既存の saved 値を維持する
         const genderInfo = getActiveBtnInfo('body-gender');
-        saved.body_gender = genderInfo.value;
-        saved.body_gender_label = genderInfo.label;
-        saved.body_age = ageEl ? ageEl.value : '';
-        saved.body_age_label = ageEl ? ageEl.options[ageEl.selectedIndex]?.text : '';
-        
+        if (genderInfo.value) {
+            saved.body_gender = genderInfo.value;
+            saved.body_gender_label = genderInfo.label;
+        }
+        const newAge = ageEl ? ageEl.value : '';
+        if (newAge) {
+            saved.body_age = newAge;
+            saved.body_age_label = ageEl.options[ageEl.selectedIndex]?.text || '';
+        }
+
         const fields = ['height','weight','shoulder','chest','neck','sleeve','belly','waist','hip','inseam','thigh','shoes','wrist'];
-        fields.forEach(f => saved[f] = getVal(f));
+        fields.forEach(f => { const v = getVal(f); if (v) saved[f] = v; });
 
         // パーソナライズ (Personalize) - weather.js が参照する構造
         if (!saved.personalize) saved.personalize = {};
-        
+
         // 感度設定
-        saved.personalize.temp_sensitivity = document.getElementById('temp-label')?.innerText || '普通';
-        saved.personalize.rain_sensitivity = document.getElementById('rain-label')?.innerText || '普通';
-        
-        // スタイル・体型属性
-        saved.personalize.gender = getActiveBtnInfo('gender').value || saved.body_gender; 
+        saved.personalize.temp_sensitivity = document.getElementById('temp-label')?.innerText || saved.personalize.temp_sensitivity || '普通';
+        saved.personalize.rain_sensitivity = document.getElementById('rain-label')?.innerText || saved.personalize.rain_sensitivity || '普通';
+
+        // スタイル・体型属性 — DOM が空なら既存値を保持
+        const _g = getActiveBtnInfo('gender').value || saved.body_gender;
+        if (_g) saved.personalize.gender = _g;
         saved.personalize.body_gender = saved.body_gender;
-        saved.personalize.body_type = getActiveBtnInfo('body-type').label;
-        saved.personalize.skeletal_type = getActiveBtnInfo('body-skeletal').label;
-        saved.personalize.skin_tone = getActiveBtnInfo('skin-tone').label;
-        saved.personalize.face_shape = getActiveBtnInfo('face-shape').label;
-        saved.personalize.hair_style = getActiveBtnInfo('hair-style').label;
-        saved.personalize.hair_color = getActiveBtnInfo('hair-color').label;
+        const _bt = getActiveBtnInfo('body-type').label; if (_bt) saved.personalize.body_type = _bt;
+        const _sk = getActiveBtnInfo('body-skeletal').label; if (_sk) saved.personalize.skeletal_type = _sk;
+        const _st = getActiveBtnInfo('skin-tone').value;  if (_st) saved.personalize.skin_tone = _st;
+        const _fs = getActiveBtnInfo('face-shape').label; if (_fs) saved.personalize.face_shape = _fs;
+        const _hs = getActiveBtnInfo('hair-style').label; if (_hs) saved.personalize.hair_style = _hs;
+        const _hc = getActiveBtnInfo('hair-color').label; if (_hc) saved.personalize.hair_color = _hc;
 
         // タグデータの抽出
         const extractTags = (selector) => {
