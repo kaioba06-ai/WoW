@@ -139,7 +139,21 @@ function syncProfileData(data) {
       sheet.getRange(4, 2).setValue("未入力項目があるため生成スキップ：" + missing);
     }
 
-    
+    // 気温感度を A6〜A8 に書き込む
+    var sensitivityMap = {
+      "極度の寒がり": -2,
+      "寒がり": -1,
+      "普通": 0,
+      "暑がり": 1,
+      "極度の暑がり": 2
+    };
+    var sensitivityVal = sensitivityMap.hasOwnProperty(data.temp_sensitivity)
+      ? sensitivityMap[data.temp_sensitivity]
+      : 0;
+    sheet.getRange(6, 1).setValue("気温への感度");
+    sheet.getRange(7, 1).setValue(timestamp);
+    sheet.getRange(8, 1).setValue(sensitivityVal);
+
     return { success: true };
   } catch (e) {
     logDebug('syncProfileData ERROR', e.toString());

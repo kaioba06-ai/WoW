@@ -449,6 +449,7 @@ function saveProfileEdit(e) {
             face_shape: saved.personalize.face_shape || '',
             hair_style: saved.personalize.hair_style || '',
             hair_color: saved.personalize.hair_color || '',
+            temp_sensitivity: saved.personalize.temp_sensitivity || '普通',
         };
 
         if (typeof google !== 'undefined' && google.script && google.script.run) {
