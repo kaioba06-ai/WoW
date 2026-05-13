@@ -98,8 +98,9 @@ function initProfileEditFields() {
 
     // 年代 (select) の初期化
     const ageSelect = document.getElementById('body-age');
-    if (ageSelect && p.body_age) {
-        ageSelect.value = p.body_age;
+    const ageValue = p.body_age || saved.body_age;
+    if (ageSelect && ageValue) {
+        ageSelect.value = ageValue;
     }
 
     // タグ類の初期化
@@ -739,7 +740,7 @@ function addProfileTag(btn, type) {
             const span = document.createElement('span');
             if (type === 'color-pref') {
                 span.className = 'profile-opt-color-pref-tag px-2 py-1 rounded-md bg-black/5 dark:bg-white/5 text-on-surface dark:text-white font-bold text-[8px] flex items-center gap-1 border border-black/5 dark:border-white/10 shadow-sm';
-                span.innerHTML = `<span class="w-2 h-2 rounded-full" style="background-color: ${color}; border: ${color === '#FFFFFF' ? '1px solid rgba(0,0,0,0.1)' : 'none'}"></span> ${name} <span onclick="this.parentElement.remove()" class="material-symbols-outlined text-[10px] cursor-pointer opacity-50 hover:opacity-100">close</span>`;
+                span.innerHTML = `<span class="w-2 h-2 rounded-full" style="background-color: ${color}; border: ${color === '#FFFFFF' ? '1px solid rgba(0,0,0,0.1)' : 'none'}"></span> ${name} <span onclick="removeProfileTag(this)" class="material-symbols-outlined text-[10px] cursor-pointer opacity-50 hover:opacity-100">close</span>`;
             } else {
                 let tagClass = 'px-2 py-1 rounded-md bg-black/5 dark:bg-white/5 text-on-surface dark:text-white font-bold text-[8px] flex items-center gap-1 border border-black/5 dark:border-white/10';
                 if (type === 'material') {
@@ -753,11 +754,12 @@ function addProfileTag(btn, type) {
                 }
                 
                 span.className = tagClass;
-                span.innerHTML = `${name} <span onclick="this.parentElement.remove()" class="material-symbols-outlined text-[10px] cursor-pointer opacity-70 hover:opacity-100">close</span>`;
+                span.innerHTML = `${name} <span onclick="removeProfileTag(this)" class="material-symbols-outlined text-[10px] cursor-pointer opacity-70 hover:opacity-100">close</span>`;
             }
             const container = btn.closest('.space-y-3').querySelector('.flex-wrap');
             if (container) container.appendChild(span);
             overlay.remove();
+            debouncedSaveProfile();
         };
         contentWrap.appendChild(item);
     });
