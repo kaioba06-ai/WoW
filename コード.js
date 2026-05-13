@@ -66,18 +66,20 @@ function syncProfileData(data) {
     logDebug('syncProfileData received', data);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // 「WoW_Database」シートを優先使用、なければ最初のシート
-    var sheet = ss.getSheetByName('WoW_Database') || ss.getSheets()[0]; 
-    if (!sheet) return { success: false, error: 'Sheet not found' };
-    
+    // ユーザーID（ハンドル名）をシート名にする
+    var sheetName = data.user_id || 'UnknownUser';
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
+
     var timestamp = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
-    
-    // 1行目のヘッダー（一応確認）
+
+    // 1行目のヘッダー
     var header = ['同期日時', '性別', '年代', '身長', '体重', '体格', '骨格', '肩幅', '胸囲', '首回り', '裄丈', '腹囲', 'ウエスト', 'ヒップ', '股下', '太もも', '靴', '手首', '肌の色', '顔の形', '髪型', '髪色'];
     sheet.getRange(1, 1, 1, header.length).setValues([header]);
-
-    // デバッグ用：届いたデータを生でA5セルに書き出し
-    sheet.getRange(5, 1).setValue("RAW_DATA: " + JSON.stringify(data));
+    sheet.getRange(1, 1, 1, header.length).setFontWeight('bold').setBackground('#f3f3f3');
+    sheet.setFrozenRows(1);
 
     // 2行目のデータマッピング修正
     var row = [
@@ -106,33 +108,52 @@ function syncProfileData(data) {
     ];
     sheet.getRange(2, 1, 1, row.length).setValues([row]);
     
-    // プロンプト生成に必須の項目（性別、年代、身長、体重）が埋まっているかチェック
-    var essentialIndices = [1, 2, 3, 4]; // gender, age, height, weight
-    var hasEssential = true;
-    for (var j = 0; j < essentialIndices.length; j++) {
-      var val = row[essentialIndices[j]];
-      if (val === null || val === undefined || val === "") {
-        hasEssential = false;
-        break;
-      }
-    }
+    // プロンプトに使う全フィールドが埋まっているかチェック（1つでも空なら生成しない）
+    var promptFields = [data.gender, data.age, data.height, data.weight,
+                        data.body_type, data.skeletal_type, data.skin_tone,
+                        data.face_shape, data.hair_style, data.hair_color];
+    var allFilled = promptFields.every(function(v) { return v !== null && v !== undefined && v !== ""; });
 
-    if (hasEssential) {
-      // 必須項目が埋まっている場合のみプロンプト生成
+    if (allFilled) {
       var prompt = generateAvatarPrompt(data);
+      sheet.getRange(3, 1).setValue("アバター生成用プロンプト");
       sheet.getRange(4, 1).setValue(timestamp);
       sheet.getRange(4, 2).setValue(prompt);
-      
-      // 画像生成もトリガーする場合（必要に応じて）
-      // generateAvatarImage(prompt); 
+
+      // 画像生成
+      try {
+        sheet.getRange(5, 1).setValue("画像生成中...");
+        var imageUrl = generateAvatarImage(prompt);
+        sheet.getRange(5, 1).setValue(timestamp);
+        sheet.getRange(5, 2).setValue(imageUrl);
+        logDebug('Avatar Image Generated', imageUrl);
+      } catch (imgErr) {
+        sheet.getRange(5, 1).setValue(timestamp);
+        sheet.getRange(5, 2).setValue("画像生成エラー: " + imgErr.toString());
+        logDebug('Avatar Image Error', imgErr.toString());
+      }
     } else {
-      // 必須項目に空欄がある場合は4行目に警告を表示
+      var missing = ["性別","年代","身長","体重","体格","骨格","肌の色","顔の形","髪型","髪色"]
+        .filter(function(_, i) { return !promptFields[i]; }).join("・");
       sheet.getRange(4, 1).setValue(timestamp);
-      sheet.getRange(4, 2).setValue("必須データ（性別・年代・身長・体重）が未入力のためプロンプトを生成しませんでした。");
-      console.log("Essential data missing. Skipping prompt generation.");
+      sheet.getRange(4, 2).setValue("未入力項目があるため生成スキップ：" + missing);
     }
 
-    
+    // 気温感度を A6〜A8 に書き込む
+    var sensitivityMap = {
+      "極度の寒がり": -2,
+      "寒がり": -1,
+      "普通": 0,
+      "暑がり": 1,
+      "極度の暑がり": 2
+    };
+    var sensitivityVal = sensitivityMap.hasOwnProperty(data.temp_sensitivity)
+      ? sensitivityMap[data.temp_sensitivity]
+      : 0;
+    sheet.getRange(6, 1).setValue("気温への感度");
+    sheet.getRange(7, 1).setValue(timestamp);
+    sheet.getRange(7, 2).setValue(sensitivityVal);
+
     return { success: true };
   } catch (e) {
     logDebug('syncProfileData ERROR', e.toString());
@@ -146,28 +167,54 @@ function syncProfileData(data) {
 function syncWeatherData(data) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    // 「WoW_Database」シートを使用
-    var sheet = ss.getSheetByName('WoW_Database');
+    // ユーザーシートに書き込む（プロフィールと同じシート）
+    var sheetName = data.user_id || 'UnknownUser';
+    var sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
-      sheet = ss.insertSheet('WoW_Database');
+      sheet = ss.insertSheet(sheetName);
     }
 
     var timestamp = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
 
-    // 7行目: 同期日時と題名
-    sheet.getRange(7, 1).setValue(timestamp);
-    sheet.getRange(7, 2).setValue("天気予報サマリー（Lv判定込）");
-    sheet.getRange(7, 1, 1, 2).setFontWeight('bold').setBackground('#F3F3F3');
+    // 8行目: 列見出し
+    var forecastHeader = ['時刻', '体感気温', '服装Lv', '個人感度', '補正後Lv', '天気'];
+    sheet.getRange(8, 1, 1, forecastHeader.length).setValues([forecastHeader]);
+    sheet.getRange(8, 1, 1, forecastHeader.length)
+         .setFontWeight('bold')
+         .setBackground('#f3f3f3')
+         .setHorizontalAlignment('center');
 
-    // 8-11行目: 予報データ (6列: 時間, 天気, 気温, 基準Lv, 個人差, 最終Lv)
+    // 9-12行目: [時刻, 体感気温(素), 服装Lv(素), 天気] の4時点
+    //   A:時刻  B:体感気温  C:素のLv  D:個人感度(=B7参照)  E:=C-D  F:天気
     if (data.forecast_data && data.forecast_data.length > 0) {
-      // データの数に合わせて範囲を動的に取得して書き込み
-      sheet.getRange(8, 1, data.forecast_data.length, data.forecast_data[0].length).setValues(data.forecast_data);
-      
-      // 数値列（D, E, F列）を中央揃えにするなどの装飾
-      sheet.getRange(8, 4, 4, 3).setHorizontalAlignment("center");
+      var src = data.forecast_data.slice(0, 4);
+      while (src.length < 4) src.push(['', '', '', '']);
+
+      // A〜C列: 時刻・体感気温・素のLv
+      var abc = src.map(function(r){ return [r[0], r[1], r[2]]; });
+      sheet.getRange(9, 1, 4, 3).setValues(abc);
+
+      // D列: 個人感度（B7を参照）
+      sheet.getRange(9, 4, 4, 1).setFormulas([
+        ['=$B$7'], ['=$B$7'], ['=$B$7'], ['=$B$7']
+      ]);
+
+      // E列: =C-D （感度補正後のLv）
+      sheet.getRange(9, 5, 4, 1).setFormulas([
+        ['=C9-D9'], ['=C10-D10'], ['=C11-D11'], ['=C12-D12']
+      ]);
+
+      // F列: 天気（日本語）
+      var f = src.map(function(r){ return [r[3] || '']; });
+      sheet.getRange(9, 6, 4, 1).setValues(f);
+
+      // B〜F列を中央揃え
+      sheet.getRange(9, 2, 4, 5).setHorizontalAlignment("center");
+
+      // 旧13行目（5件目の残骸）を消去
+      sheet.getRange(13, 1, 1, 6).clearContent();
     }
-    
+
     return { success: true };
   } catch (e) {
     logDebug('syncWeatherData ERROR', e.toString());
@@ -267,27 +314,50 @@ function generateAvatarImage(prompt) {
  * 物理データからAI画像生成用のプロンプトを組み立てる
  */
 function generateAvatarPrompt(data) {
-  // 必須データが1つでも欠けている場合は生成を拒否する（バックアップガード）
-  if (!data.gender && !data.body_gender) return "性別が未入力のため生成できません。";
-  if (!data.age && !data.body_age) return "年代が未入力のため生成できません。";
+  var skinMap = {
+    "fair":"fair skin", "natural":"natural skin", "tan":"tan skin", "deep":"dark skin",
+    "色白":"fair skin", "普通":"natural skin", "小麦色":"tan skin", "褐色":"dark skin"
+  };
+  var bodyMap = {
+    "やせ型":"slender", "普通":"average", "筋肉質":"muscular", "ぽっちゃり":"plump", "がっちり":"athletic"
+  };
+  var skeletalMap = {
+    "ストレート":"straight", "ウェーブ":"wave", "ナチュラル":"natural", "わからない":"natural"
+  };
+  var ageMap = {
+    "10代":"10s", "20代":"20s", "30代":"30s", "40代":"40s", "50代":"50s", "60代以上":"60s and above"
+  };
+  var faceMap = {
+    "oval":"oval", "round":"round", "oblong":"long", "heart":"heart-shaped",
+    "卵型":"oval", "丸顔":"round", "面長":"long", "逆三角形":"heart-shaped"
+  };
+  var hairStyleMap = {
+    "short":"short", "medium":"medium-length", "long":"long", "bob":"bob", "very-short":"very short",
+    "ショート":"short", "ミディアム":"medium-length", "ロング":"long", "ボブ":"bob", "ベリーショート":"very short"
+  };
+  var hairColorMap = {
+    "black":"black", "dark-brown":"dark brown", "light-brown":"light brown", "blond":"blond", "gray":"gray/white",
+    "ブラック":"black", "ダークブラウン":"dark brown", "ライトブラウン":"light brown", "ブロンド":"blond", "グレー/白":"gray/white"
+  };
 
-  var skinMap = {"色白":"fair skin", "普通":"natural skin", "小麦色":"tan skin", "褐色":"dark skin"};
-  var bodyMap = {"痩せ型":"slender", "普通":"average", "がっちり":"athletic", "ぽっちゃり":"plump", "筋肉質":"muscular"};
-  
-  var skin = skinMap[data.skin_tone] || data.skin_tone || "";
-  var body = bodyMap[data.body_type] || data.body_type || "";
-  var genderLabel = data.gender || data.body_gender || "man";
-  var age = data.age || data.body_age || "";
-  
+  var genderLabel = data.gender;
+  var skin     = skinMap[data.skin_tone]      || data.skin_tone;
+  var body     = bodyMap[data.body_type]      || data.body_type;
+  var skeletal = skeletalMap[data.skeletal_type] || data.skeletal_type;
+  var age      = ageMap[data.age]             || data.age;
+  var face     = faceMap[data.face_shape]     || data.face_shape;
+  var hairSt   = hairStyleMap[data.hair_style]  || data.hair_style;
+  var hairCol  = hairColorMap[data.hair_color]  || data.hair_color;
+
   var clothing = "topless, wearing only basic minimalist neutral-colored briefs";
   if (genderLabel === "女性") {
     clothing = "wearing minimalist neutral-colored tight-fitting fitness wear, including a compression T-shirt and leggings";
   }
-  
-  var prompt = "A full-body realistic 3D character model of a " + (genderLabel === "女性" ? "woman" : (genderLabel === "男性" ? "man" : "person")) + " in their " + age + ". ";
-  prompt += "Physical details: " + (data.height ? data.height + "cm tall, " : "") + (data.weight ? data.weight + "kg, " : "") + (body ? body + " body type, " : "") + (data.skeletal_type || "") + " bone structure. ";
-  prompt += "Appearance: " + (skin ? skin + ", " : "") + (data.face_shape || "") + " face shape, " + (data.hair_style || "") + " hair in " + (data.hair_color || "") + " color. ";
+
+  var prompt = "A full-body realistic 3D character model of a " + (genderLabel === "女性" ? "woman" : "man") + " in their " + age + ". ";
+  prompt += "Physical details: " + data.height + "cm tall, " + data.weight + "kg, " + body + " body type, " + skeletal + " bone structure. ";
+  prompt += "Appearance: " + skin + ", " + face + " face shape, " + hairSt + " hair in " + hairCol + " color. ";
   prompt += "Style: " + clothing + ", showing body silhouette for shape visualization, neutral standing pose, facing front, minimalist white studio background, realistic anatomical details, cinematic lighting, 8k high resolution.";
-  
+
   return prompt;
 }
