@@ -167,28 +167,28 @@ function syncProfileData(data) {
 function syncWeatherData(data) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    // 「WoW_Database」シートを使用
-    var sheet = ss.getSheetByName('WoW_Database');
+    // ユーザーシートに書き込む（プロフィールと同じシート）
+    var sheetName = data.user_id || 'UnknownUser';
+    var sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
-      sheet = ss.insertSheet('WoW_Database');
+      sheet = ss.insertSheet(sheetName);
     }
 
     var timestamp = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
 
-    // 7行目: 同期日時と題名
-    sheet.getRange(7, 1).setValue(timestamp);
-    sheet.getRange(7, 2).setValue("天気予報サマリー（Lv判定込）");
-    sheet.getRange(7, 1, 1, 2).setFontWeight('bold').setBackground('#F3F3F3');
+    // 8行目: 題名
+    sheet.getRange(8, 1).setValue("体感気温予報");
 
-    // 8-11行目: 予報データ (6列: 時間, 天気, 気温, 基準Lv, 個人差, 最終Lv)
+    // 9-13行目: [時刻, 体感気温, 服装レベル] の5時点
     if (data.forecast_data && data.forecast_data.length > 0) {
-      // データの数に合わせて範囲を動的に取得して書き込み
-      sheet.getRange(8, 1, data.forecast_data.length, data.forecast_data[0].length).setValues(data.forecast_data);
-      
-      // 数値列（D, E, F列）を中央揃えにするなどの装飾
-      sheet.getRange(8, 4, 4, 3).setHorizontalAlignment("center");
+      var rows = data.forecast_data.slice(0, 5);
+      // 足りない行は空で埋める
+      while (rows.length < 5) rows.push(['', '', '']);
+      sheet.getRange(9, 1, 5, 3).setValues(rows);
+      // B列（体感気温）・C列（服装レベル）を中央揃え
+      sheet.getRange(9, 2, 5, 2).setHorizontalAlignment("center");
     }
-    
+
     return { success: true };
   } catch (e) {
     logDebug('syncWeatherData ERROR', e.toString());

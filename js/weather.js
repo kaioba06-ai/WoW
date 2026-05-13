@@ -1009,33 +1009,23 @@ function getWeatherForecastSummary() {
     
     if (startIndex < 0) return null;
     
-    const offsets = [0, 3, 4, 12];
+    // 現在・+3h・+6h・+12h・+24h の5時点
+    const offsets = [0, 3, 6, 12, 24];
     const forecastData = [];
-    
+
     offsets.forEach((offset) => {
         const idx = startIndex + offset;
         if (idx < apparentTemps.length) {
             const t = Math.round(apparentTemps[idx]);
-            const code = codes[idx];
-            const info = getWeatherInfo(code);
             const hour = new Date(times[idx]).getHours();
             const timeLabel = offset === 0 ? `現在 (${hour}:00)` : `+${offset}h (${hour}:00)`;
-            
-            const baseLevel = getThermalLevel(t);
-            const finalLevel = baseLevel + adjustment;
+            const thermalLevel = getThermalLevel(t);
 
-            // [時間, 天気, 気温, 基準Lv, 個人差, 最終Lv]
-            forecastData.push([
-                timeLabel,
-                info.desc,
-                `${t}°C`,
-                baseLevel,
-                adjustment,
-                finalLevel
-            ]);
+            // [時刻ラベル, 体感気温(数値), 服装レベル(1-10)]
+            forecastData.push([timeLabel, t, thermalLevel]);
         }
     });
-    
+
     return forecastData;
 }
 
