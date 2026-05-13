@@ -118,6 +118,19 @@ function syncProfileData(data) {
       var prompt = generateAvatarPrompt(data);
       sheet.getRange(4, 1).setValue(timestamp);
       sheet.getRange(4, 2).setValue(prompt);
+
+      // 画像生成
+      try {
+        sheet.getRange(5, 1).setValue("画像生成中...");
+        var imageUrl = generateAvatarImage(prompt);
+        sheet.getRange(5, 1).setValue(timestamp);
+        sheet.getRange(5, 2).setValue(imageUrl);
+        logDebug('Avatar Image Generated', imageUrl);
+      } catch (imgErr) {
+        sheet.getRange(5, 1).setValue(timestamp);
+        sheet.getRange(5, 2).setValue("画像生成エラー: " + imgErr.toString());
+        logDebug('Avatar Image Error', imgErr.toString());
+      }
     } else {
       var missing = ["性別","年代","身長","体重","体格","骨格","肌の色","顔の形","髪型","髪色"]
         .filter(function(_, i) { return !promptFields[i]; }).join("・");
