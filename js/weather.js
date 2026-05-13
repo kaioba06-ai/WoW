@@ -65,16 +65,24 @@ function getWeatherInfo(code) {
     return WMO_WEATHER[code] || { desc:'不明', emoji:'❓', icon:'help', iconColor:'text-gray-400' };
 }
 
-function getClothingSuggestion(temp) {
-    if (temp <= 5)  return 'ダウンコート';
-    if (temp <= 10) return '厚手コート';
-    if (temp <= 15) return 'コート着用';
-    if (temp <= 18) return 'ジャケット';
-    if (temp <= 22) return 'カーディガン';
-    if (temp <= 25) return 'シャツ';
-    if (temp <= 28) return '薄手シャツ';
-    return 'Tシャツ';
+/**
+ * 気温から10段階のサーマルレベルを取得する (5度刻み)
+ * Lv.1: 0℃以下, Lv.10: 40℃超
+ */
+function getThermalLevel(temp) {
+    if (temp <= 0)  return 1;
+    if (temp <= 5)  return 2;
+    if (temp <= 10) return 3;
+    if (temp <= 15) return 4;
+    if (temp <= 20) return 5;
+    if (temp <= 25) return 6;
+    if (temp <= 30) return 7;
+    if (temp <= 35) return 8;
+    if (temp <= 40) return 9;
+    return 10;
 }
+
+
 
 function getTimeIcon(hour) {
     if (hour >= 6 && hour < 10) return 'light_mode';
@@ -255,6 +263,9 @@ async function loadWeather(lat, lon, pref, city) {
         updateCurrentWeather(data);
         updateHourlyTimeline(data);
         updateWeeklyForecast(data);
+        
+        // クラウドへ自動同期
+        syncWeatherToCloud(data);
     } catch(e) {
         console.error('[Weather] Failed to load weather:', e);
         const descEl = document.getElementById('weather-desc');
@@ -476,11 +487,12 @@ function getBestOutfit(apparentTemp, seed, weatherCode, hour) {
     else if (p.temp_sensitivity === '暑がり') adjustedTemp += 2;
     else if (p.temp_sensitivity === '極度の暑がり') adjustedTemp += 4;
 
+    const lv = getThermalLevel(adjustedTemp);
     let category = 'mild';
-    if (adjustedTemp <= 10) category = 'cold';
-    else if (adjustedTemp <= 20) category = 'mild';
-    else if (adjustedTemp <= 27) category = 'warm';
-    else category = 'hot';
+    if (lv <= 3)      category = 'cold'; // 10度以下
+    else if (lv <= 5) category = 'mild'; // 10〜20度
+    else if (lv <= 7) category = 'warm'; // 20〜30度
+    else              category = 'hot';  // 30度超
 
     // 2. カタログからの選択 (好きな服装＝対象スタイルを優先)
     let stylePreference = p.gender; // "mens", "ladies", "none" (ID based)
@@ -584,12 +596,13 @@ function getBestOutfit(apparentTemp, seed, weatherCode, hour) {
 
     return {
         category,
+        thermalLevel: lv,
         title: baseOutfit.title,
         desc: `${baseOutfit.desc} ${addOnDesc}`,
         img: mainImg,
         items: modifiedItems,
         isNight: (isNight || isEvening),
-        visualPrompt: visualPrompt // AI生成用にデータを保持
+        visualPrompt: visualPrompt
     };
 }
 
@@ -788,8 +801,8 @@ function updateHourlyTimeline(data) {
     }
     const safeStartIndex = startIndex < 0 ? 0 : startIndex;
 
-    // targetOffsets = [0, 3, 6, 12] に基づいて下段カードを更新
-    const targetOffsets = [0, 3, 6, 12];
+    // targetOffsets = [0, 3, 4, 12] に基づいて下段カードを更新
+    const targetOffsets = [0, 3, 4, 12];
     hourlySuggestions = []; 
 
     targetOffsets.forEach((offset, i) => {
@@ -897,7 +910,8 @@ function updateWeeklyForecast(data) {
         const weatherInfo = getWeatherInfo(codes[i]);
         const prob = precipProbs[i];
         const imgSrc = WEEKLY_OUTFIT_IMGS[cardIndex % WEEKLY_OUTFIT_IMGS.length];
-        const suggestion = getClothingSuggestion(aMaxT);
+
+
 
         const iconColor = codes[i] <= 3
             ? 'text-orange-400'
@@ -962,3 +976,92 @@ function refreshWeeklyData() {
 window.addEventListener('sectionsLoaded', () => {
     initWeather();
 });
+
+/**
+ * スプレッドシート抽出用の予報サマリーを取得 (8-11行目用)
+ */
+function getWeatherForecastSummary() {
+    if (!lastWeatherData || !lastWeatherData.hourly) return null;
+    
+    const profile = getUserProfile();
+    const p = profile.personalize || {};
+    
+    // 個人差のマッピング
+    const sensitivityMap = {
+        '極度の寒がり': -2,
+        '寒がり': -1,
+        '普通': 0,
+        '暑がり': 1,
+        '極度の暑がり': 2
+    };
+    const adjustment = sensitivityMap[p.temp_sensitivity] || 0;
+
+    const now = new Date();
+    const nowHour = now.getHours();
+    const times = lastWeatherData.hourly.time;
+    const apparentTemps = lastWeatherData.hourly.apparent_temperature || lastWeatherData.hourly.temperature_2m;
+    const codes = lastWeatherData.hourly.weather_code;
+    
+    const startIndex = times.findIndex(t => {
+        const d = new Date(t);
+        return d.getFullYear() === now.getFullYear() && d.getHours() >= nowHour;
+    });
+    
+    if (startIndex < 0) return null;
+    
+    const offsets = [0, 3, 4, 12];
+    const forecastData = [];
+    
+    offsets.forEach((offset) => {
+        const idx = startIndex + offset;
+        if (idx < apparentTemps.length) {
+            const t = Math.round(apparentTemps[idx]);
+            const code = codes[idx];
+            const info = getWeatherInfo(code);
+            const hour = new Date(times[idx]).getHours();
+            const timeLabel = offset === 0 ? `現在 (${hour}:00)` : `+${offset}h (${hour}:00)`;
+            
+            const baseLevel = getThermalLevel(t);
+            const finalLevel = baseLevel + adjustment;
+
+            // [時間, 天気, 気温, 基準Lv, 個人差, 最終Lv]
+            forecastData.push([
+                timeLabel,
+                info.desc,
+                `${t}°C`,
+                baseLevel,
+                adjustment,
+                finalLevel
+            ]);
+        }
+    });
+    
+    return forecastData;
+}
+
+async function syncWeatherToCloud(data) {
+    console.log('[Weather] Starting cloud sync (8-11 rows)...');
+    const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+    const userId = profile.handle || 'unknown';
+    
+    const forecastData = getWeatherForecastSummary();
+    if (!forecastData) return;
+
+    const syncData = {
+        user_id: userId,
+        forecast_data: forecastData // 新しい配列形式
+    };
+
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run.withSuccessHandler(res => console.log('[Weather] Sync success:', res))
+                         .withFailureHandler(err => console.error('[Weather] Sync error:', err))
+                         .syncWeatherData(syncData);
+    } else if (typeof WOW_CONFIG !== 'undefined' && WOW_CONFIG.cloudUrl) {
+        const payload = JSON.stringify({ 
+            apiKey: WOW_CONFIG.apiKey, 
+            type: 'weather_v2', // バージョン2として送信
+            data: syncData 
+        });
+        fetch(WOW_CONFIG.cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload });
+    }
+}

@@ -3,12 +3,8 @@
 let _profilePhotoPending = null;
 let _saveTimeout = null;
 
-function debouncedSaveProfile() {
-    if (_saveTimeout) clearTimeout(_saveTimeout);
-    _saveTimeout = setTimeout(() => {
-        saveProfileEdit();
-    }, 500);
-}
+// debouncedSaveProfile is defined later
+
 
 // プロフィール編集フォームをLocalStorageから初期化
 function initProfileEditFields() {
@@ -150,55 +146,18 @@ function initProfileEditFields() {
     setVal('settings-thigh', saved.thigh);
     setVal('settings-shoes', saved.shoes);
     setVal('settings-wrist', saved.wrist);
+
+    // 追加：タグ類の復元を実行
+    recreateTags('.profile-opt-material-tag-container', p.materials, 'material');
+    recreateTags('.profile-opt-inspiration-tag-container', p.inspirations, 'inspiration');
+    recreateTags('#profile-favorite-colors-container', p.favorite_colors, 'color');
 }
 
 /**
  * プロフィールにタグを追加する (素材、インスピレーション、好きな色)
  */
-function addProfileTag(btn, type) {
-    let value = '';
-    let color = '#888888';
+// addProfileTag and removeProfileTag are defined later with custom modals
 
-    if (type === 'color-pref') {
-        value = prompt('好きな色の名前を入力してください (例: ネイビー)');
-        if (!value) return;
-        color = prompt('色のカラーコードを入力してください (例: #000080)', '#000080');
-        if (!color) color = '#888888';
-    } else {
-        const typeLabel = type === 'material' ? '好みの素材' : 'インスピレーション';
-        value = prompt(`${typeLabel}を入力してください (例: ${type === 'material' ? 'リネン' : 'ストリート'})`);
-        if (!value) return;
-    }
-
-    const containerSelector = type === 'color-pref' ? '#profile-favorite-colors-container' : 
-                             (type === 'material' ? '.profile-opt-material-tag-container' : '.profile-opt-inspiration-tag-container');
-    const container = document.querySelector(containerSelector);
-    if (!container) return;
-
-    const span = document.createElement('span');
-    if (type === 'color-pref') {
-        span.className = 'profile-opt-color-pref-tag px-2 py-1 rounded-md bg-black/5 dark:bg-white/5 text-on-surface dark:text-white font-bold text-[8px] flex items-center gap-1 border border-black/5 dark:border-white/10 shadow-sm';
-        span.innerHTML = `<span class="w-2 h-2 rounded-full" style="background-color: ${color}; border: ${color === '#FFFFFF' ? '1px solid rgba(0,0,0,0.1)' : 'none'}"></span> ${value} <span onclick="removeProfileTag(this)" class="material-symbols-outlined text-[10px] cursor-pointer opacity-50 hover:opacity-100">close</span>`;
-    } else {
-        let tagClass = 'px-2 py-1 rounded-md bg-black/5 dark:bg-white/5 text-on-surface dark:text-white font-bold text-[8px] flex items-center gap-1 border border-black/5 dark:border-white/10';
-        if (type === 'material') tagClass = 'profile-opt-material-tag ' + tagClass;
-        if (type === 'inspiration') tagClass = 'profile-opt-inspiration-tag px-2.5 py-1 rounded-full bg-black/80 dark:bg-white/80 text-white dark:text-slate-900 font-bold text-[8px] flex items-center gap-1';
-        
-        span.className = tagClass;
-        span.innerHTML = `${value} <span onclick="removeProfileTag(this)" class="material-symbols-outlined text-[10px] cursor-pointer opacity-50 hover:opacity-100">close</span>`;
-    }
-    container.appendChild(span);
-    saveProfileEdit(); // 追加後に保存
-}
-
-/**
- * プロフィールのタグを削除する
- */
-function removeProfileTag(el) {
-    const tag = el.parentElement;
-    tag.remove();
-    saveProfileEdit(); // 削除後に保存
-}
 
 // ===== 設定モーダル =====
 function openSettingsModal() {
@@ -374,95 +333,139 @@ function removeProfilePhoto() {
 function saveProfileEdit(e) {
     console.log('[Sync] Starting Spreadsheet sync...');
     try {
+        const getVal = (id) => (document.getElementById('settings-' + id) || document.getElementById(id))?.value || '';
+        
+        const getActiveBtnInfo = (group) => {
+            const btns = document.querySelectorAll(`.profile-opt-${group}`);
+            for (let i = 0; i < btns.length; i++) {
+                if (btns[i].dataset.active === 'true' || btns[i].getAttribute('data-active') === 'true') {
+                    return {
+                        value: btns[i].dataset.value || btns[i].innerText.trim(),
+                        label: btns[i].dataset.label || btns[i].innerText.trim()
+                    };
+                }
+            }
+            return { value: '', label: '' };
+        };
+
+        const ageEl = document.getElementById('body-age');
         const saved = JSON.parse(localStorage.getItem('kion_profile') || '{}');
-        const getVal = (id) => document.getElementById(id)?.value || '';
-        const getSelected = (group) => {
-            const btn = document.querySelector(`.profile-opt-${group}[data-active="true"]`);
-            if (!btn) return { value: '', label: '' };
-            return {
-                value: btn.dataset.value || btn.innerText.trim(),
-                label: btn.dataset.label || btn.innerText.trim()
-            };
-        };
+        
+        // 基本情報
+        saved.name = document.getElementById('profile-edit-name')?.value || saved.name || '';
+        saved.handle = document.getElementById('profile-edit-handle')?.value?.replace(/^@/, '') || saved.handle || '';
+        saved.bio = document.getElementById('profile-edit-bio')?.value || saved.bio || '';
+        
+        // 写真の更新
+        if (_profilePhotoPending === '__remove__') {
+            saved.photo = null;
+        } else if (_profilePhotoPending) {
+            saved.photo = _profilePhotoPending;
+        }
 
-        // フォームデータの収集
-        saved.name = getVal('profile-edit-name') || saved.name;
-        saved.handle = getVal('profile-edit-handle').replace(/^@/, '') || saved.handle;
-        saved.bio = getVal('profile-edit-bio') || saved.bio;
-        saved.birthday = {
-            y: getVal('profile-edit-birth-y'),
-            m: getVal('profile-edit-birth-m'),
-            d: getVal('profile-edit-birth-d')
-        };
-        saved.birthday_visibility = document.querySelector('.birth-v-btn[data-active="true"]')?.id.replace('birth-v-', '') || 'public';
-
-        saved.personalize = {
-            gender: 'mens',
-            gender_label: 'メンズ',
-            temp_sensitivity: document.getElementById('temp-label')?.innerText?.trim() || '普通',
-            rain_sensitivity: '普通',
-            fit_upper: 'regular',
-            fit_upper_label: 'レギュラー',
-            fit_lower: 'regular',
-            fit_lower_label: 'レギュラー',
-            skeletal_type: getSelected('body-skeletal').value,
-            skeletal_type_label: getSelected('body-skeletal').label,
-            skin_tone: getSelected('skin-tone').value,
-            skin_tone_label: getSelected('skin-tone').label,
-            face_shape: getSelected('face-shape').value,
-            face_shape_label: getSelected('face-shape').label,
-            body_gender: getSelected('body-gender').value,
-            body_gender_label: getSelected('body-gender').label,
-            body_type: getSelected('body-type').value,
-            body_type_label: getSelected('body-type').label,
-            hair_style: getSelected('hair-style').value,
-            hair_style_label: getSelected('hair-style').label,
-            hair_color: getSelected('hair-color').value,
-            hair_color_label: getSelected('hair-color').label,
-            body_age: getVal('body-age'),
-            body_age_label: document.getElementById('body-age')?.options[document.getElementById('body-age')?.selectedIndex]?.text || '',
-            scene_tags: Array.from(document.querySelectorAll('.profile-opt-scenes[data-active="true"]')).map(t => t.innerText.trim()),
-        };
-
-        const getNum = (id) => document.getElementById(id)?.value || '';
+        
+        // 身体データ (Basic)
+        const genderInfo = getActiveBtnInfo('body-gender');
+        saved.body_gender = genderInfo.value;
+        saved.body_gender_label = genderInfo.label;
+        saved.body_age = ageEl ? ageEl.value : '';
+        saved.body_age_label = ageEl ? ageEl.options[ageEl.selectedIndex]?.text : '';
+        
         const fields = ['height','weight','shoulder','chest','neck','sleeve','belly','waist','hip','inseam','thigh','shoes','wrist'];
-        fields.forEach(f => saved[f] = getNum(`settings-${f}`));
+        fields.forEach(f => saved[f] = getVal(f));
+
+        // パーソナライズ (Personalize) - weather.js が参照する構造
+        if (!saved.personalize) saved.personalize = {};
+        
+        // 感度設定
+        saved.personalize.temp_sensitivity = document.getElementById('temp-label')?.innerText || '普通';
+        saved.personalize.rain_sensitivity = document.getElementById('rain-label')?.innerText || '普通';
+        
+        // スタイル・体型属性
+        saved.personalize.gender = getActiveBtnInfo('gender').value || saved.body_gender; 
+        saved.personalize.body_gender = saved.body_gender;
+        saved.personalize.body_type = getActiveBtnInfo('body-type').label;
+        saved.personalize.skeletal_type = getActiveBtnInfo('body-skeletal').label;
+        saved.personalize.skin_tone = getActiveBtnInfo('skin-tone').label;
+        saved.personalize.face_shape = getActiveBtnInfo('face-shape').label;
+        saved.personalize.hair_style = getActiveBtnInfo('hair-style').label;
+        saved.personalize.hair_color = getActiveBtnInfo('hair-color').label;
+
+        // タグデータの抽出
+        const extractTags = (selector) => {
+            return Array.from(document.querySelectorAll(selector)).map(el => {
+                const clone = el.cloneNode(true);
+                clone.querySelectorAll('.material-symbols-outlined').forEach(s => s.remove());
+                return clone.textContent.trim();
+            }).filter(x => x);
+        };
+        
+        saved.personalize.materials = extractTags('.profile-opt-material-tag');
+        saved.personalize.inspirations = extractTags('.profile-opt-inspiration-tag');
+        
+        // 好きな色はオブジェクト形式
+        saved.personalize.favorite_colors = Array.from(document.querySelectorAll('.profile-opt-color-pref-tag')).map(el => {
+            const clone = el.cloneNode(true);
+            clone.querySelectorAll('.material-symbols-outlined').forEach(s => s.remove());
+            const colorDot = el.querySelector('span');
+            return {
+                name: clone.textContent.trim(),
+                color: colorDot ? colorDot.style.backgroundColor : ''
+            };
+        });
 
         // LocalStorageに保存
         localStorage.setItem('kion_profile', JSON.stringify(saved));
-        applyProfileDisplay(saved);
+        if (typeof applyProfileDisplay === 'function') applyProfileDisplay(saved);
 
-        // クラウド(GAS/スプレッドシート)への同期データ
+        // クラウド同期
         const syncData = {
             user_id: saved.handle || 'unknown',
-            body_gender: saved.personalize?.body_gender_label || '',
-            body_age: saved.personalize?.body_age_label || '',
-            height: saved.height, weight: saved.weight,
-            body_type: saved.personalize?.body_type_label || '',
-            skeletal_type: saved.personalize?.skeletal_type_label || '',
-            shoulder: saved.shoulder, chest: saved.chest, neck: saved.neck, sleeve: saved.sleeve,
-            belly: saved.belly, waist: saved.waist, hip: saved.hip, inseam: saved.inseam, thigh: saved.thigh,
-            shoes: saved.shoes, wrist: saved.wrist,
-            skin_tone: saved.personalize?.skin_tone_label || '',
-            face_shape: saved.personalize?.face_shape_label || '',
-            hair_style: saved.personalize?.hair_style_label || '',
-            hair_color: saved.personalize?.hair_color_label || ''
+            gender: saved.body_gender_label || '',
+            age: saved.body_age_label || '',
+            height: saved.height || '', 
+            weight: saved.weight || '',
+            body_type: saved.personalize.body_type || '',
+            skeletal_type: saved.personalize.skeletal_type || '',
+            shoulder: saved.shoulder || '', 
+            chest: saved.chest || '', 
+            neck: saved.neck || '', 
+            sleeve: saved.sleeve || '',
+            belly: saved.belly || '', 
+            waist: saved.waist || '', 
+            hip: saved.hip || '', 
+            inseam: saved.inseam || '', 
+            thigh: saved.thigh || '',
+            shoes: saved.shoes || '', 
+            wrist: saved.wrist || '',
+            skin_tone: saved.personalize.skin_tone || '',
+            face_shape: saved.personalize.face_shape || '',
+            hair_style: saved.personalize.hair_style || '',
+            hair_color: saved.personalize.hair_color || '',
         };
 
         if (typeof google !== 'undefined' && google.script && google.script.run) {
-            google.script.run.syncProfileData(syncData);
+            google.script.run
+                .withSuccessHandler(res => console.log('[Sync] Success:', res))
+                .withFailureHandler(err => console.error('[Sync] Failure:', err))
+                .syncProfileData(syncData);
         } else if (typeof WOW_CONFIG !== 'undefined' && WOW_CONFIG.cloudUrl) {
-            const payload = JSON.stringify({ apiKey: WOW_CONFIG.apiKey, data: syncData });
-            fetch(WOW_CONFIG.cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload });
+            // Fallback to fetch (Web App URL)
+            fetch(WOW_CONFIG.cloudUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({
+                    apiKey: WOW_CONFIG.apiKey,
+                    type: 'profile',
+                    data: syncData
+                })
+            })
+            .then(() => console.log('[Sync] Profile Sync triggered via fetch'))
+            .catch(err => console.error('[Sync] Fetch failure:', err));
         }
 
-        if (typeof window.refreshWeatherUI === 'function') {
-            window.refreshWeatherUI();
-        }
-
-        // 通知やボタンのフィードバックをすべて削除
     } catch (err) {
-        console.error('[Profile] Save Error:', err);
+        console.error('[Sync] Error during profile sync:', err);
     }
 }
 
@@ -470,8 +473,28 @@ function saveProfileEdit(e) {
  * 入力中の自動保存（内部用）
  */
 function debouncedSaveProfile() {
-    saveProfileEdit();
+    if (_saveTimeout) clearTimeout(_saveTimeout);
+    _saveTimeout = setTimeout(() => {
+        saveProfileEdit();
+    }, 500);
 }
+
+/**
+ * ボタン選択時の処理
+ */
+function selectProfileOption(btn, group) {
+    const btns = btn.parentElement.querySelectorAll(`.profile-opt-${group}`);
+    btns.forEach(b => {
+        b.dataset.active = 'false';
+        b.setAttribute('data-active', 'false');
+    });
+    btn.dataset.active = 'true';
+    btn.setAttribute('data-active', 'true');
+    
+    // デバウンスを介して保存
+    debouncedSaveProfile();
+}
+
 
 // ===== 過去の投稿ギャラリー =====
 let profilePostsFilter = 'all';
@@ -639,25 +662,18 @@ window.addEventListener('sectionsLoaded', () => {
         document.getElementById('profile-bio-count').textContent = bioInput.value.length;
     });
 
-});
-
-
-
-// ===== プロフィール: 選択トグル =====
-function selectProfileOption(btn, group) {
-    if(navigator.vibrate) navigator.vibrate([10]);
-    document.querySelectorAll(`.profile-opt-${group}`).forEach(el => el.dataset.active = 'false');
-    btn.dataset.active = 'true';
-    
-    // Auto-save on change
-    saveProfileEdit();
-}
-
+});/**
+ * プロフィールのタグを削除する
+ */
 function removeProfileTag(btn) {
     if(navigator.vibrate) navigator.vibrate([5]);
-    btn.parentElement.remove();
-    saveProfileEdit();
+    const tag = btn.parentElement;
+    if (tag) {
+        tag.remove();
+        debouncedSaveProfile();
+    }
 }
+
 
 function addProfileTag(btn, type) {
     if(navigator.vibrate) navigator.vibrate([8]);

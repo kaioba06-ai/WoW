@@ -8,7 +8,7 @@ function doPost(e) {
     
     var params = JSON.parse(contents);
     
-    // APIキーの簡易認証（スクリプトプロパティから取得）
+    // APIキーの簡易認証
     var API_KEY = PropertiesService.getScriptProperties().getProperty('SYNC_API_KEY') || "kion_sync_99"; 
     if (params.apiKey !== API_KEY) {
       logDebug('Auth Failed', { received: params.apiKey, expected: API_KEY });
@@ -16,8 +16,13 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
-    var result = syncProfileData(params.data);
-    logDebug('syncProfileData result', result);
+    var result;
+    if (params.type === 'weather' || params.type === 'weather_v2') {
+      result = syncWeatherData(params.data);
+    } else {
+      result = syncProfileData(params.data);
+    }
+    logDebug('Sync result (' + (params.type || 'profile') + ')', result);
     
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
@@ -33,15 +38,24 @@ function doPost(e) {
  * ログをDebugLogシートの一番上に挿入
  */
 function logDebug(msg, data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var debugSheet = ss.getSheetByName('DebugLog');
-  if (!debugSheet) {
-    debugSheet = ss.insertSheet('DebugLog');
-    debugSheet.appendRow(['日時', 'メッセージ', 'データ']);
-    debugSheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#f3f3f3');
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) {
+      console.log('Spreadsheet not bound: ' + msg, data);
+      return;
+    }
+    var debugSheet = ss.getSheetByName('DebugLog');
+    if (!debugSheet) {
+      debugSheet = ss.insertSheet('DebugLog');
+      debugSheet.appendRow(['日時', 'メッセージ', 'データ']);
+      debugSheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#f3f3f3');
+      debugSheet.setFrozenRows(1);
+    }
+    debugSheet.insertRowBefore(2);
+    debugSheet.getRange(2, 1, 1, 3).setValues([[new Date(), msg, typeof data === 'object' ? JSON.stringify(data) : data]]);
+  } catch (e) {
+    console.error('logDebug failed', e.toString());
   }
-  debugSheet.insertRowBefore(2);
-  debugSheet.getRange(2, 1, 1, 3).setValues([[new Date(), msg, typeof data === 'object' ? JSON.stringify(data) : data]]);
 }
 
 /**
@@ -49,51 +63,114 @@ function logDebug(msg, data) {
  */
 function syncProfileData(data) {
   try {
+    logDebug('syncProfileData received', data);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // ユーザーID（ハンドル名）をシート名にする
-    var sheetName = data.user_id || 'UnknownUser';
-    var sheet = ss.getSheetByName(sheetName);
-    
-    if (!sheet) {
-      sheet = ss.insertSheet(sheetName);
-      var header = ['同期日時', '性別', '年代', '身長', '体重', '体格', '骨格', '肩幅', '胸囲', '首回り', '裄丈', '腹囲', 'ウエスト', 'ヒップ', '股下', '太もも', '靴', '手首', '肌の色', '顔の形', '髪型', '髪色'];
-      sheet.appendRow(header);
-      sheet.getRange(1, 1, 1, header.length).setFontWeight('bold').setBackground('#f3f3f3');
-      sheet.setFrozenRows(1);
-    }
+    // 「WoW_Database」シートを優先使用、なければ最初のシート
+    var sheet = ss.getSheetByName('WoW_Database') || ss.getSheets()[0]; 
+    if (!sheet) return { success: false, error: 'Sheet not found' };
     
     var timestamp = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
-    var row = [timestamp, data.body_gender||'', data.body_age||'', data.height||'', data.weight||'', data.body_type||'', data.skeletal_type||'', data.shoulder||'', data.chest||'', data.neck||'', data.sleeve||'', data.belly||'', data.waist||'', data.hip||'', data.inseam||'', data.thigh||'', data.shoes||'', data.wrist||'', data.skin_tone||'', data.face_shape||'', data.hair_style||'', data.hair_color||''];
+    
+    // 1行目のヘッダー（一応確認）
+    var header = ['同期日時', '性別', '年代', '身長', '体重', '体格', '骨格', '肩幅', '胸囲', '首回り', '裄丈', '腹囲', 'ウエスト', 'ヒップ', '股下', '太もも', '靴', '手首', '肌の色', '顔の形', '髪型', '髪色'];
+    sheet.getRange(1, 1, 1, header.length).setValues([header]);
+
+    // デバッグ用：届いたデータを生でA5セルに書き出し
+    sheet.getRange(5, 1).setValue("RAW_DATA: " + JSON.stringify(data));
+
+    // 2行目のデータマッピング修正
+    var row = [
+      timestamp,
+      data.gender || data.body_gender || '',
+      data.age || data.body_age || '',
+      data.height || '',
+      data.weight || '',
+      data.body_type || '',
+      data.skeletal_type || '',
+      data.shoulder || '',
+      data.chest || '',
+      data.neck || '',
+      data.sleeve || '',
+      data.belly || '',
+      data.waist || '',
+      data.hip || '',
+      data.inseam || '',
+      data.thigh || '',
+      data.shoes || '',
+      data.wrist || '',
+      data.skin_tone || '',
+      data.face_shape || '',
+      data.hair_style || '',
+      data.hair_color || ''
+    ];
     sheet.getRange(2, 1, 1, row.length).setValues([row]);
     
-    // アバター生成用プロンプトの生成
-    var prompt = generateAvatarPrompt(data);
-    logDebug('Generated Prompt', prompt); // 最新のログ機能を使用
+    // プロンプト生成に必須の項目（性別、年代、身長、体重）が埋まっているかチェック
+    var essentialIndices = [1, 2, 3, 4]; // gender, age, height, weight
+    var hasEssential = true;
+    for (var j = 0; j < essentialIndices.length; j++) {
+      var val = row[essentialIndices[j]];
+      if (val === null || val === undefined || val === "") {
+        hasEssential = false;
+        break;
+      }
+    }
 
-    sheet.getRange(3, 1).setValue("アバター生成用プロンプト");
-    sheet.getRange(4, 1).setValue(timestamp); // A4: タイムスタンプ
-    sheet.getRange(4, 2).setValue(prompt);    // B4: プロンプト
+    if (hasEssential) {
+      // 必須項目が埋まっている場合のみプロンプト生成
+      var prompt = generateAvatarPrompt(data);
+      sheet.getRange(4, 1).setValue(timestamp);
+      sheet.getRange(4, 2).setValue(prompt);
+      
+      // 画像生成もトリガーする場合（必要に応じて）
+      // generateAvatarImage(prompt); 
+    } else {
+      // 必須項目に空欄がある場合は4行目に警告を表示
+      sheet.getRange(4, 1).setValue(timestamp);
+      sheet.getRange(4, 2).setValue("必須データ（性別・年代・身長・体重）が未入力のためプロンプトを生成しませんでした。");
+      console.log("Essential data missing. Skipping prompt generation.");
+    }
+
     
-    // 【画像生成と保存】 (A5, A6, B6)
-    try {
-      sheet.getRange(5, 1).setValue("アバター画像生成中...");
-      var imageUrl = generateAvatarImage(prompt);
-      var finishTime = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
-      sheet.getRange(5, 1).setValue("最新のアバター画像");
-      sheet.getRange(6, 1).setValue(finishTime); // A6: 完了タイムスタンプ
-      sheet.getRange(6, 2).setValue(imageUrl);   // B6: 画像リンク
-      logDebug('Image Generation Success', imageUrl);
-    } catch (imgErr) {
-      var errorTime = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
-      sheet.getRange(5, 1).setValue("画像生成エラー");
-      sheet.getRange(6, 1).setValue(errorTime);   // A6: エラー発生時刻
-      sheet.getRange(6, 2).setValue(imgErr.toString()); // B6: エラー内容
-      logDebug('Image Generation Error', imgErr.toString());
+    return { success: true };
+  } catch (e) {
+    logDebug('syncProfileData ERROR', e.toString());
+    return { success: false, error: e.toString() };
+  }
+}
+
+/**
+ * 気温予測データのみを更新
+ */
+function syncWeatherData(data) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    // 「WoW_Database」シートを使用
+    var sheet = ss.getSheetByName('WoW_Database');
+    if (!sheet) {
+      sheet = ss.insertSheet('WoW_Database');
+    }
+
+    var timestamp = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
+
+    // 7行目: 同期日時と題名
+    sheet.getRange(7, 1).setValue(timestamp);
+    sheet.getRange(7, 2).setValue("天気予報サマリー（Lv判定込）");
+    sheet.getRange(7, 1, 1, 2).setFontWeight('bold').setBackground('#F3F3F3');
+
+    // 8-11行目: 予報データ (6列: 時間, 天気, 気温, 基準Lv, 個人差, 最終Lv)
+    if (data.forecast_data && data.forecast_data.length > 0) {
+      // データの数に合わせて範囲を動的に取得して書き込み
+      sheet.getRange(8, 1, data.forecast_data.length, data.forecast_data[0].length).setValues(data.forecast_data);
+      
+      // 数値列（D, E, F列）を中央揃えにするなどの装飾
+      sheet.getRange(8, 4, 4, 3).setHorizontalAlignment("center");
     }
     
     return { success: true };
   } catch (e) {
+    logDebug('syncWeatherData ERROR', e.toString());
     return { success: false, error: e.toString() };
   }
 }
@@ -102,16 +179,19 @@ function syncProfileData(data) {
  * 初期設定用：実行するとAPIキーを自動的にスクリプトプロパティに保存します
  * GASエディタ上でこの関数を選択して「実行」してください
  */
+/**
+ * 初期設定用：APIキーをスクリプトプロパティに保存します。
+ * セキュリティのため、実際のキーはここには書かず、GASの設定画面から直接入力するか、
+ * 一時的に書いて実行した後はすぐに消去してください。
+ */
 function setupApiKeys() {
   var scriptProperties = PropertiesService.getScriptProperties();
   
-  // あなたが発行した新しいAPIキーを設定（AIzaから始まるキー）
-  scriptProperties.setProperty('GOOGLE_API_KEY', 'AIzaSyAvxpLcKQUZvhowaoHvJFhCKMGvv-tGVyk');
+  // キーが未設定の場合のみ、ここを書き換えて一度だけ実行してください
+  // scriptProperties.setProperty('GOOGLE_API_KEY', 'YOUR_NEW_KEY_HERE');
   
-  // Webhook認証用のキー（固定）
   scriptProperties.setProperty('SYNC_API_KEY', 'kion_sync_99');
-  
-  console.log('APIキーの設定が完了しました。');
+  console.log('設定完了。現在のキーの状態:', scriptProperties.getProperty('GOOGLE_API_KEY') ? '設定済み' : '未設定');
 }
 
 /**
@@ -187,21 +267,26 @@ function generateAvatarImage(prompt) {
  * 物理データからAI画像生成用のプロンプトを組み立てる
  */
 function generateAvatarPrompt(data) {
+  // 必須データが1つでも欠けている場合は生成を拒否する（バックアップガード）
+  if (!data.gender && !data.body_gender) return "性別が未入力のため生成できません。";
+  if (!data.age && !data.body_age) return "年代が未入力のため生成できません。";
+
   var skinMap = {"色白":"fair skin", "普通":"natural skin", "小麦色":"tan skin", "褐色":"dark skin"};
   var bodyMap = {"痩せ型":"slender", "普通":"average", "がっちり":"athletic", "ぽっちゃり":"plump", "筋肉質":"muscular"};
   
-  var skin = skinMap[data.skin_tone] || data.skin_tone || "natural skin";
-  var body = bodyMap[data.body_type] || data.body_type || "average";
-  var genderLabel = data.body_gender || "";
+  var skin = skinMap[data.skin_tone] || data.skin_tone || "";
+  var body = bodyMap[data.body_type] || data.body_type || "";
+  var genderLabel = data.gender || data.body_gender || "man";
+  var age = data.age || data.body_age || "";
   
   var clothing = "topless, wearing only basic minimalist neutral-colored briefs";
   if (genderLabel === "女性") {
     clothing = "wearing minimalist neutral-colored tight-fitting fitness wear, including a compression T-shirt and leggings";
   }
   
-  var prompt = "A full-body realistic 3D character model of a " + (genderLabel === "女性" ? "woman" : "man") + " in their " + data.body_age + ". ";
-  prompt += "Physical details: " + (data.height || "170") + "cm tall, " + (data.weight || "60") + "kg, " + body + " body type, " + (data.skeletal_type || "") + " bone structure. ";
-  prompt += "Appearance: " + skin + ", " + (data.face_shape || "") + " face shape, " + (data.hair_style || "") + " hair in " + (data.hair_color || "") + " color. ";
+  var prompt = "A full-body realistic 3D character model of a " + (genderLabel === "女性" ? "woman" : (genderLabel === "男性" ? "man" : "person")) + " in their " + age + ". ";
+  prompt += "Physical details: " + (data.height ? data.height + "cm tall, " : "") + (data.weight ? data.weight + "kg, " : "") + (body ? body + " body type, " : "") + (data.skeletal_type || "") + " bone structure. ";
+  prompt += "Appearance: " + (skin ? skin + ", " : "") + (data.face_shape || "") + " face shape, " + (data.hair_style || "") + " hair in " + (data.hair_color || "") + " color. ";
   prompt += "Style: " + clothing + ", showing body silhouette for shape visualization, neutral standing pose, facing front, minimalist white studio background, realistic anatomical details, cinematic lighting, 8k high resolution.";
   
   return prompt;
