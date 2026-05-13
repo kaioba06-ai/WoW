@@ -106,30 +106,21 @@ function syncProfileData(data) {
     ];
     sheet.getRange(2, 1, 1, row.length).setValues([row]);
     
-    // プロンプト生成に必須の項目（性別、年代、身長、体重）が埋まっているかチェック
-    var essentialIndices = [1, 2, 3, 4]; // gender, age, height, weight
-    var hasEssential = true;
-    for (var j = 0; j < essentialIndices.length; j++) {
-      var val = row[essentialIndices[j]];
-      if (val === null || val === undefined || val === "") {
-        hasEssential = false;
-        break;
-      }
-    }
+    // プロンプトに使う全フィールドが埋まっているかチェック（1つでも空なら生成しない）
+    var promptFields = [data.gender, data.age, data.height, data.weight,
+                        data.body_type, data.skeletal_type, data.skin_tone,
+                        data.face_shape, data.hair_style, data.hair_color];
+    var allFilled = promptFields.every(function(v) { return v !== null && v !== undefined && v !== ""; });
 
-    if (hasEssential) {
-      // 必須項目が埋まっている場合のみプロンプト生成
+    if (allFilled) {
       var prompt = generateAvatarPrompt(data);
       sheet.getRange(4, 1).setValue(timestamp);
       sheet.getRange(4, 2).setValue(prompt);
-      
-      // 画像生成もトリガーする場合（必要に応じて）
-      // generateAvatarImage(prompt); 
     } else {
-      // 必須項目に空欄がある場合は4行目に警告を表示
+      var missing = ["性別","年代","身長","体重","体格","骨格","肌の色","顔の形","髪型","髪色"]
+        .filter(function(_, i) { return !promptFields[i]; }).join("・");
       sheet.getRange(4, 1).setValue(timestamp);
-      sheet.getRange(4, 2).setValue("必須データ（性別・年代・身長・体重）が未入力のためプロンプトを生成しませんでした。");
-      console.log("Essential data missing. Skipping prompt generation.");
+      sheet.getRange(4, 2).setValue("未入力項目があるため生成スキップ：" + missing);
     }
 
     
@@ -267,27 +258,26 @@ function generateAvatarImage(prompt) {
  * 物理データからAI画像生成用のプロンプトを組み立てる
  */
 function generateAvatarPrompt(data) {
-  // 必須データが1つでも欠けている場合は生成を拒否する（バックアップガード）
-  if (!data.gender && !data.body_gender) return "性別が未入力のため生成できません。";
-  if (!data.age && !data.body_age) return "年代が未入力のため生成できません。";
+  var skinMap = {"fair":"fair skin", "natural":"natural skin", "tan":"tan skin", "deep":"dark skin",
+                 "色白":"fair skin", "普通":"natural skin", "小麦色":"tan skin", "褐色":"dark skin"};
+  var bodyMap = {"やせ型":"slender", "普通":"average", "筋肉質":"muscular", "ぽっちゃり":"plump",
+                 "slender":"slender", "average":"average", "muscular":"muscular", "plump":"plump"};
+  var skeletalMap = {"ストレート":"straight", "ウェーブ":"wave", "ナチュラル":"natural", "わからない":"unknown"};
 
-  var skinMap = {"色白":"fair skin", "普通":"natural skin", "小麦色":"tan skin", "褐色":"dark skin"};
-  var bodyMap = {"痩せ型":"slender", "普通":"average", "がっちり":"athletic", "ぽっちゃり":"plump", "筋肉質":"muscular"};
-  
-  var skin = skinMap[data.skin_tone] || data.skin_tone || "";
-  var body = bodyMap[data.body_type] || data.body_type || "";
-  var genderLabel = data.gender || data.body_gender || "man";
-  var age = data.age || data.body_age || "";
-  
+  var genderLabel = data.gender;
+  var skin = skinMap[data.skin_tone] || data.skin_tone;
+  var body = bodyMap[data.body_type] || data.body_type;
+  var skeletal = skeletalMap[data.skeletal_type] || data.skeletal_type;
+
   var clothing = "topless, wearing only basic minimalist neutral-colored briefs";
   if (genderLabel === "女性") {
     clothing = "wearing minimalist neutral-colored tight-fitting fitness wear, including a compression T-shirt and leggings";
   }
-  
-  var prompt = "A full-body realistic 3D character model of a " + (genderLabel === "女性" ? "woman" : (genderLabel === "男性" ? "man" : "person")) + " in their " + age + ". ";
-  prompt += "Physical details: " + (data.height ? data.height + "cm tall, " : "") + (data.weight ? data.weight + "kg, " : "") + (body ? body + " body type, " : "") + (data.skeletal_type || "") + " bone structure. ";
-  prompt += "Appearance: " + (skin ? skin + ", " : "") + (data.face_shape || "") + " face shape, " + (data.hair_style || "") + " hair in " + (data.hair_color || "") + " color. ";
+
+  var prompt = "A full-body realistic 3D character model of a " + (genderLabel === "女性" ? "woman" : "man") + " in their " + data.age + ". ";
+  prompt += "Physical details: " + data.height + "cm tall, " + data.weight + "kg, " + body + " body type, " + skeletal + " bone structure. ";
+  prompt += "Appearance: " + skin + ", " + data.face_shape + " face shape, " + data.hair_style + " hair in " + data.hair_color + " color. ";
   prompt += "Style: " + clothing + ", showing body silhouette for shape visualization, neutral standing pose, facing front, minimalist white studio background, realistic anatomical details, cinematic lighting, 8k high resolution.";
-  
+
   return prompt;
 }
