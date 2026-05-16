@@ -621,8 +621,20 @@ function selectSuggestion(index) {
     const leftBadge = document.getElementById('suggest-badge-left-0');
     const rightBadge = document.getElementById('suggest-badge-right-0');
 
+    // AIシーン画像（C14-C17 から取得済）があればそれを優先、無ければストック画像
+    const aiUrl = (function() {
+        try {
+            const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+            const userId = profile.handle || 'unknown';
+            if (userId === 'unknown') return null;
+            const cached = JSON.parse(localStorage.getItem('kion_scene_images_' + userId) || 'null');
+            const u = cached && Array.isArray(cached.scenes) ? cached.scenes[index] : null;
+            return (u && typeof u === 'string' && u.startsWith('http')) ? u : null;
+        } catch (_) { return null; }
+    })();
+
     if (imgEl) {
-        imgEl.src = data.meta.img;
+        imgEl.src = aiUrl || data.meta.img;
         imgEl.onerror = () => {
             imgEl.src = "https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800";
             imgEl.onerror = null;
@@ -975,6 +987,8 @@ function refreshWeeklyData() {
 // 天気データの取得を開始
 window.addEventListener('sectionsLoaded', () => {
     initWeather();
+    // 即座にキャッシュ済みのシーン画像を反映、その後最新を取りに行く
+    fetchAndApplySceneImages();
 });
 
 /**
@@ -1032,11 +1046,90 @@ function getWeatherForecastSummary() {
     return forecastData;
 }
 
+// 直近の同期時刻（多重起動防止）
+let __lastWeatherSyncAt = 0;
+const __WEATHER_SYNC_COOLDOWN_MS = 30 * 1000; // 30秒
+
+/**
+ * GAS からシーン画像URLを取得し、ホームページの画像に反映
+ * - localStorage キャッシュを先に適用（瞬時表示）
+ * - そのあと GAS から最新を取りに行って差し替え
+ */
+async function fetchAndApplySceneImages() {
+    if (typeof WOW_CONFIG === 'undefined' || !WOW_CONFIG.cloudUrl) return;
+    const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+    const userId = profile.handle || 'unknown';
+    if (!userId || userId === 'unknown') return;
+
+    const cacheKey = 'kion_scene_images_' + userId;
+
+    // 1) キャッシュ即時適用
+    try {
+        const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+        if (cached && Array.isArray(cached.scenes) && cached.scenes.length === 4) {
+            applySceneImages(cached.scenes);
+        }
+    } catch (_) {}
+
+    // 2) GASから最新取得
+    try {
+        const url = `${WOW_CONFIG.cloudUrl}?action=scenes`
+                  + `&apiKey=${encodeURIComponent(WOW_CONFIG.apiKey)}`
+                  + `&user_id=${encodeURIComponent(userId)}`;
+        const resp = await fetch(url, { method: 'GET' });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (data && data.success && Array.isArray(data.scenes)) {
+            const hasAny = data.scenes.some(u => u && typeof u === 'string' && u.startsWith('http'));
+            if (hasAny) {
+                localStorage.setItem(cacheKey, JSON.stringify({ scenes: data.scenes, ts: Date.now() }));
+                applySceneImages(data.scenes);
+            }
+        }
+    } catch (e) {
+        console.warn('[Weather] Scene image fetch failed:', e);
+    }
+}
+
+function applySceneImages(scenes) {
+    if (!Array.isArray(scenes)) return;
+    const setImg = (el, url) => {
+        if (!el) return;
+        el.onerror = () => {
+            console.warn('[Weather] AI scene image load failed:', url);
+            el.onerror = null;
+            // フォールバックは既存onerror or 何もしない（既存表示維持）
+        };
+        el.src = url;
+        el.classList.remove('opacity-0');
+        if (el.parentElement) el.parentElement.classList.remove('skeleton');
+    };
+    for (let i = 0; i < 4; i++) {
+        const url = scenes[i];
+        if (!url || typeof url !== 'string' || !url.startsWith('http')) continue;
+        setImg(document.getElementById(`grid-img-${i}`), url);
+    }
+    // メイン画像は現在選択中のスロットを反映
+    const idx = (typeof currentSelectedIndex === 'number') ? currentSelectedIndex : 0;
+    const mainUrl = scenes[idx];
+    if (mainUrl && typeof mainUrl === 'string' && mainUrl.startsWith('http')) {
+        setImg(document.getElementById('suggest-img-0'), mainUrl);
+    }
+}
+
 async function syncWeatherToCloud(data) {
+    const __now = Date.now();
+    if (__now - __lastWeatherSyncAt < __WEATHER_SYNC_COOLDOWN_MS) {
+        console.log('[Weather] Sync skipped (cooldown, last was ' +
+            Math.round((__now - __lastWeatherSyncAt) / 1000) + 's ago)');
+        return;
+    }
+    __lastWeatherSyncAt = __now;
+
     console.log('[Weather] Starting cloud sync (8-11 rows)...');
     const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
     const userId = profile.handle || 'unknown';
-    
+
     const forecastData = getWeatherForecastSummary();
     if (!forecastData) return;
 
@@ -1046,15 +1139,19 @@ async function syncWeatherToCloud(data) {
     };
 
     if (typeof google !== 'undefined' && google.script && google.script.run) {
-        google.script.run.withSuccessHandler(res => console.log('[Weather] Sync success:', res))
-                         .withFailureHandler(err => console.error('[Weather] Sync error:', err))
-                         .syncWeatherData(syncData);
+        google.script.run.withSuccessHandler(res => {
+            console.log('[Weather] Sync success:', res);
+            fetchAndApplySceneImages();
+        }).withFailureHandler(err => console.error('[Weather] Sync error:', err))
+          .syncWeatherData(syncData);
     } else if (typeof WOW_CONFIG !== 'undefined' && WOW_CONFIG.cloudUrl) {
-        const payload = JSON.stringify({ 
-            apiKey: WOW_CONFIG.apiKey, 
+        const payload = JSON.stringify({
+            apiKey: WOW_CONFIG.apiKey,
             type: 'weather_v2', // バージョン2として送信
-            data: syncData 
+            data: syncData
         });
         fetch(WOW_CONFIG.cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload });
+        // 同期完了を直接受け取れない(no-cors)ため、画像生成が終わる頃合いに取得しに行く
+        setTimeout(fetchAndApplySceneImages, 70 * 1000); // 70秒後
     }
 }
