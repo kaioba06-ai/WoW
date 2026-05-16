@@ -3,7 +3,7 @@
  */
 const WOW_CONFIG = {
     // 最新のデプロイURL
-    cloudUrl: "https://script.google.com/macros/s/AKfycbyUVrMy6AZFiDXDFO7QcEmhFojjGqRof2p6A_HVXfdkA4Wd7IEMeiXGasRg06IQcNtwLg/exec",
+    cloudUrl: "https://script.google.com/macros/s/AKfycbwjfbbZ4OkBrSmI6jfBJmZ-B45WuZpkzfem5EQEi7D-hcP_AiwDrojmwUHSvXg4icSD-Q/exec",
     // 認証キー
     apiKey: "kion_sync_99",
     

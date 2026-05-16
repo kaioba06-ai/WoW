@@ -3,12 +3,8 @@
 let _profilePhotoPending = null;
 let _saveTimeout = null;
 
-function debouncedSaveProfile() {
-    if (_saveTimeout) clearTimeout(_saveTimeout);
-    _saveTimeout = setTimeout(() => {
-        saveProfileEdit();
-    }, 500);
-}
+// debouncedSaveProfile is defined later
+
 
 // プロフィール編集フォームをLocalStorageから初期化
 function initProfileEditFields() {
@@ -88,21 +84,24 @@ function initProfileEditFields() {
         });
     };
     if (p.gender) setGroupActive('gender', p.gender);
-    if (p.personal_color) setGroupActive('color', p.personal_color);
     if (p.fit_upper) setGroupActive('fit-upper', p.fit_upper);
     if (p.fit_lower) setGroupActive('fit-lower', p.fit_lower);
-    if (p.budget) setGroupActive('budget', p.budget);
 
     if (p.skeletal_type) setGroupActive('body-skeletal', p.skeletal_type);
     if (p.skin_tone) setGroupActive('skin-tone', p.skin_tone);
-    if (p.lineage) setGroupActive('roots', p.lineage);
+
     if (p.face_shape) setGroupActive('face-shape', p.face_shape);
     if (p.body_gender) setGroupActive('body-gender', p.body_gender);
-    if (p.body_age) setGroupActive('body-age', p.body_age);
     if (p.hair_style) setGroupActive('hair-style', p.hair_style);
     if (p.hair_color) setGroupActive('hair-color', p.hair_color);
-    if (p.eye_color) setGroupActive('eye-color', p.eye_color); // 新項目
     if (p.body_type) setGroupActive('body-type', p.body_type);
+
+    // 年代 (select) の初期化
+    const ageSelect = document.getElementById('body-age');
+    const ageValue = p.body_age || saved.body_age;
+    if (ageSelect && ageValue) {
+        ageSelect.value = ageValue;
+    }
 
     // タグ類の初期化
     const recreateTags = (containerSelector, data, type) => {
@@ -130,10 +129,6 @@ function initProfileEditFields() {
         });
     };
 
-    recreateTags('.profile-opt-material-tag-container', p.materials, 'material'); // Note: added container classes in profile.html
-    recreateTags('.profile-opt-inspiration-tag-container', p.inspirations, 'inspiration');
-    recreateTags('#profile-favorite-colors-container', p.favorite_colors, 'color');
-
     // 身体データ（数値）の初期化
     const setVal = (id, val) => {
         const el = document.getElementById(id);
@@ -152,55 +147,18 @@ function initProfileEditFields() {
     setVal('settings-thigh', saved.thigh);
     setVal('settings-shoes', saved.shoes);
     setVal('settings-wrist', saved.wrist);
+
+    // 追加：タグ類の復元を実行
+    recreateTags('.profile-opt-material-tag-container', p.materials, 'material');
+    recreateTags('.profile-opt-inspiration-tag-container', p.inspirations, 'inspiration');
+    recreateTags('#profile-favorite-colors-container', p.favorite_colors, 'color');
 }
 
 /**
  * プロフィールにタグを追加する (素材、インスピレーション、好きな色)
  */
-function addProfileTag(btn, type) {
-    let value = '';
-    let color = '#888888';
+// addProfileTag and removeProfileTag are defined later with custom modals
 
-    if (type === 'color-pref') {
-        value = prompt('好きな色の名前を入力してください (例: ネイビー)');
-        if (!value) return;
-        color = prompt('色のカラーコードを入力してください (例: #000080)', '#000080');
-        if (!color) color = '#888888';
-    } else {
-        const typeLabel = type === 'material' ? '好みの素材' : 'インスピレーション';
-        value = prompt(`${typeLabel}を入力してください (例: ${type === 'material' ? 'リネン' : 'ストリート'})`);
-        if (!value) return;
-    }
-
-    const containerSelector = type === 'color-pref' ? '#profile-favorite-colors-container' : 
-                             (type === 'material' ? '.profile-opt-material-tag-container' : '.profile-opt-inspiration-tag-container');
-    const container = document.querySelector(containerSelector);
-    if (!container) return;
-
-    const span = document.createElement('span');
-    if (type === 'color-pref') {
-        span.className = 'profile-opt-color-pref-tag px-2 py-1 rounded-md bg-black/5 dark:bg-white/5 text-on-surface dark:text-white font-bold text-[8px] flex items-center gap-1 border border-black/5 dark:border-white/10 shadow-sm';
-        span.innerHTML = `<span class="w-2 h-2 rounded-full" style="background-color: ${color}; border: ${color === '#FFFFFF' ? '1px solid rgba(0,0,0,0.1)' : 'none'}"></span> ${value} <span onclick="removeProfileTag(this)" class="material-symbols-outlined text-[10px] cursor-pointer opacity-50 hover:opacity-100">close</span>`;
-    } else {
-        let tagClass = 'px-2 py-1 rounded-md bg-black/5 dark:bg-white/5 text-on-surface dark:text-white font-bold text-[8px] flex items-center gap-1 border border-black/5 dark:border-white/10';
-        if (type === 'material') tagClass = 'profile-opt-material-tag ' + tagClass;
-        if (type === 'inspiration') tagClass = 'profile-opt-inspiration-tag px-2.5 py-1 rounded-full bg-black/80 dark:bg-white/80 text-white dark:text-slate-900 font-bold text-[8px] flex items-center gap-1';
-        
-        span.className = tagClass;
-        span.innerHTML = `${value} <span onclick="removeProfileTag(this)" class="material-symbols-outlined text-[10px] cursor-pointer opacity-50 hover:opacity-100">close</span>`;
-    }
-    container.appendChild(span);
-    saveProfileEdit(); // 追加後に保存
-}
-
-/**
- * プロフィールのタグを削除する
- */
-function removeProfileTag(el) {
-    const tag = el.parentElement;
-    tag.remove();
-    saveProfileEdit(); // 削除後に保存
-}
 
 // ===== 設定モーダル =====
 function openSettingsModal() {
@@ -369,112 +327,103 @@ function removeProfilePhoto() {
     document.getElementById('profile-photo-input').value = '';
 }
 
+/**
+ * プロフィール編集の保存と同期
+ * スプレッドシート（GAS）への自動抽出を優先します
+ */
 function saveProfileEdit(e) {
+    console.log('[Sync] Starting Spreadsheet sync...');
     try {
-        const saved = JSON.parse(localStorage.getItem('kion_profile') || '{}');
-        const nameInput = document.getElementById('profile-edit-name');
-        const handleInput = document.getElementById('profile-edit-handle');
-        const bioInput = document.getElementById('profile-edit-bio');
+        const getVal = (id) => (document.getElementById('settings-' + id) || document.getElementById(id))?.value || '';
         
-        const name  = nameInput ? nameInput.value.trim() : (saved.name || 'Alessandro Riva');
-        const handle = handleInput ? handleInput.value.trim().replace(/^@/, '') : (saved.handle || 'alessandro_riva');
-        const bio   = bioInput ? bioInput.value.trim() : (saved.bio || '');
-
-        const birthY = document.getElementById('profile-edit-birth-y')?.value || '';
-        const birthM = document.getElementById('profile-edit-birth-m')?.value || '';
-        const birthD = document.getElementById('profile-edit-birth-d')?.value || '';
-        const birthday = { y: birthY, m: birthM, d: birthD };
-
-        // 値とラベルの両方を取得するヘルパー
-        const getSelected = (group) => {
-            const btn = document.querySelector(`.profile-opt-${group}[data-active="true"]`);
-            if (!btn) return { value: '', label: '' };
-            return {
-                value: btn.dataset.value || btn.innerText.trim(),
-                label: btn.dataset.label || btn.innerText.trim()
-            };
+        const getActiveBtnInfo = (group) => {
+            const btns = document.querySelectorAll(`.profile-opt-${group}`);
+            for (let i = 0; i < btns.length; i++) {
+                if (btns[i].dataset.active === 'true' || btns[i].getAttribute('data-active') === 'true') {
+                    return {
+                        value: btns[i].dataset.value || btns[i].innerText.trim(),
+                        label: btns[i].dataset.label || btns[i].innerText.trim()
+                    };
+                }
+            }
+            return { value: '', label: '' };
         };
 
-        const birthdayVisibility = document.querySelector('.birth-v-btn[data-active="true"]')?.id.replace('birth-v-', '') || 'public';
-
-        // パーソナライズ項目を収集
-        const personalize = {
-            // 内部的には value (ID) を優先保存するが、後でエクスポート時に label を使う
-            gender: getSelected('gender').value,
-            gender_label: getSelected('gender').label,
-            temp_sensitivity: document.getElementById('temp-label')?.innerText?.trim() || '普通',
-            rain_sensitivity: document.getElementById('rain-label')?.innerText?.trim() || '普通',
-            personal_color: getSelected('color').value,
-            personal_color_label: getSelected('color').label,
-            fit_upper: getSelected('fit-upper').value,
-            fit_upper_label: getSelected('fit-upper').label,
-            fit_lower: getSelected('fit-lower').value,
-            fit_lower_label: getSelected('fit-lower').label,
-            budget: getSelected('budget').value,
-            budget_label: getSelected('budget').label,
-
-            skeletal_type: getSelected('body-skeletal').value,
-            skeletal_type_label: getSelected('body-skeletal').label,
-            skin_tone: getSelected('skin-tone').value,
-            skin_tone_label: getSelected('skin-tone').label,
-            lineage: getSelected('roots').value,
-            lineage_label: getSelected('roots').label,
-            face_shape: getSelected('face-shape').value,
-            face_shape_label: getSelected('face-shape').label,
-            body_gender: getSelected('body-gender').value,
-            body_gender_label: getSelected('body-gender').label,
-            body_type: getSelected('body-type').value,
-            body_type_label: getSelected('body-type').label,
-            body_age: getSelected('body-age').value,
-            body_age_label: getSelected('body-age').label,
-            hair_style: getSelected('hair-style').value,
-            hair_style_label: getSelected('hair-style').label,
-            hair_color: getSelected('hair-color').value,
-            hair_color_label: getSelected('hair-color').label,
-            eye_color: getSelected('eye-color').value,
-            eye_color_label: getSelected('eye-color').label,
-            // タグ類
-            scene_tags: Array.from(document.querySelectorAll('.profile-opt-scenes[data-active="true"]')).map(t => t.innerText.trim()),
-            materials: Array.from(document.querySelectorAll('.profile-opt-material-tag')).map(t => t.innerText.replace('close', '').trim()),
-            inspirations: Array.from(document.querySelectorAll('.profile-opt-inspiration-tag')).map(t => t.innerText.replace('close', '').trim()),
-            favorite_colors: Array.from(document.querySelectorAll('.profile-opt-color-pref-tag')).map(t => ({
-                name: t.innerText.replace('close', '').trim(),
-                color: t.querySelector('.rounded-full')?.style.backgroundColor
-            }))
-        };
-
-        if(_profilePhotoPending === '__remove__') {
+        const ageEl = document.getElementById('body-age');
+        const saved = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+        
+        // 基本情報
+        saved.name = document.getElementById('profile-edit-name')?.value || saved.name || '';
+        saved.handle = document.getElementById('profile-edit-handle')?.value?.replace(/^@/, '') || saved.handle || '';
+        saved.bio = document.getElementById('profile-edit-bio')?.value || saved.bio || '';
+        
+        // 写真の更新
+        if (_profilePhotoPending === '__remove__') {
             saved.photo = null;
-        } else if(_profilePhotoPending) {
+        } else if (_profilePhotoPending) {
             saved.photo = _profilePhotoPending;
         }
-        saved.name = name;
-        saved.handle = handle;
-        saved.bio  = bio;
-        saved.birthday = birthday;
-        saved.birthday_visibility = birthdayVisibility;
-        saved.personalize = personalize;
 
-        // 身体データを保存対象に追加（数値として確実に取得）
-        const getNum = (id) => document.getElementById(id)?.value || '';
-        saved.height = getNum('settings-height');
-        saved.weight = getNum('settings-weight');
-        saved.shoulder = getNum('settings-shoulder');
-        saved.chest = getNum('settings-chest');
-        saved.neck = getNum('settings-neck');
-        saved.sleeve = getNum('settings-sleeve');
-        saved.belly = getNum('settings-belly');
-        saved.waist = getNum('settings-waist');
-        saved.hip = getNum('settings-hip');
-        saved.inseam = getNum('settings-inseam');
-        saved.thigh = getNum('settings-thigh');
-        saved.shoes = getNum('settings-shoes');
-        saved.wrist = getNum('settings-wrist');
+        
+        // 身体データ (Basic) — DOM が空の場合は既存の saved 値を維持する
+        const genderInfo = getActiveBtnInfo('body-gender');
+        if (genderInfo.value) {
+            saved.body_gender = genderInfo.value;
+            saved.body_gender_label = genderInfo.label;
+        }
+        const newAge = ageEl ? ageEl.value : '';
+        if (newAge) {
+            saved.body_age = newAge;
+            saved.body_age_label = ageEl.options[ageEl.selectedIndex]?.text || '';
+        }
 
+        const fields = ['height','weight','shoulder','chest','neck','sleeve','belly','waist','hip','inseam','thigh','shoes','wrist'];
+        fields.forEach(f => { const v = getVal(f); if (v) saved[f] = v; });
+
+        // パーソナライズ (Personalize) - weather.js が参照する構造
+        if (!saved.personalize) saved.personalize = {};
+
+        // 感度設定
+        saved.personalize.temp_sensitivity = document.getElementById('temp-label')?.innerText || saved.personalize.temp_sensitivity || '普通';
+        saved.personalize.rain_sensitivity = document.getElementById('rain-label')?.innerText || saved.personalize.rain_sensitivity || '普通';
+
+        // スタイル・体型属性 — DOM が空なら既存値を保持
+        const _g = getActiveBtnInfo('gender').value || saved.body_gender;
+        if (_g) saved.personalize.gender = _g;
+        saved.personalize.body_gender = saved.body_gender;
+        const _bt = getActiveBtnInfo('body-type').label; if (_bt) saved.personalize.body_type = _bt;
+        const _sk = getActiveBtnInfo('body-skeletal').label; if (_sk) saved.personalize.skeletal_type = _sk;
+        const _st = getActiveBtnInfo('skin-tone').value;  if (_st) saved.personalize.skin_tone = _st;
+        const _fs = getActiveBtnInfo('face-shape').value; if (_fs) saved.personalize.face_shape = _fs;
+        const _hs = getActiveBtnInfo('hair-style').value; if (_hs) saved.personalize.hair_style = _hs;
+        const _hc = getActiveBtnInfo('hair-color').value; if (_hc) saved.personalize.hair_color = _hc;
+
+        // タグデータの抽出
+        const extractTags = (selector) => {
+            return Array.from(document.querySelectorAll(selector)).map(el => {
+                const clone = el.cloneNode(true);
+                clone.querySelectorAll('.material-symbols-outlined').forEach(s => s.remove());
+                return clone.textContent.trim();
+            }).filter(x => x);
+        };
+        
+        saved.personalize.materials = extractTags('.profile-opt-material-tag');
+        saved.personalize.inspirations = extractTags('.profile-opt-inspiration-tag');
+        
+        // 好きな色はオブジェクト形式
+        saved.personalize.favorite_colors = Array.from(document.querySelectorAll('.profile-opt-color-pref-tag')).map(el => {
+            const clone = el.cloneNode(true);
+            clone.querySelectorAll('.material-symbols-outlined').forEach(s => s.remove());
+            const colorDot = el.querySelector('span');
+            return {
+                name: clone.textContent.trim(),
+                color: colorDot ? colorDot.style.backgroundColor : ''
+            };
+        });
+
+        // LocalStorageに保存
         localStorage.setItem('kion_profile', JSON.stringify(saved));
-
-        applyProfileDisplay(saved);
-        _profilePhotoPending = null;
+        if (typeof applyProfileDisplay === 'function') applyProfileDisplay(saved);
 
         // Supabase にも同期保存
         if (typeof window.saveProfileToSupabase === 'function') {
@@ -487,40 +436,84 @@ function saveProfileEdit(e) {
             });
         }
 
-        // 保存された設定を即座に提案ロジックに反映させる
-        if (typeof window.refreshWeatherUI === 'function') {
-            window.refreshWeatherUI();
+        // クラウド同期
+        const syncData = {
+            user_id: saved.handle || 'unknown',
+            gender: saved.body_gender_label || '',
+            age: saved.body_age_label || '',
+            height: saved.height || '', 
+            weight: saved.weight || '',
+            body_type: saved.personalize.body_type || '',
+            skeletal_type: saved.personalize.skeletal_type || '',
+            shoulder: saved.shoulder || '', 
+            chest: saved.chest || '', 
+            neck: saved.neck || '', 
+            sleeve: saved.sleeve || '',
+            belly: saved.belly || '', 
+            waist: saved.waist || '', 
+            hip: saved.hip || '', 
+            inseam: saved.inseam || '', 
+            thigh: saved.thigh || '',
+            shoes: saved.shoes || '', 
+            wrist: saved.wrist || '',
+            skin_tone: saved.personalize.skin_tone || '',
+            face_shape: saved.personalize.face_shape || '',
+            hair_style: saved.personalize.hair_style || '',
+            hair_color: saved.personalize.hair_color || '',
+            temp_sensitivity: saved.personalize.temp_sensitivity || '普通',
+        };
+
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+            google.script.run
+                .withSuccessHandler(res => console.log('[Sync] Success:', res))
+                .withFailureHandler(err => console.error('[Sync] Failure:', err))
+                .syncProfileData(syncData);
+        } else if (typeof WOW_CONFIG !== 'undefined' && WOW_CONFIG.cloudUrl) {
+            // Fallback to fetch (Web App URL)
+            fetch(WOW_CONFIG.cloudUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({
+                    apiKey: WOW_CONFIG.apiKey,
+                    type: 'profile',
+                    data: syncData
+                })
+            })
+            .then(() => console.log('[Sync] Profile Sync triggered via fetch'))
+            .catch(err => console.error('[Sync] Fetch failure:', err));
         }
 
-        // 自動同期を実行 (クラウド設定がある場合のみ)
-        if (typeof sendToCloud === 'function') {
-            sendToCloud(true);
-        }
-
-        // 保存完了のフィードバック（必要に応じて）
-        const eventObj = e || window.event;
-        const btn = eventObj?.target || document.querySelector('button[onclick*="saveProfileEdit"]');
-        if (btn && btn.id !== 'profile-edit-name' && btn.id !== 'profile-edit-handle') {
-            // 自動保存の場合はメインのボタンにフィードバックを出す
-            const saveBtn = document.querySelector('button[onclick*="saveProfileEdit"]');
-            if (saveBtn) {
-                const orig = saveBtn.textContent;
-                if (!orig.includes('✓')) {
-                    saveBtn.innerHTML = '<span class="material-symbols-outlined text-sm">done</span> 保存済み';
-                    saveBtn.classList.add('bg-green-500', 'dark:bg-green-500');
-                    saveBtn.classList.remove('bg-primary', 'dark:bg-blue-500');
-                    setTimeout(() => {
-                        saveBtn.textContent = '完了';
-                        saveBtn.classList.remove('bg-green-500', 'dark:bg-green-500');
-                        saveBtn.classList.add('bg-primary', 'dark:bg-blue-500');
-                    }, 1200);
-                }
-            }
-        }
     } catch (err) {
-        console.error('[Profile] Save Error:', err);
+        console.error('[Sync] Error during profile sync:', err);
     }
 }
+
+/**
+ * 入力中の自動保存（内部用）
+ */
+function debouncedSaveProfile() {
+    if (_saveTimeout) clearTimeout(_saveTimeout);
+    _saveTimeout = setTimeout(() => {
+        saveProfileEdit();
+    }, 500);
+}
+
+/**
+ * ボタン選択時の処理
+ */
+function selectProfileOption(btn, group) {
+    const btns = btn.parentElement.querySelectorAll(`.profile-opt-${group}`);
+    btns.forEach(b => {
+        b.dataset.active = 'false';
+        b.setAttribute('data-active', 'false');
+    });
+    btn.dataset.active = 'true';
+    btn.setAttribute('data-active', 'true');
+    
+    // デバウンスを介して保存
+    debouncedSaveProfile();
+}
+
 
 // ===== 過去の投稿ギャラリー =====
 let profilePostsFilter = 'all';
@@ -688,25 +681,18 @@ window.addEventListener('sectionsLoaded', () => {
         document.getElementById('profile-bio-count').textContent = bioInput.value.length;
     });
 
-});
-
-
-
-// ===== プロフィール: 選択トグル =====
-function selectProfileOption(btn, group) {
-    if(navigator.vibrate) navigator.vibrate([10]);
-    document.querySelectorAll(`.profile-opt-${group}`).forEach(el => el.dataset.active = 'false');
-    btn.dataset.active = 'true';
-    
-    // Auto-save on change
-    saveProfileEdit();
-}
-
+});/**
+ * プロフィールのタグを削除する
+ */
 function removeProfileTag(btn) {
     if(navigator.vibrate) navigator.vibrate([5]);
-    btn.parentElement.remove();
-    saveProfileEdit();
+    const tag = btn.parentElement;
+    if (tag) {
+        tag.remove();
+        debouncedSaveProfile();
+    }
 }
+
 
 function addProfileTag(btn, type) {
     if(navigator.vibrate) navigator.vibrate([8]);
@@ -772,7 +758,7 @@ function addProfileTag(btn, type) {
             const span = document.createElement('span');
             if (type === 'color-pref') {
                 span.className = 'profile-opt-color-pref-tag px-2 py-1 rounded-md bg-black/5 dark:bg-white/5 text-on-surface dark:text-white font-bold text-[8px] flex items-center gap-1 border border-black/5 dark:border-white/10 shadow-sm';
-                span.innerHTML = `<span class="w-2 h-2 rounded-full" style="background-color: ${color}; border: ${color === '#FFFFFF' ? '1px solid rgba(0,0,0,0.1)' : 'none'}"></span> ${name} <span onclick="this.parentElement.remove()" class="material-symbols-outlined text-[10px] cursor-pointer opacity-50 hover:opacity-100">close</span>`;
+                span.innerHTML = `<span class="w-2 h-2 rounded-full" style="background-color: ${color}; border: ${color === '#FFFFFF' ? '1px solid rgba(0,0,0,0.1)' : 'none'}"></span> ${name} <span onclick="removeProfileTag(this)" class="material-symbols-outlined text-[10px] cursor-pointer opacity-50 hover:opacity-100">close</span>`;
             } else {
                 let tagClass = 'px-2 py-1 rounded-md bg-black/5 dark:bg-white/5 text-on-surface dark:text-white font-bold text-[8px] flex items-center gap-1 border border-black/5 dark:border-white/10';
                 if (type === 'material') {
@@ -786,11 +772,12 @@ function addProfileTag(btn, type) {
                 }
                 
                 span.className = tagClass;
-                span.innerHTML = `${name} <span onclick="this.parentElement.remove()" class="material-symbols-outlined text-[10px] cursor-pointer opacity-70 hover:opacity-100">close</span>`;
+                span.innerHTML = `${name} <span onclick="removeProfileTag(this)" class="material-symbols-outlined text-[10px] cursor-pointer opacity-70 hover:opacity-100">close</span>`;
             }
             const container = btn.closest('.space-y-3').querySelector('.flex-wrap');
             if (container) container.appendChild(span);
             overlay.remove();
+            debouncedSaveProfile();
         };
         contentWrap.appendChild(item);
     });
@@ -876,335 +863,7 @@ function updateFollowUI(isFollowing, showToast = true) {
     }
 }
 
-// ===== データ抽出 (Spreadsheet Export) =====
 
-/**
- * 登録されているプロフィールデータ、身体データ、クローゼットデータを抽出
- */
-function getFullExportData() {
-    const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
-    const closet = JSON.parse(localStorage.getItem('kion_closet_items') || '[]');
-    const posts = JSON.parse(localStorage.getItem('kion_my_posts') || '[]');
-    const p = profile.personalize || {};
+// --- Extraction related code removed by user request ---
 
-    // AIアバター生成用のプロンプト変換マップ
-    const map = {
-        face: { 'oval': 'Oval', 'round': 'Round', 'oblong': 'Oblong', 'square': 'Square', 'heart': 'Heart' },
-        gender: { 'male': 'man', 'female': 'woman', 'none': 'person' }
-    };
-
-    // 1. サーマルレベルの算出
-    const labels = ['極度の寒がり','寒がり','普通','暑がり','極度の暑がり'];
-    const sensitivityIdx = labels.indexOf(p.temp_sensitivity || '普通');
-    const thermalLevel = (sensitivityIdx + 1) * 2; 
-
-    // AI用英語ID
-    const skinPrompt = p.skin_tone || 'natural'; 
-    const stylePrompt = p.gender || 'unisex'; 
-    const facePrompt = map.face[p.face_shape] || p.face_shape || 'oval';
-    const fitUpPrompt = p.fit_upper || 'regular';
-    const fitLowPrompt = p.fit_lower || 'regular';
-    const genderPrompt = map.gender[p.body_gender] || p.body_gender || 'person';
-    const agePrompt = p.body_age || '20s';
-    const hairStylePrompt = p.hair_style || 'short';
-    const hairColorPrompt = p.hair_color || 'black';
-    const eyeColorPrompt = p.eye_color || 'black';
-
-    return {
-        timestamp: new Date().toLocaleString(),
-        profile: {
-            name: profile.name || 'Alessandro Riva',
-            handle: profile.handle || 'alessandro_riva',
-            bio: profile.bio || '',
-            birthday: profile.birthday ? `${profile.birthday.y}/${profile.birthday.m}/${profile.birthday.d}` : '',
-            visibility: profile.birthday_visibility || 'private'
-        },
-        personalize: {
-            thermalLevel: thermalLevel,
-            sensitivity: p.temp_sensitivity || '普通',
-            rain_sensitivity: p.rain_sensitivity || '普通',
-            gender_style: p.gender_label || 'こだわらない', // 日本語ラベル
-            personal_color: p.personal_color_label || 'わからない', // 日本語ラベル
-            fit_up: p.fit_upper_label || 'レギュラー', // 日本語ラベル
-            fit_low: p.fit_lower_label || 'レギュラー', // 日本語ラベル
-            budget: p.budget_label || 'ミックス', // 日本語ラベル
-            materials: Array.isArray(p.materials) ? p.materials.join(', ') : (p.materials || ''),
-            inspirations: Array.isArray(p.inspirations) ? p.inspirations.join(', ') : (p.inspirations || ''),
-            favorite_colors: Array.isArray(p.favorite_colors) ? p.favorite_colors.map(c => typeof c === 'object' ? c.name : c).join(', ') : (p.favorite_colors || '')
-        },
-        body: {
-            body_gender: p.body_gender_label || 'その他', // 日本語ラベル
-            age: p.body_age_label || '20s',             // 日本語ラベル
-            height: profile.height || '',
-            weight: profile.weight || '',
-            body_type: p.body_type_label || '普通',     // 日本語ラベル
-            skeletal_type: p.skeletal_type_label || 'わからない', // 日本語ラベル
-            skin_tone: p.skin_tone_label || 'Natural',   // 日本語ラベル
-            lineage: p.lineage_label || 'その他',      // 日本語ラベル
-            face_shape: p.face_shape_label || '卵型',   // 日本語ラベル
-            hair_style: p.hair_style_label || 'ショート', // 日本語ラベル
-            hair_color: p.hair_color_label || 'ブラック', // 日本語ラベル
-            eye_color: p.eye_color_label || 'ブラック',   // 日本語ラベル
-            shoulder: profile.shoulder || '',
-            chest: profile.chest || '',
-            neck: profile.neck || '',
-            sleeve: profile.sleeve || '',
-            belly: profile.belly || '',
-            waist: profile.waist || '',
-            hip: profile.hip || '',
-            inseam: profile.inseam || '',
-            thigh: profile.thigh || '',
-            shoes: profile.shoes || '',
-            wrist: profile.wrist || ''
-        },
-        closet_count: closet.length,
-        closet_items: closet.map(item => ({
-            name: item.name,
-            category: item.category,
-            color: item.colorName || item.color,
-            addedAt: item.addedAt
-        })),
-        posts_count: posts.length,
-        // AIアバター生成用の詳細プロンプト
-        visual_parts: {
-            skin: skinPrompt,
-            heritage: p.lineage || 'Mixed heritage',
-            face: facePrompt,
-            gender: genderPrompt,
-            style: stylePrompt,
-            hair_style: hairStylePrompt,
-            hair_color: hairColorPrompt,
-            eye_color: eyeColorPrompt,
-            fit_up: fitUpPrompt,
-            fit_low: fitLowPrompt,
-            full_prompt: `A ${skinPrompt} ${genderPrompt} of ${p.lineage || 'Mixed'} heritage, ${facePrompt} face, ${hairStylePrompt} ${hairColorPrompt} hair, ${eyeColorPrompt} eyes, wearing ${stylePrompt} style, ${fitUpPrompt} fit upper, ${fitLowPrompt} fit lower, backdrop in milano.`
-        }
-    };
-}
-
-/**
- * CSV形式で抽出（スプレッドシート用）
- */
-function exportToSpreadsheet() {
-    try {
-        if (navigator.vibrate) navigator.vibrate([15, 50, 15]);
-        const data = getFullExportData();
-        
-        // CSVデータの構築 (縦型：キー, 値)
-        const rows = [
-            ['Category', 'Key', 'Value', 'Note'],
-            ['Metadata', 'Export Time', data.timestamp, ''],
-            ['Metadata', 'Status', data.status, ''],
-            ['Profile', 'Name', data.profile.name, ''],
-            ['Profile', 'ID', data.profile.handle, ''],
-            ['Profile', 'Birthday', data.profile.birthday, ''],
-            ['Personalize', 'Thermal Level', data.personalize.thermalLevel, '1-10 Scale'],
-            ['Personalize', 'Sensitivity', data.personalize.sensitivity, ''],
-            ['Personalize', 'Rain Sensitivity', data.personalize.rain_sensitivity, ''],
-            ['Personalize', 'Gender Style', data.personalize.gender_style, ''],
-            ['Personalize', 'Personal Color', data.personalize.personal_color, ''],
-            ['Personalize', 'Skin Tone', data.personalize.skin_tone, ''],
-            ['Body', 'Height', data.body.height, 'cm'],
-            ['Body', 'Weight', data.body.weight, 'kg'],
-            ['Body', 'Body Type', data.body.body_type, ''],
-            ['Body', 'Skeletal Type', data.body.skeletal_type, ''],
-            ['Body', 'Shoulder', data.body.shoulder, 'cm'],
-            ['Body', 'Chest', data.body.chest, 'cm'],
-            ['Body', 'Waist', data.body.waist, 'cm'],
-            ['Body', 'Hip', data.body.hip, 'cm'],
-            ['Body', 'Inseam', data.body.inseam, 'cm'],
-            ['Body', 'Shoes', data.body.shoes, 'cm'],
-            ['Closet', 'Total Items', data.closet_count, ''],
-        ];
-
-        // クローゼットアイテムも追加
-        data.closet_items.forEach((item, i) => {
-            rows.push(['ClosetItem', `Item ${i+1}`, item.name, `${item.category} / ${item.color}`]);
-        });
-
-        const csvContent = rows.map(r => r.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
-        downloadFile(csvContent, 'csv', `WoW_Data_Export_${data.profile.handle}`);
-        
-        alert('CSVデータの抽出が完了しました 📊\nGoogleスプレッドシート等で開いてください。');
-    } catch (err) {
-        console.error('[Export] CSV Error:', err);
-        alert('CSV抽出に失敗しました');
-    }
-}
-
-/**
- * フラットなCSV形式で抽出（1行に全データを集約。大量データ管理用）
- */
-function exportToFlatSpreadsheet() {
-    try {
-        if (navigator.vibrate) navigator.vibrate([15, 50, 15]);
-        const data = getFullExportData();
-        
-        const flatData = {
-            '保存日時': data.timestamp,
-            '名前': data.profile.name,
-            'ハンドル名': data.profile.handle,
-            '自己紹介': data.profile.bio,
-            '誕生日': data.profile.birthday,
-            // --- パーソナライズ ---
-            '*スタイル傾向': data.personalize.gender_style,
-            '気温感度': data.personalize.sensitivity,
-            '耐熱レベル': data.personalize.thermalLevel,
-            '雨感度': data.personalize.rain_sensitivity,
-            '*パーソナルカラー': data.personalize.personal_color,
-            '好きな色': (data.personalize.favorite_colors || []).map(c => c.name).join(', '),
-            '*フィット感(上)': data.personalize.fit_up,
-            '*フィット感(下)': data.personalize.fit_low,
-            '好みの素材': (data.personalize.materials || []).join(', '),
-            'インスピレーション': (data.personalize.inspirations || []).join(', '),
-            '予算感': data.personalize.budget,
-            // --- 身体データ ---
-            '*身体性別': data.body.body_gender,
-            '年代': data.body.age,
-            '身長': data.body.height,
-            '体重': data.body.weight,
-            '体格': data.body.body_type,
-            '骨格タイプ': data.body.skeletal_type,
-            '*肌の色': data.body.skin_tone,
-            '*ルーツ': data.body.lineage,
-            '*顔型': data.body.face_shape,
-            '髪型': data.body.hair_style,
-            '髪色': data.body.hair_color,
-            '目の色': data.body.eye_color,
-            '肩幅': data.body.shoulder,
-            '胸囲': data.body.chest,
-            '首回り': data.body.neck,
-            '裄丈': data.body.sleeve,
-            '腹囲': data.body.belly,
-            'ウエスト': data.body.waist,
-            'ヒップ': data.body.hip,
-            '股下': data.body.inseam,
-            '太もも': data.body.thigh,
-            '靴サイズ': data.body.shoes,
-            '手首周り': data.body.wrist,
-            'クローゼット数': data.closet_count,
-            '投稿数': data.posts_count
-        };
-
-        const headers = Object.keys(flatData);
-        const values = Object.values(flatData).map(v => `"${(v || '').toString().replace(/"/g, '""')}"`);
-        
-        const csvContent = headers.join(',') + '\n' + values.join(',');
-        downloadFile(csvContent, 'csv', `WoW_Flat_Data_${data.profile.handle}`);
-        
-        alert('フラットCSVデータの抽出が完了しました 📈\n1行に全てのデータが集約されています。');
-    } catch (err) {
-        console.error('[Export] Flat CSV Error:', err);
-        alert('フラットCSV抽出に失敗しました');
-    }
-}
-
-/**
- * クラウド（Googleスプレッドシート）へ直接送信
- * @param {boolean} isSilent - 自動同期の場合はアラートを出さない
- */
-async function sendToCloud(isSilent = false) {
-    // 【自動クリーンアップ】WOW_CONFIGがある場合、古いlocalStorageの設定を掃除して自動移行させる
-    if (typeof WOW_CONFIG !== 'undefined') {
-        if (localStorage.getItem('kion_cloud_url')) localStorage.removeItem('kion_cloud_url');
-        if (localStorage.getItem('kion_cloud_api_key')) localStorage.removeItem('kion_cloud_api_key');
-    }
-
-    // 優先順位: 1. 手動設定(localStorage) 2. 自動設定(WOW_CONFIG)
-    const endpoint = localStorage.getItem('kion_cloud_url') || (typeof WOW_CONFIG !== 'undefined' ? WOW_CONFIG.cloudUrl : '');
-    const apiKey = localStorage.getItem('kion_cloud_api_key') || (typeof WOW_CONFIG !== 'undefined' ? WOW_CONFIG.apiKey : '');
-
-    if (!endpoint) {
-        if (!isSilent) {
-            const url = prompt('Google Apps Script の「ウェブアプリURL」を入力してください：');
-            if (url) localStorage.setItem('kion_cloud_url', url);
-        }
-        return;
-    }
-    
-    if (!apiKey && !isSilent) {
-        const key = prompt('APIキー（スプレッドシート側で設定したもの）を入力してください：');
-        if (key) localStorage.setItem('kion_cloud_api_key', key);
-    }
-
-    try {
-        const data = getFullExportData();
-        data.apiKey = apiKey; // APIキーをデータに含める
-        
-        // 視覚的なフィードバック（ボタンの状態更新）
-        const cloudBtn = document.getElementById('cloud-sync-btn-label');
-        if (cloudBtn) cloudBtn.textContent = '同期中...';
-
-        await fetch(endpoint, {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
-
-        setTimeout(() => {
-            if (cloudBtn) cloudBtn.textContent = '同期済み';
-            if (!isSilent) {
-                if (navigator.vibrate) navigator.vibrate([5, 5, 50]);
-                alert('クラウドとの同期が完了しました！☁️');
-            }
-            if (cloudBtn) setTimeout(() => cloudBtn.textContent = 'クラウドへ同期 (Direct)', 3000);
-        }, 1000);
-
-    } catch (err) {
-        console.error('[Cloud] Auto-Sync Error:', err);
-        if (!isSilent) alert('クラウド同期に失敗しました。');
-    }
-}
-
-/**
- * クラウド送信先のURLをリセット
- */
-function resetCloudUrl() {
-    const newUrl = prompt('新しい Google Apps Script URL を入力してください：', localStorage.getItem('kion_cloud_url') || '');
-    if (newUrl !== null) {
-        localStorage.setItem('kion_cloud_url', newUrl);
-    }
-    const newKey = prompt('新しい APIキー を入力してください：', localStorage.getItem('kion_cloud_api_key') || '');
-    if (newKey !== null) {
-        localStorage.setItem('kion_cloud_api_key', newKey);
-        alert('クラウド設定を更新しました。');
-    }
-}
-
-/**
- * JSON形式で抽出（開発・バックアップ用）
- */
-function exportToJSON() {
-    try {
-        if (navigator.vibrate) navigator.vibrate([15, 50, 15]);
-        const data = getFullExportData();
-        const jsonContent = JSON.stringify(data, null, 2);
-        downloadFile(jsonContent, 'json', `WoW_Data_Backup_${data.profile.handle}`);
-        alert('JSONデータの抽出が完了しました 💾');
-    } catch (err) {
-        console.error('[Export] JSON Error:', err);
-        alert('JSON抽出に失敗しました');
-    }
-}
-
-/**
- * ファイルダウンロードのヘルパー
- */
-function downloadFile(content, extension, filenameBase) {
-    const mimeTypes = {
-        'csv': 'text/csv;charset=utf-8;',
-        'json': 'application/json;charset=utf-8;'
-    };
-    const prefix = extension === 'csv' ? '\ufeff' : ''; // BOM for Excel
-    const blob = new Blob([prefix + content], { type: mimeTypes[extension] });
-    const url = URL.createObjectURL(blob);
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${filenameBase}_${timestamp}.${extension}`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
 
