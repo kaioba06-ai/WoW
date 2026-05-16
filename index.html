@@ -144,7 +144,81 @@
             console.log('User logged in:', data.session.user.email);
             // ログイン中ユーザー情報をグローバルに保存
             window.currentUser = data.session.user;
+
+            // プロフィール情報を Supabase から取得
+            await loadUserProfile();
         }
+
+        // ===== Supabase からプロフィール情報を取得 =====
+        async function loadUserProfile() {
+            if (!window.currentUser) return;
+
+            const { data, error } = await window.supabaseClient
+                .from('users')
+                .select('*')
+                .eq('id', window.currentUser.id)
+                .single();
+
+            if (error) {
+                console.error('[Profile] Load error:', error);
+                return;
+            }
+
+            if (data) {
+                console.log('[Profile] Loaded from Supabase:', data.username);
+
+                // localStorage と互換性のある形式で保存
+                const profile = {
+                    name: data.username || '',
+                    handle: data.username || '',
+                    avatar: data.avatar_emoji || '🧣',
+                    bio: data.bio || '',
+                    temp_preference: data.temp_preference || 'normal',
+                    styles: data.styles || [],
+                    photo: data.avatar_url || '',
+                    email: data.email || ''
+                };
+                localStorage.setItem('kion_profile', JSON.stringify(profile));
+                window.currentProfile = profile;
+
+                // sectionsLoaded 後に画面に反映するため公開
+                window.applyProfileFromDB = function() {
+                    if (typeof applyProfileDisplay === 'function') {
+                        applyProfileDisplay(profile);
+                    }
+                };
+            }
+        }
+
+        // ===== プロフィール情報を Supabase に保存 =====
+        window.saveProfileToSupabase = async function(profileData) {
+            if (!window.currentUser) {
+                console.error('[Profile] Not logged in');
+                return { success: false, error: 'Not logged in' };
+            }
+
+            const updates = {
+                username: profileData.name || profileData.username || '',
+                avatar_emoji: profileData.avatar || '🧣',
+                bio: profileData.bio || '',
+                temp_preference: profileData.temp_preference || 'normal',
+                styles: profileData.styles || [],
+                avatar_url: profileData.photo || profileData.avatar_url || ''
+            };
+
+            const { data, error } = await window.supabaseClient
+                .from('users')
+                .update(updates)
+                .eq('id', window.currentUser.id);
+
+            if (error) {
+                console.error('[Profile] Save error:', error);
+                return { success: false, error: error.message };
+            }
+
+            console.log('[Profile] Saved to Supabase');
+            return { success: true };
+        };
 
         // ===== ログアウト機能（グローバル関数として公開） =====
         window.logout = async function() {

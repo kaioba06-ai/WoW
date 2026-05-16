@@ -262,9 +262,14 @@ window.addEventListener('sectionsLoaded', () => {
     syncSettingsThemeUI(document.documentElement.classList.contains('dark'));
 
     // プロフィールデータを復元
-    const savedProfile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
-    if(savedProfile.name || savedProfile.photo || savedProfile.bio) {
-        applyProfileDisplay(savedProfile);
+    // Supabase から取得済みの場合は優先的に使用
+    if (typeof window.applyProfileFromDB === 'function') {
+        window.applyProfileFromDB();
+    } else {
+        const savedProfile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+        if(savedProfile.name || savedProfile.photo || savedProfile.bio) {
+            applyProfileDisplay(savedProfile);
+        }
     }
 
     // ドラッグスクロール初期化

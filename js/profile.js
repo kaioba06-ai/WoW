@@ -476,6 +476,17 @@ function saveProfileEdit(e) {
         applyProfileDisplay(saved);
         _profilePhotoPending = null;
 
+        // Supabase にも同期保存
+        if (typeof window.saveProfileToSupabase === 'function') {
+            window.saveProfileToSupabase(saved).then(result => {
+                if (result.success) {
+                    console.log('[Profile] Synced to Supabase');
+                } else {
+                    console.warn('[Profile] Supabase sync failed:', result.error);
+                }
+            });
+        }
+
         // 保存された設定を即座に提案ロジックに反映させる
         if (typeof window.refreshWeatherUI === 'function') {
             window.refreshWeatherUI();
