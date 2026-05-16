@@ -203,21 +203,25 @@
                 bio: profileData.bio || '',
                 temp_preference: profileData.temp_preference || 'normal',
                 styles: profileData.styles || [],
-                avatar_url: profileData.photo || profileData.avatar_url || ''
+                avatar_url: profileData.photo || profileData.avatar_url || '',
+                updated_at: new Date().toISOString()
             };
+
+            console.log('[Profile] Sending to Supabase:', updates);
 
             const { data, error } = await window.supabaseClient
                 .from('users')
                 .update(updates)
-                .eq('id', window.currentUser.id);
+                .eq('id', window.currentUser.id)
+                .select();
 
             if (error) {
                 console.error('[Profile] Save error:', error);
                 return { success: false, error: error.message };
             }
 
-            console.log('[Profile] Saved to Supabase');
-            return { success: true };
+            console.log('[Profile] Saved to Supabase:', data);
+            return { success: true, data };
         };
 
         // ===== ログアウト機能（グローバル関数として公開） =====
