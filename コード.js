@@ -305,10 +305,11 @@ function syncWeatherData(data) {
 
     var timestamp = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
 
-    // 8行目: 列見出し（A〜F: 予報、G〜T: 部位別、U: コーデ画像）
-    var forecastHeader = ['時刻', '体感気温', '服装Lv', '個人感度', '補正後Lv', '天気'];
+    // 8行目: 列見出し（A: 生成開始タイムスタンプ、B〜F: 予報、G〜T: 部位別、U: コーデ画像）
+    var bHeader = ['体感気温', '服装Lv', '個人感度', '補正後Lv', '天気'];
     var bodyHeader = ['頭', '顔', '耳', '首', 'インナー', 'アウター', '手首', '手指', '腰', '脚', '脚～足首', '足', '手', '小物'];
-    sheet.getRange(8, 1, 1, forecastHeader.length).setValues([forecastHeader]);
+    sheet.getRange(8, 1).setValue(timestamp); // 生成開始タイムスタンプ
+    sheet.getRange(8, 2, 1, bHeader.length).setValues([bHeader]);
     sheet.getRange(8, 7, 1, bodyHeader.length).setValues([bodyHeader]);
     sheet.getRange(8, 21).setValue('コーデ画像');
     sheet.getRange(8, 1, 1, 21)
@@ -345,6 +346,13 @@ function syncWeatherData(data) {
 
       // 旧13行目（5件目の残骸）を消去
       sheet.getRange(13, 1, 1, 20).clearContent();
+
+      // コーデ・画像生成は明示的なフラグがある時のみ実行
+      // (data.regenerate_outfits === true の時だけ生成、それ以外は予報のみ更新でリターン)
+      if (data.regenerate_outfits !== true) {
+        logDebug('Outfit regeneration skipped', 'regenerate_outfits flag is false');
+        return { success: true, message: 'forecast only updated' };
+      }
 
       // G9:T12 にコーディネート4案を生成
       try {
@@ -584,102 +592,65 @@ function generateAvatarImage(prompt) {
 }
 
 /**
- * 物理データからAI画像生成用のプロンプトを組み立てる
+ * シートのデータをそのままプロンプトに反映するシンプル版
  */
 function generateAvatarPrompt(data) {
+  // 英語訳マップ（日本語→英語のみ。形容詞の盛り付けはしない）
   var skinMap = {
-    "fair":"fair skin", "natural":"natural skin", "tan":"tan skin", "deep":"dark skin",
-    "色白":"fair skin", "普通":"natural skin", "小麦色":"tan skin", "褐色":"dark skin"
+    "色白":"fair skin", "普通":"natural skin tone", "小麦色":"tan skin", "褐色":"dark skin"
   };
   var bodyMap = {
-    "やせ型":   "slim and lean body, narrow frame, low body fat, slender limbs",
-    "普通":     "average build, balanced proportions, neither slim nor heavy",
-    "筋肉質":   "muscular athletic build, defined musculature, broad shoulders, low body fat",
-    "ぽっちゃり": "soft rounded body with full belly and chest, fuller figure, plus-size physique, visible body fat throughout the torso and limbs, soft jawline, NOT a fit or muscular body, NOT a fashion model body",
-    "がっちり": "broad sturdy build, thick torso, strong shoulders, solid frame, square silhouette"
+    "やせ型":"slim", "普通":"average build", "筋肉質":"muscular", "ぽっちゃり":"plus-size", "がっちり":"sturdy"
   };
   var skeletalMap = {
     "ストレート":"straight", "ウェーブ":"wave", "ナチュラル":"natural", "わからない":"natural"
   };
-  var ageMap = {
-    "10代":"10s", "20代":"20s", "30代":"30s", "40代":"40s", "50代":"50s", "60代以上":"60s and above"
-  };
   var faceMap = {
-    "oval":"oval", "round":"round", "oblong":"long", "heart":"heart-shaped",
-    "卵型":"oval", "丸顔":"round", "面長":"long", "逆三角形":"heart-shaped"
+    "卵型":"oval", "丸顔":"round", "面長":"long", "逆三角形":"heart-shaped",
+    "oval":"oval", "round":"round", "oblong":"long", "heart":"heart-shaped"
   };
   var hairStyleMap = {
-    "short":"short", "medium":"medium-length", "long":"long", "bob":"bob", "very-short":"very short",
-    "ショート":"short", "ミディアム":"medium-length", "ロング":"long", "ボブ":"bob", "ベリーショート":"very short"
+    "ベリーショート":"very short", "ショート":"short", "ミディアム":"medium-length", "ロング":"long", "ボブ":"bob",
+    "very-short":"very short", "short":"short", "medium":"medium-length", "long":"long", "bob":"bob"
   };
   var hairColorMap = {
-    "black":"black", "dark-brown":"dark brown", "light-brown":"light brown", "blond":"blond", "gray":"gray/white",
-    "ブラック":"black", "ダークブラウン":"dark brown", "ライトブラウン":"light brown", "ブロンド":"blond", "グレー/白":"gray/white"
+    "ブラック":"black", "ダークブラウン":"dark brown", "ライトブラウン":"light brown", "ブロンド":"blond", "グレー/白":"gray",
+    "black":"black", "dark-brown":"dark brown", "light-brown":"light brown", "blond":"blond", "gray":"gray"
+  };
+  var ageMap = {
+    "10代":"teens", "20代":"20s", "30代":"30s", "40代":"40s", "50代":"50s", "60代以上":"60s or older"
   };
 
-  var genderLabel = data.gender;
-  var skin     = skinMap[data.skin_tone]      || data.skin_tone;
-  var body     = bodyMap[data.body_type]      || data.body_type;
-  var skeletal = skeletalMap[data.skeletal_type] || data.skeletal_type;
-  var age      = ageMap[data.age]             || data.age;
-  var face     = faceMap[data.face_shape]     || data.face_shape;
-  var hairSt   = hairStyleMap[data.hair_style]  || data.hair_style;
-  var hairCol  = hairColorMap[data.hair_color]  || data.hair_color;
+  var gender   = data.gender === "女性" ? "woman" : (data.gender === "男性" ? "man" : "person");
+  var age      = ageMap[data.age] || data.age || '';
+  var height   = data.height ? data.height + " cm tall" : '';
+  var weight   = data.weight ? "weighing " + data.weight + " kg" : '';
+  var body     = bodyMap[data.body_type] || data.body_type || '';
+  var skeletal = (skeletalMap[data.skeletal_type] || data.skeletal_type || '');
+  var skin     = skinMap[data.skin_tone] || data.skin_tone || '';
+  var face     = faceMap[data.face_shape] || data.face_shape || '';
+  var hairSt   = hairStyleMap[data.hair_style] || data.hair_style || '';
+  var hairCol  = hairColorMap[data.hair_color] || data.hair_color || '';
 
-  var isFemale = (typeof genderLabel === 'string') && genderLabel.trim() === "女性";
-  var isMale = (typeof genderLabel === 'string') && (genderLabel.trim() === "男性" || genderLabel.trim() === "male" || genderLabel.trim() === "Male");
+  var clothing = (data.gender === "女性")
+    ? "wearing a plain neutral fitted tank top and leggings"
+    : "topless, wearing only plain neutral briefs";
 
-  var clothing = "topless, wearing only basic minimalist neutral-colored briefs";
-  if (isFemale) {
-    clothing = "wearing minimalist neutral-colored tight-fitting fitness wear: a fitted compression T-shirt and leggings, showing a clearly feminine figure";
-  }
+  var parts = [
+    "A full-body photorealistic image of a " + gender,
+    age ? "in their " + age : '',
+    height,
+    weight,
+    body ? body + " body type" : '',
+    skeletal ? skeletal + " bone structure" : '',
+    skin,
+    face ? face + " face shape" : '',
+    hairSt ? hairSt + " " + hairCol + " hair" : ''
+  ].filter(function(x){ return x; });
 
-  // 身長を文章的な特徴に変換（画像内テキスト化を防ぐため数値は使わない）
-  var heightDesc = '';
-  var h = Number(data.height);
-  if (h) {
-    if (h < 150) heightDesc = 'very petite stature';
-    else if (h < 158) heightDesc = 'petite stature';
-    else if (h < 165) heightDesc = 'short to average height';
-    else if (h < 172) heightDesc = 'average height';
-    else if (h < 180) heightDesc = 'tall stature';
-    else if (h < 188) heightDesc = 'very tall stature';
-    else heightDesc = 'extremely tall stature';
-  }
-
-  // BMIから体型補正を算出（数値は出さず形容詞で）
-  var w = Number(data.weight);
-  var bmiDesc = '';
-  if (h && w) {
-    var bmi = w / Math.pow(h / 100, 2);
-    if (bmi < 17) bmiDesc = 'very thin, underweight, visibly slim with low body mass';
-    else if (bmi < 19) bmiDesc = 'slim, lean, lower body mass';
-    else if (bmi < 23) bmiDesc = 'healthy normal weight, balanced body mass';
-    else if (bmi < 25) bmiDesc = 'slightly fuller than average, soft natural curves, well-fed appearance';
-    else if (bmi < 28) bmiDesc = 'noticeably fuller figure, soft body with visible body fat on torso and limbs, fuller cheeks, NOT a thin or model body';
-    else if (bmi < 32) bmiDesc = 'distinctly heavy build, plus-size body, rounded torso with visible weight, full arms and thighs, double chin tendency, NOT a fit body';
-    else bmiDesc = 'very heavy build, large plus-size body, pronounced full belly and limbs, rounded face and neck, clearly overweight physique';
-  }
-
-  var subjectNoun = isFemale ? "woman" : (isMale ? "man" : "person");
-  var genderEmphasis = '';
-  if (isFemale) {
-    genderEmphasis = " The subject is unmistakably FEMALE: clearly feminine face with soft features, feminine jawline, female silhouette and body proportions, visibly feminine chest, narrower waist relative to hips, smooth skin texture. NEVER render this person as masculine, NEVER as androgynous, NEVER as a sumo-wrestler-like male figure even when the body is fuller — a heavy female body is still distinctly female with feminine features.";
-  } else if (isMale) {
-    genderEmphasis = " The subject is unmistakably MALE: masculine facial features, broader shoulders relative to hips, masculine body proportions.";
-  }
-
-  var prompt = "A full-body realistic 3D character model of a " + subjectNoun + " in their " + age + ". ";
-  prompt += genderEmphasis + " ";
-  prompt += "BODY (must be rendered exactly as described — do NOT default to fashion model physique, do NOT slim down or idealize): ";
-  prompt += [heightDesc, bmiDesc, body, skeletal + " bone structure"].filter(function(x){return x;}).join(". ") + ". ";
-  prompt += "The body proportions and physique above are mandatory. The figure must visibly match the description — height, weight presence, and body shape must all be evident in the silhouette. ";
-  if (isFemale) {
-    prompt += "Even with a heavy or plus-size body, the figure remains distinctly feminine. ";
-  }
-  prompt += "Appearance: " + skin + ", " + face + " face shape, " + hairSt + " hair in " + hairCol + " color. ";
-  prompt += "Style: " + clothing + ", neutral standing pose, facing front, arms relaxed at sides, minimalist white studio background, realistic anatomical details consistent with the body description above, cinematic lighting, 8k high resolution. ";
-  prompt += "IMPORTANT: The image must contain NO text, NO numbers, NO labels, NO captions, NO watermarks of any kind.";
+  var prompt = parts.join(", ") + ". ";
+  prompt += clothing + ". Standing pose, facing camera, plain white studio background, 8K photorealistic. ";
+  prompt += "The image must contain no text, no numbers, no labels of any kind.";
 
   return prompt;
 }
