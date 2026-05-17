@@ -201,15 +201,43 @@ function syncProfileData(data) {
       data.hair_color || ''
     ];
     sheet.getRange(2, 1, 1, row.length).setValues([row]);
-    
+
+    // シートを真のデータソースとして再読み込み
+    // （クライアント送信値がそのままセットされた直後だが、シート経由にすることで
+    //  「シートを直接編集した時もアバター生成に反映される」設計にする）
+    var sheetRow = sheet.getRange(2, 1, 1, row.length).getValues()[0];
+    var sheetData = {
+      gender:        sheetRow[1],
+      age:           sheetRow[2],
+      height:        sheetRow[3],
+      weight:        sheetRow[4],
+      body_type:     sheetRow[5],
+      skeletal_type: sheetRow[6],
+      shoulder:      sheetRow[7],
+      chest:         sheetRow[8],
+      neck:          sheetRow[9],
+      sleeve:        sheetRow[10],
+      belly:         sheetRow[11],
+      waist:         sheetRow[12],
+      hip:           sheetRow[13],
+      inseam:        sheetRow[14],
+      thigh:         sheetRow[15],
+      shoes:         sheetRow[16],
+      wrist:         sheetRow[17],
+      skin_tone:     sheetRow[18],
+      face_shape:    sheetRow[19],
+      hair_style:    sheetRow[20],
+      hair_color:    sheetRow[21]
+    };
+
     // プロンプトに使う全フィールドが埋まっているかチェック（1つでも空なら生成しない）
-    var promptFields = [data.gender, data.age, data.height, data.weight,
-                        data.body_type, data.skeletal_type, data.skin_tone,
-                        data.face_shape, data.hair_style, data.hair_color];
+    var promptFields = [sheetData.gender, sheetData.age, sheetData.height, sheetData.weight,
+                        sheetData.body_type, sheetData.skeletal_type, sheetData.skin_tone,
+                        sheetData.face_shape, sheetData.hair_style, sheetData.hair_color];
     var allFilled = promptFields.every(function(v) { return v !== null && v !== undefined && v !== ""; });
 
     if (allFilled) {
-      var prompt = generateAvatarPrompt(data);
+      var prompt = generateAvatarPrompt(sheetData);
       sheet.getRange(3, 1).setValue("アバター生成用プロンプト");
       sheet.getRange(4, 1).setValue(timestamp);
       sheet.getRange(4, 2).setValue(prompt);
@@ -598,27 +626,57 @@ function generateAvatarPrompt(data) {
   var hairSt   = hairStyleMap[data.hair_style]  || data.hair_style;
   var hairCol  = hairColorMap[data.hair_color]  || data.hair_color;
 
+  var isFemale = (typeof genderLabel === 'string') && genderLabel.trim() === "女性";
+  var isMale = (typeof genderLabel === 'string') && (genderLabel.trim() === "男性" || genderLabel.trim() === "male" || genderLabel.trim() === "Male");
+
   var clothing = "topless, wearing only basic minimalist neutral-colored briefs";
-  if (genderLabel === "女性") {
-    clothing = "wearing minimalist neutral-colored tight-fitting fitness wear, including a compression T-shirt and leggings";
+  if (isFemale) {
+    clothing = "wearing minimalist neutral-colored tight-fitting fitness wear: a fitted compression T-shirt and leggings, showing a clearly feminine figure";
   }
 
-  // 身長・体重を文章的な特徴に変換（画像内テキスト化を防ぐため数値は使わない）
+  // 身長を文章的な特徴に変換（画像内テキスト化を防ぐため数値は使わない）
   var heightDesc = '';
   var h = Number(data.height);
   if (h) {
-    if (h < 155) heightDesc = 'petite stature';
-    else if (h < 165) heightDesc = 'average height';
-    else if (h < 175) heightDesc = 'medium-tall stature';
-    else if (h < 185) heightDesc = 'tall stature';
-    else heightDesc = 'very tall stature';
+    if (h < 150) heightDesc = 'very petite stature';
+    else if (h < 158) heightDesc = 'petite stature';
+    else if (h < 165) heightDesc = 'short to average height';
+    else if (h < 172) heightDesc = 'average height';
+    else if (h < 180) heightDesc = 'tall stature';
+    else if (h < 188) heightDesc = 'very tall stature';
+    else heightDesc = 'extremely tall stature';
   }
-  // 体重はbody_typeで既に表現されるので別途記述しない
 
-  var prompt = "A full-body realistic 3D character model of a " + (genderLabel === "女性" ? "woman" : "man") + " in their " + age + ". ";
-  prompt += "BODY (must be rendered exactly as described, do not default to fashion model physique): ";
-  prompt += [heightDesc, body, skeletal + " bone structure"].filter(function(x){return x;}).join(". ") + ". ";
-  prompt += "The body proportions and physique above are mandatory and must not be slimmed down or idealized. ";
+  // BMIから体型補正を算出（数値は出さず形容詞で）
+  var w = Number(data.weight);
+  var bmiDesc = '';
+  if (h && w) {
+    var bmi = w / Math.pow(h / 100, 2);
+    if (bmi < 17) bmiDesc = 'very thin, underweight, visibly slim with low body mass';
+    else if (bmi < 19) bmiDesc = 'slim, lean, lower body mass';
+    else if (bmi < 23) bmiDesc = 'healthy normal weight, balanced body mass';
+    else if (bmi < 25) bmiDesc = 'slightly fuller than average, soft natural curves, well-fed appearance';
+    else if (bmi < 28) bmiDesc = 'noticeably fuller figure, soft body with visible body fat on torso and limbs, fuller cheeks, NOT a thin or model body';
+    else if (bmi < 32) bmiDesc = 'distinctly heavy build, plus-size body, rounded torso with visible weight, full arms and thighs, double chin tendency, NOT a fit body';
+    else bmiDesc = 'very heavy build, large plus-size body, pronounced full belly and limbs, rounded face and neck, clearly overweight physique';
+  }
+
+  var subjectNoun = isFemale ? "woman" : (isMale ? "man" : "person");
+  var genderEmphasis = '';
+  if (isFemale) {
+    genderEmphasis = " The subject is unmistakably FEMALE: clearly feminine face with soft features, feminine jawline, female silhouette and body proportions, visibly feminine chest, narrower waist relative to hips, smooth skin texture. NEVER render this person as masculine, NEVER as androgynous, NEVER as a sumo-wrestler-like male figure even when the body is fuller — a heavy female body is still distinctly female with feminine features.";
+  } else if (isMale) {
+    genderEmphasis = " The subject is unmistakably MALE: masculine facial features, broader shoulders relative to hips, masculine body proportions.";
+  }
+
+  var prompt = "A full-body realistic 3D character model of a " + subjectNoun + " in their " + age + ". ";
+  prompt += genderEmphasis + " ";
+  prompt += "BODY (must be rendered exactly as described — do NOT default to fashion model physique, do NOT slim down or idealize): ";
+  prompt += [heightDesc, bmiDesc, body, skeletal + " bone structure"].filter(function(x){return x;}).join(". ") + ". ";
+  prompt += "The body proportions and physique above are mandatory. The figure must visibly match the description — height, weight presence, and body shape must all be evident in the silhouette. ";
+  if (isFemale) {
+    prompt += "Even with a heavy or plus-size body, the figure remains distinctly feminine. ";
+  }
   prompt += "Appearance: " + skin + ", " + face + " face shape, " + hairSt + " hair in " + hairCol + " color. ";
   prompt += "Style: " + clothing + ", neutral standing pose, facing front, arms relaxed at sides, minimalist white studio background, realistic anatomical details consistent with the body description above, cinematic lighting, 8k high resolution. ";
   prompt += "IMPORTANT: The image must contain NO text, NO numbers, NO labels, NO captions, NO watermarks of any kind.";
