@@ -27,3 +27,7 @@ npm-debug.log*
 # Temporary files
 *.tmp
 .cache/
+
+# Claude Code worktrees & local settings
+.claude/worktrees/
+.claude/settings.local.json

@@ -1142,16 +1142,20 @@ function applySceneImages(scenes) {
     }
 }
 
-async function syncWeatherToCloud(data) {
+async function syncWeatherToCloud(data, opts) {
+    opts = opts || {};
+    const regenerateOutfits = opts.regenerateOutfits === true;
+    const skipCooldown = opts.skipCooldown === true || regenerateOutfits;
+
     const __now = Date.now();
-    if (__now - __lastWeatherSyncAt < __WEATHER_SYNC_COOLDOWN_MS) {
+    if (!skipCooldown && __now - __lastWeatherSyncAt < __WEATHER_SYNC_COOLDOWN_MS) {
         console.log('[Weather] Sync skipped (cooldown, last was ' +
             Math.round((__now - __lastWeatherSyncAt) / 1000) + 's ago)');
         return;
     }
     __lastWeatherSyncAt = __now;
 
-    console.log('[Weather] Starting cloud sync (8-11 rows)...');
+    console.log('[Weather] Starting cloud sync', regenerateOutfits ? '(WITH outfit regeneration)' : '(forecast only)');
     const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
     const userId = profile.handle || 'unknown';
 
@@ -1160,7 +1164,8 @@ async function syncWeatherToCloud(data) {
 
     const syncData = {
         user_id: userId,
-        forecast_data: forecastData // 新しい配列形式
+        forecast_data: forecastData,
+        regenerate_outfits: regenerateOutfits
     };
 
     if (typeof google !== 'undefined' && google.script && google.script.run) {
@@ -1176,10 +1181,52 @@ async function syncWeatherToCloud(data) {
             data: syncData
         });
         fetch(WOW_CONFIG.cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload });
-        // 同期完了を直接受け取れない(no-cors)ため、ポーリングで完了を検知
-        startSceneImagePolling();
+        // コーデ再生成時のみポーリング開始（予報のみなら不要）
+        if (regenerateOutfits) {
+            startSceneImagePolling();
+        }
     }
 }
+
+/**
+ * 手動コーデ再生成（「コーデ更新」ボタンから呼ばれる）
+ * - 強制的にGASに regenerate_outfits=true を送信
+ * - クールダウン無視
+ * - 完了までポーリング
+ */
+function __setRefreshBtnBusy(busy) {
+    const btn = document.getElementById('refresh-outfits-btn');
+    if (!btn) return;
+    if (busy) {
+        btn.dataset.busy = 'true';
+        btn.classList.add('opacity-50', 'pointer-events-none');
+        // アイコンをくるくる回す
+        const icon = btn.querySelector('.material-symbols-outlined');
+        if (icon) icon.classList.add('animate-spin');
+    } else {
+        btn.dataset.busy = 'false';
+        btn.classList.remove('opacity-50', 'pointer-events-none');
+        const icon = btn.querySelector('.material-symbols-outlined');
+        if (icon) icon.classList.remove('animate-spin');
+    }
+}
+
+async function manualRegenerateOutfits() {
+    console.log('[Weather] Manual outfit regeneration triggered');
+    if (!lastWeatherData) {
+        alert('天気データがまだ取得できていません。少し待ってからもう一度試してください。');
+        return;
+    }
+    __setRefreshBtnBusy(true);
+
+    await syncWeatherToCloud(lastWeatherData, { regenerateOutfits: true, skipCooldown: true });
+
+    // フェイルセーフ: 3分経ってもポーリングが解放しなければ強制解放
+    setTimeout(() => __setRefreshBtnBusy(false), 3 * 60 * 1000);
+}
+
+// グローバル公開
+window.manualRegenerateOutfits = manualRegenerateOutfits;
 
 // ポーリング状態の管理（多重起動防止）
 let __scenePollingTimer = null;
@@ -1209,11 +1256,13 @@ async function __scenePollTick() {
     if (ready) {
         console.log('[ScenePoll] READY - stopping');
         __scenePollingTimer = null;
+        if (typeof __setRefreshBtnBusy === 'function') __setRefreshBtnBusy(false);
         return;
     }
     if (__scenePollAttempts >= __SCENE_POLL_MAX_ATTEMPTS) {
         console.warn('[ScenePoll] max attempts reached - stopping');
         __scenePollingTimer = null;
+        if (typeof __setRefreshBtnBusy === 'function') __setRefreshBtnBusy(false);
         return;
     }
     __scenePollingTimer = setTimeout(__scenePollTick, __SCENE_POLL_INTERVAL_MS);
