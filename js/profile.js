@@ -98,8 +98,9 @@ function initProfileEditFields() {
 
     // 年代 (select) の初期化
     const ageSelect = document.getElementById('body-age');
-    if (ageSelect && p.body_age) {
-        ageSelect.value = p.body_age;
+    const ageValue = p.body_age || saved.body_age;
+    if (ageSelect && ageValue) {
+        ageSelect.value = ageValue;
     }
 
     // タグ類の初期化
@@ -364,32 +365,38 @@ function saveProfileEdit(e) {
         }
 
         
-        // 身体データ (Basic)
+        // 身体データ (Basic) — DOM が空の場合は既存の saved 値を維持する
         const genderInfo = getActiveBtnInfo('body-gender');
-        saved.body_gender = genderInfo.value;
-        saved.body_gender_label = genderInfo.label;
-        saved.body_age = ageEl ? ageEl.value : '';
-        saved.body_age_label = ageEl ? ageEl.options[ageEl.selectedIndex]?.text : '';
-        
+        if (genderInfo.value) {
+            saved.body_gender = genderInfo.value;
+            saved.body_gender_label = genderInfo.label;
+        }
+        const newAge = ageEl ? ageEl.value : '';
+        if (newAge) {
+            saved.body_age = newAge;
+            saved.body_age_label = ageEl.options[ageEl.selectedIndex]?.text || '';
+        }
+
         const fields = ['height','weight','shoulder','chest','neck','sleeve','belly','waist','hip','inseam','thigh','shoes','wrist'];
-        fields.forEach(f => saved[f] = getVal(f));
+        fields.forEach(f => { const v = getVal(f); if (v) saved[f] = v; });
 
         // パーソナライズ (Personalize) - weather.js が参照する構造
         if (!saved.personalize) saved.personalize = {};
-        
+
         // 感度設定
-        saved.personalize.temp_sensitivity = document.getElementById('temp-label')?.innerText || '普通';
-        saved.personalize.rain_sensitivity = document.getElementById('rain-label')?.innerText || '普通';
-        
-        // スタイル・体型属性
-        saved.personalize.gender = getActiveBtnInfo('gender').value || saved.body_gender; 
+        saved.personalize.temp_sensitivity = document.getElementById('temp-label')?.innerText || saved.personalize.temp_sensitivity || '普通';
+        saved.personalize.rain_sensitivity = document.getElementById('rain-label')?.innerText || saved.personalize.rain_sensitivity || '普通';
+
+        // スタイル・体型属性 — DOM が空なら既存値を保持
+        const _g = getActiveBtnInfo('gender').value || saved.body_gender;
+        if (_g) saved.personalize.gender = _g;
         saved.personalize.body_gender = saved.body_gender;
-        saved.personalize.body_type = getActiveBtnInfo('body-type').label;
-        saved.personalize.skeletal_type = getActiveBtnInfo('body-skeletal').label;
-        saved.personalize.skin_tone = getActiveBtnInfo('skin-tone').label;
-        saved.personalize.face_shape = getActiveBtnInfo('face-shape').label;
-        saved.personalize.hair_style = getActiveBtnInfo('hair-style').label;
-        saved.personalize.hair_color = getActiveBtnInfo('hair-color').label;
+        const _bt = getActiveBtnInfo('body-type').label; if (_bt) saved.personalize.body_type = _bt;
+        const _sk = getActiveBtnInfo('body-skeletal').label; if (_sk) saved.personalize.skeletal_type = _sk;
+        const _st = getActiveBtnInfo('skin-tone').value;  if (_st) saved.personalize.skin_tone = _st;
+        const _fs = getActiveBtnInfo('face-shape').value; if (_fs) saved.personalize.face_shape = _fs;
+        const _hs = getActiveBtnInfo('hair-style').value; if (_hs) saved.personalize.hair_style = _hs;
+        const _hc = getActiveBtnInfo('hair-color').value; if (_hc) saved.personalize.hair_color = _hc;
 
         // タグデータの抽出
         const extractTags = (selector) => {
@@ -418,9 +425,24 @@ function saveProfileEdit(e) {
         localStorage.setItem('kion_profile', JSON.stringify(saved));
         if (typeof applyProfileDisplay === 'function') applyProfileDisplay(saved);
 
+        // Supabase にも同期保存
+        if (typeof window.saveProfileToSupabase === 'function') {
+            window.saveProfileToSupabase(saved).then(result => {
+                if (result.success) {
+                    console.log('[Profile] Synced to Supabase');
+                } else {
+                    console.warn('[Profile] Supabase sync failed:', result.error);
+                }
+            });
+        }
+
         // クラウド同期
+        // ハンドル変更時に古いシートをリネームできるよう previous_user_id を含める
+        const __prevHandle = localStorage.getItem('kion_prev_handle');
+        const __currentHandle = saved.handle || 'unknown';
         const syncData = {
-            user_id: saved.handle || 'unknown',
+            user_id: __currentHandle,
+            previous_user_id: (__prevHandle && __prevHandle !== __currentHandle) ? __prevHandle : '',
             gender: saved.body_gender_label || '',
             age: saved.body_age_label || '',
             height: saved.height || '', 
@@ -442,6 +464,7 @@ function saveProfileEdit(e) {
             face_shape: saved.personalize.face_shape || '',
             hair_style: saved.personalize.hair_style || '',
             hair_color: saved.personalize.hair_color || '',
+            temp_sensitivity: saved.personalize.temp_sensitivity || '普通',
         };
 
         if (typeof google !== 'undefined' && google.script && google.script.run) {
@@ -463,6 +486,9 @@ function saveProfileEdit(e) {
             .then(() => console.log('[Sync] Profile Sync triggered via fetch'))
             .catch(err => console.error('[Sync] Fetch failure:', err));
         }
+
+        // 現在のハンドルを次回比較用に保存
+        localStorage.setItem('kion_prev_handle', __currentHandle);
 
     } catch (err) {
         console.error('[Sync] Error during profile sync:', err);
@@ -739,7 +765,7 @@ function addProfileTag(btn, type) {
             const span = document.createElement('span');
             if (type === 'color-pref') {
                 span.className = 'profile-opt-color-pref-tag px-2 py-1 rounded-md bg-black/5 dark:bg-white/5 text-on-surface dark:text-white font-bold text-[8px] flex items-center gap-1 border border-black/5 dark:border-white/10 shadow-sm';
-                span.innerHTML = `<span class="w-2 h-2 rounded-full" style="background-color: ${color}; border: ${color === '#FFFFFF' ? '1px solid rgba(0,0,0,0.1)' : 'none'}"></span> ${name} <span onclick="this.parentElement.remove()" class="material-symbols-outlined text-[10px] cursor-pointer opacity-50 hover:opacity-100">close</span>`;
+                span.innerHTML = `<span class="w-2 h-2 rounded-full" style="background-color: ${color}; border: ${color === '#FFFFFF' ? '1px solid rgba(0,0,0,0.1)' : 'none'}"></span> ${name} <span onclick="removeProfileTag(this)" class="material-symbols-outlined text-[10px] cursor-pointer opacity-50 hover:opacity-100">close</span>`;
             } else {
                 let tagClass = 'px-2 py-1 rounded-md bg-black/5 dark:bg-white/5 text-on-surface dark:text-white font-bold text-[8px] flex items-center gap-1 border border-black/5 dark:border-white/10';
                 if (type === 'material') {
@@ -753,11 +779,12 @@ function addProfileTag(btn, type) {
                 }
                 
                 span.className = tagClass;
-                span.innerHTML = `${name} <span onclick="this.parentElement.remove()" class="material-symbols-outlined text-[10px] cursor-pointer opacity-70 hover:opacity-100">close</span>`;
+                span.innerHTML = `${name} <span onclick="removeProfileTag(this)" class="material-symbols-outlined text-[10px] cursor-pointer opacity-70 hover:opacity-100">close</span>`;
             }
             const container = btn.closest('.space-y-3').querySelector('.flex-wrap');
             if (container) container.appendChild(span);
             overlay.remove();
+            debouncedSaveProfile();
         };
         contentWrap.appendChild(item);
     });

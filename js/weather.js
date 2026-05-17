@@ -1056,10 +1056,18 @@ const __WEATHER_SYNC_COOLDOWN_MS = 30 * 1000; // 30秒
  * - そのあと GAS から最新を取りに行って差し替え
  */
 async function fetchAndApplySceneImages() {
-    if (typeof WOW_CONFIG === 'undefined' || !WOW_CONFIG.cloudUrl) return;
+    console.log('[SceneFetch] start');
+    if (typeof WOW_CONFIG === 'undefined' || !WOW_CONFIG.cloudUrl) {
+        console.warn('[SceneFetch] WOW_CONFIG.cloudUrl missing');
+        return;
+    }
     const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
     const userId = profile.handle || 'unknown';
-    if (!userId || userId === 'unknown') return;
+    console.log('[SceneFetch] userId =', userId);
+    if (!userId || userId === 'unknown') {
+        console.warn('[SceneFetch] handle is unknown, abort');
+        return;
+    }
 
     const cacheKey = 'kion_scene_images_' + userId;
 
@@ -1067,27 +1075,44 @@ async function fetchAndApplySceneImages() {
     try {
         const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
         if (cached && Array.isArray(cached.scenes) && cached.scenes.length === 4) {
+            console.log('[SceneFetch] applying cached scenes', cached.scenes);
             applySceneImages(cached.scenes);
+        } else {
+            console.log('[SceneFetch] no cache for', cacheKey);
         }
-    } catch (_) {}
+    } catch (e) {
+        console.warn('[SceneFetch] cache parse error', e);
+    }
 
     // 2) GASから最新取得
     try {
         const url = `${WOW_CONFIG.cloudUrl}?action=scenes`
                   + `&apiKey=${encodeURIComponent(WOW_CONFIG.apiKey)}`
                   + `&user_id=${encodeURIComponent(userId)}`;
-        const resp = await fetch(url, { method: 'GET' });
-        if (!resp.ok) return;
+        console.log('[SceneFetch] GET', url);
+        const resp = await fetch(url, { method: 'GET', redirect: 'follow' });
+        console.log('[SceneFetch] response status', resp.status, resp.ok);
+        if (!resp.ok) {
+            console.warn('[SceneFetch] non-OK response');
+            return;
+        }
         const data = await resp.json();
+        console.log('[SceneFetch] data', data);
         if (data && data.success && Array.isArray(data.scenes)) {
             const hasAny = data.scenes.some(u => u && typeof u === 'string' && u.startsWith('http'));
+            console.log('[SceneFetch] hasAny URLs?', hasAny, data.scenes);
             if (hasAny) {
                 localStorage.setItem(cacheKey, JSON.stringify({ scenes: data.scenes, ts: Date.now() }));
                 applySceneImages(data.scenes);
+                console.log('[SceneFetch] applied fresh scenes');
+            } else {
+                console.warn('[SceneFetch] all scenes are null/invalid');
             }
+        } else {
+            console.warn('[SceneFetch] data.success=false or missing scenes', data);
         }
     } catch (e) {
-        console.warn('[Weather] Scene image fetch failed:', e);
+        console.warn('[SceneFetch] fetch failed:', e);
     }
 }
 
@@ -1147,11 +1172,79 @@ async function syncWeatherToCloud(data) {
     } else if (typeof WOW_CONFIG !== 'undefined' && WOW_CONFIG.cloudUrl) {
         const payload = JSON.stringify({
             apiKey: WOW_CONFIG.apiKey,
-            type: 'weather_v2', // バージョン2として送信
+            type: 'weather_v2',
             data: syncData
         });
         fetch(WOW_CONFIG.cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload });
-        // 同期完了を直接受け取れない(no-cors)ため、画像生成が終わる頃合いに取得しに行く
-        setTimeout(fetchAndApplySceneImages, 70 * 1000); // 70秒後
+        // 同期完了を直接受け取れない(no-cors)ため、ポーリングで完了を検知
+        startSceneImagePolling();
+    }
+}
+
+// ポーリング状態の管理（多重起動防止）
+let __scenePollingTimer = null;
+let __scenePollAttempts = 0;
+const __SCENE_POLL_INTERVAL_MS = 8 * 1000;       // 8秒ごと
+const __SCENE_POLL_MAX_ATTEMPTS = 22;            // 最大22回 ≒ 3分弱
+const __SCENE_POLL_INITIAL_DELAY_MS = 25 * 1000; // 最初の25秒は同期中なのでスキップ
+
+function startSceneImagePolling() {
+    // 既存ポーリングがあればキャンセル
+    if (__scenePollingTimer) {
+        clearTimeout(__scenePollingTimer);
+        __scenePollingTimer = null;
+    }
+    __scenePollAttempts = 0;
+    console.log('[ScenePoll] starting');
+
+    // 初回は同期完了見込みの25秒後
+    __scenePollingTimer = setTimeout(__scenePollTick, __SCENE_POLL_INITIAL_DELAY_MS);
+}
+
+async function __scenePollTick() {
+    __scenePollAttempts++;
+    console.log('[ScenePoll] attempt', __scenePollAttempts);
+
+    const ready = await __scenePollFetchOnce();
+    if (ready) {
+        console.log('[ScenePoll] READY - stopping');
+        __scenePollingTimer = null;
+        return;
+    }
+    if (__scenePollAttempts >= __SCENE_POLL_MAX_ATTEMPTS) {
+        console.warn('[ScenePoll] max attempts reached - stopping');
+        __scenePollingTimer = null;
+        return;
+    }
+    __scenePollingTimer = setTimeout(__scenePollTick, __SCENE_POLL_INTERVAL_MS);
+}
+
+// 1回ぶんの取得 → ready なら true を返す
+async function __scenePollFetchOnce() {
+    if (typeof WOW_CONFIG === 'undefined' || !WOW_CONFIG.cloudUrl) return true; // 何もできないので止める
+    const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+    const userId = profile.handle || 'unknown';
+    if (!userId || userId === 'unknown') return true;
+
+    try {
+        const url = `${WOW_CONFIG.cloudUrl}?action=scenes`
+                  + `&apiKey=${encodeURIComponent(WOW_CONFIG.apiKey)}`
+                  + `&user_id=${encodeURIComponent(userId)}`;
+        const resp = await fetch(url, { method: 'GET', redirect: 'follow' });
+        if (!resp.ok) return false;
+        const data = await resp.json();
+        if (data && data.success && data.ready && Array.isArray(data.scenes)) {
+            const hasAll = data.scenes.length === 4 && data.scenes.every(u => u && typeof u === 'string' && u.startsWith('http'));
+            if (hasAll) {
+                const cacheKey = 'kion_scene_images_' + userId;
+                localStorage.setItem(cacheKey, JSON.stringify({ scenes: data.scenes, ts: Date.now(), generatedAt: data.generatedAt }));
+                applySceneImages(data.scenes);
+                return true;
+            }
+        }
+        return false;
+    } catch (e) {
+        console.warn('[ScenePoll] fetch failed:', e);
+        return false;
     }
 }

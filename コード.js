@@ -28,8 +28,6 @@ function doGet(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
       // C14:C17 のIMAGE式からURLを抽出。なければ素のセル値も拾う
-      // Drive の "uc?export=view" 形式はブラウザ<img>から読めないので
-      // "thumbnail" 形式に変換して返す
       var scenes = [];
       var locations = [];
       var poses = [];
@@ -50,8 +48,23 @@ function doGet(e) {
         locations.push(sheet.getRange(r, 1).getValue() || '');
         poses.push(sheet.getRange(r, 2).getValue() || '');
       }
+
+      // 完了シグナル: 4枚全部に有効な画像URLがあるか
+      var ready = scenes.length === 4 && scenes.every(function(u){ return u && typeof u === 'string' && u.indexOf('http') === 0; });
+      // 最新生成時刻（A5タイムスタンプを流用、なければ現在）
+      var generatedAt = sheet.getRange(5, 1).getValue();
+      if (generatedAt instanceof Date) generatedAt = generatedAt.toISOString();
+      else generatedAt = String(generatedAt || '');
+
       return ContentService
-        .createTextOutput(JSON.stringify({ success: true, scenes: scenes, locations: locations, poses: poses }))
+        .createTextOutput(JSON.stringify({
+          success: true,
+          ready: ready,
+          generatedAt: generatedAt,
+          scenes: scenes,
+          locations: locations,
+          poses: poses
+        }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -127,9 +140,28 @@ function syncProfileData(data) {
   try {
     logDebug('syncProfileData received', data);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    
+
     // ユーザーID（ハンドル名）をシート名にする
     var sheetName = data.user_id || 'UnknownUser';
+
+    // ハンドル変更検出: previous_user_id が指定されていれば、旧シートをリネーム
+    var prevId = data.previous_user_id || '';
+    if (prevId && prevId !== sheetName) {
+      var prevSheet = ss.getSheetByName(prevId);
+      if (prevSheet) {
+        var newExists = ss.getSheetByName(sheetName);
+        if (!newExists) {
+          // 新シートがまだ無い → 旧シートをリネーム（データ完全保持）
+          prevSheet.setName(sheetName);
+          logDebug('Renamed sheet', prevId + ' -> ' + sheetName);
+        } else {
+          // 新シートが既に存在 → 旧シートを削除（重複を整理）
+          ss.deleteSheet(prevSheet);
+          logDebug('Deleted old sheet', prevId);
+        }
+      }
+    }
+
     var sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
       sheet = ss.insertSheet(sheetName);
