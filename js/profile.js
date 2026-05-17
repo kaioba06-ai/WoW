@@ -437,8 +437,12 @@ function saveProfileEdit(e) {
         }
 
         // クラウド同期
+        // ハンドル変更時に古いシートをリネームできるよう previous_user_id を含める
+        const __prevHandle = localStorage.getItem('kion_prev_handle');
+        const __currentHandle = saved.handle || 'unknown';
         const syncData = {
-            user_id: saved.handle || 'unknown',
+            user_id: __currentHandle,
+            previous_user_id: (__prevHandle && __prevHandle !== __currentHandle) ? __prevHandle : '',
             gender: saved.body_gender_label || '',
             age: saved.body_age_label || '',
             height: saved.height || '', 
@@ -482,6 +486,9 @@ function saveProfileEdit(e) {
             .then(() => console.log('[Sync] Profile Sync triggered via fetch'))
             .catch(err => console.error('[Sync] Fetch failure:', err));
         }
+
+        // 現在のハンドルを次回比較用に保存
+        localStorage.setItem('kion_prev_handle', __currentHandle);
 
     } catch (err) {
         console.error('[Sync] Error during profile sync:', err);
