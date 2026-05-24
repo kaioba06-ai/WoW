@@ -235,8 +235,8 @@ function doGet(e) {
       try {
         // 1) プロフィール行2を上書き
         //    パラメータ: gender, age, height, weight, body_type, skeletal_type, face_shape, hair_style, hair_color, skin_color
-        var headerRow = sh3.getRange(1, 1, 1, 22).getValues()[0];
-        var existing  = sh3.getRange(2, 1, 1, 22).getValues()[0];
+        var headerRow = sh3.getRange(1, 1, 1, 25).getValues()[0];
+        var existing  = sh3.getRange(2, 1, 1, 25).getValues()[0];
         var keyMap = {
           gender: '性別', age: '年代', height: '身長', weight: '体重',
           body_type: '体格', skeletal_type: '骨格',
@@ -250,7 +250,7 @@ function doGet(e) {
           }
         }
         existing[0] = new Date().toISOString();  // 同期日時
-        sh3.getRange(2, 1, 1, 22).setValues([existing]);
+        sh3.getRange(2, 1, 1, 25).setValues([existing]);
 
         // 2) アバター再生成
         var pd = {};
@@ -348,8 +348,8 @@ function doGet(e) {
       // 失敗時にA5が「画像生成中...」のまま残らないよう finally でクリーンアップ
       try {
         // 行1ヘッダー → 行2データを取得して連想配列化
-        var headerRow = sh2.getRange(1, 1, 1, 22).getValues()[0];
-        var dataRow = sh2.getRange(2, 1, 1, 22).getValues()[0];
+        var headerRow = sh2.getRange(1, 1, 1, 25).getValues()[0];
+        var dataRow = sh2.getRange(2, 1, 1, 25).getValues()[0];
         var profileData = {};
         for (var hi = 0; hi < headerRow.length; hi++) {
           profileData[headerRow[hi]] = dataRow[hi];
@@ -439,8 +439,8 @@ function doGet(e) {
         b5_value: String(sheet.getRange(5, 2).getValue()).substring(0, 300),
         b5_formula: sheet.getRange(5, 2).getFormula().substring(0, 300),
         b4_prompt: String(sheet.getRange(4, 2).getValue()).substring(0, 1000),
-        profile_row1: sheet.getRange(1, 1, 1, 22).getValues()[0],
-        profile_row2: sheet.getRange(2, 1, 1, 22).getValues()[0],
+        profile_row1: sheet.getRange(1, 1, 1, 25).getValues()[0],
+        profile_row2: sheet.getRange(2, 1, 1, 25).getValues()[0],
         c14_value: String(sheet.getRange(14, 3).getValue()),
         c14_formula: sheet.getRange(14, 3).getFormula(),
         c15_value: String(sheet.getRange(15, 3).getValue()),
@@ -614,18 +614,21 @@ function analyzeFacePhoto(data) {
 
   // プロンプト: 抽象度の高いenum値のみを返させる
   // 個人識別に繋がる「ほくろ位置」「目の間隔」等の詳細は出さない
+  // 性別・年代は手動入力させるので抽出しない
   var promptText = [
     'Analyze this photo and extract abstract avatar features ONLY.',
     'DO NOT describe the person\'s identity, name, or any identifying marks (moles, scars, tattoos).',
     'DO NOT attempt to recognize who this person is.',
+    'DO NOT infer gender or age — the user enters those manually.',
     'Choose the closest value from each enum below. Return JSON.',
     '',
-    'gender: "男性" | "女性"',
-    'age: "10代" | "20代" | "30代" | "40代" | "50代" | "60代以上"',
     'face_shape: "卵型" | "丸顔" | "面長" | "逆三角形"',
     'hair_style: "ベリーショート" | "ショート" | "ミディアム" | "ロング" | "ボブ"',
     'hair_color: "ブラック" | "ダークブラウン" | "ライトブラウン" | "ブロンド" | "グレー/白"',
     'skin_color: "色白" | "普通" | "小麦色" | "褐色"',
+    'glasses: "なし" | "度付き" | "サングラス"',
+    'beard: "なし" | "薄い無精ひげ" | "しっかり生やしている" | "整えたデザインひげ"   ※女性等で該当しない場合は "なし"',
+    'makeup: "ノーメイク" | "ナチュラル" | "しっかり" | "モード/個性的"',
     '',
     'If the image does not contain a clear single human face, return {"success":false,"error":"no_face"}.'
   ].join('\n');
@@ -633,14 +636,15 @@ function analyzeFacePhoto(data) {
   var schema = {
     type: "OBJECT",
     properties: {
-      gender:      { type: "STRING" },
-      age:         { type: "STRING" },
       face_shape:  { type: "STRING" },
       hair_style:  { type: "STRING" },
       hair_color:  { type: "STRING" },
-      skin_color:  { type: "STRING" }
+      skin_color:  { type: "STRING" },
+      glasses:     { type: "STRING" },
+      beard:       { type: "STRING" },
+      makeup:      { type: "STRING" }
     },
-    required: ["gender","age","face_shape","hair_style","hair_color","skin_color"]
+    required: ["face_shape","hair_style","hair_color","skin_color","glasses","beard","makeup"]
   };
 
   var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
@@ -755,7 +759,7 @@ function syncProfileData(data) {
     var timestamp = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
 
     // 1行目のヘッダー
-    var header = ['同期日時', '性別', '年代', '身長', '体重', '体格', '骨格', '肩幅', '胸囲', '首回り', '裄丈', '腹囲', 'ウエスト', 'ヒップ', '股下', '太もも', '靴', '手首', '肌の色', '顔の形', '髪型', '髪色'];
+    var header = ['同期日時', '性別', '年代', '身長', '体重', '体格', '骨格', '肩幅', '胸囲', '首回り', '裄丈', '腹囲', 'ウエスト', 'ヒップ', '股下', '太もも', '靴', '手首', '肌の色', '顔の形', '髪型', '髪色', '眼鏡', 'ひげ', '化粧'];
     sheet.getRange(1, 1, 1, header.length).setValues([header]);
     sheet.getRange(1, 1, 1, header.length).setFontWeight('bold').setBackground('#f3f3f3');
     sheet.setFrozenRows(1);
@@ -783,7 +787,10 @@ function syncProfileData(data) {
       data.skin_tone || '',
       data.face_shape || '',
       data.hair_style || '',
-      data.hair_color || ''
+      data.hair_color || '',
+      data.glasses || '',
+      data.beard || '',
+      data.makeup || ''
     ];
     sheet.getRange(2, 1, 1, row.length).setValues([row]);
 
@@ -955,7 +962,7 @@ function syncWeatherData(data) {
       // G9:T12 にコーディネート4案を生成
       try {
         // プロフィール情報を2行目から読み取り
-        var profileRow = sheet.getRange(2, 1, 1, 22).getValues()[0];
+        var profileRow = sheet.getRange(2, 1, 1, 25).getValues()[0];
         var profile = {
           gender: profileRow[1],
           age: profileRow[2],

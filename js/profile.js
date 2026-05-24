@@ -424,25 +424,27 @@ function _resizeImageToBase64(file, maxDim) {
  * 既存フォームの data-value と一致させる
  */
 const _FACE_FEATURE_VALUE_MAP = {
-    gender:     { '男性': 'male', '女性': 'female' },
-    age:        { '10代':'10s','20代':'20s','30代':'30s','40代':'40s','50代':'50s','60代以上':'60s' },
     face_shape: { '卵型':'oval','丸顔':'round','面長':'oblong','逆三角形':'heart' },
     hair_style: { 'ベリーショート':'very-short','ショート':'short','ミディアム':'medium','ロング':'long','ボブ':'bob' },
     hair_color: { 'ブラック':'black','ダークブラウン':'dark-brown','ライトブラウン':'light-brown','ブロンド':'blond','グレー/白':'gray' },
-    skin_color: { '色白':'fair','普通':'natural','小麦色':'tan','褐色':'deep' }
+    skin_color: { '色白':'fair','普通':'natural','小麦色':'tan','褐色':'deep' },
+    glasses:    { 'なし':'none','度付き':'prescription','サングラス':'sunglasses' },
+    beard:      { 'なし':'none','薄い無精ひげ':'light-stubble','しっかり生やしている':'full','整えたデザインひげ':'designed' },
+    makeup:     { 'ノーメイク':'none','ナチュラル':'natural','しっかり':'strong','モード/個性的':'mode' }
 };
 
 /**
  * 各特徴キー → 既存フォームのターゲットセレクタ
- * select の場合は #id、ボタングループの場合は .profile-opt-XXX
+ * 性別/年代は手動入力させるため対象外
  */
 const _FACE_FEATURE_FORM_MAP = {
-    gender:     { type: 'buttonGroup', selector: '.profile-opt-body-gender' },
-    age:        { type: 'select',      selector: '#body-age' },
     face_shape: { type: 'buttonGroup', selector: '.profile-opt-face-shape' },
     hair_style: { type: 'buttonGroup', selector: '.profile-opt-hair-style' },
     hair_color: { type: 'buttonGroup', selector: '.profile-opt-hair-color' },
-    skin_color: { type: 'buttonGroup', selector: '.profile-opt-skin-tone' }
+    skin_color: { type: 'buttonGroup', selector: '.profile-opt-skin-tone' },
+    glasses:    { type: 'buttonGroup', selector: '.profile-opt-glasses' },
+    beard:      { type: 'buttonGroup', selector: '.profile-opt-beard' },
+    makeup:     { type: 'buttonGroup', selector: '.profile-opt-makeup' }
 };
 
 /**
