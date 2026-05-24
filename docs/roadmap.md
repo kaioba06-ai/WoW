@@ -7,6 +7,51 @@
 
 ---
 
+## 🤖 私（Claude）の自動化可能範囲
+
+**毎回確認不要。以下は私が自力で実行できます。**
+
+### コード変更〜本番反映
+| やること | 手段 |
+|---|---|
+| `コード.js` / `*.gs` 編集 | Edit / Write tool |
+| Apps Script へコード push | `clasp push` |
+| 本番デプロイ更新 | `clasp deploy -i AKfycbwjfbbZ4OkBrSmI6jfBJmZ-B45WuZpkzfem5EQEi7D-hcP_AiwDrojmwUHSvXg4icSD-Q -d "<desc>"` |
+| Git add / commit / push | Bash |
+
+### サーバー側機能の実行（本番GAS）
+本番デプロイURL `https://script.google.com/macros/s/AKfycbwjfbbZ4OkBrSmI6jfBJmZ-B45WuZpkzfem5EQEi7D-hcP_AiwDrojmwUHSvXg4icSD-Q/exec` + `apiKey=kion_sync_99` で以下を curl 実行可能：
+
+| action | 用途 |
+|---|---|
+| `migrate_v2` | 既存シートを v2 構造へマイグレーション |
+| `test_regenerate&user_id=X` | 既存B5を流用してパイプライン再実行 |
+| `test_pipeline&...` | プロフィール＋予報を上書きして全パイプライン実行 |
+| `regenerate_avatar&user_id=X` | アバターのみ再生成 |
+| `debug_dump&user_id=X` | 主要セル＋プロフィールをダンプ |
+| `recent_failures` | DebugLog から失敗系ログ抽出 |
+| `scenes&user_id=X` | C14-17 シーン画像URL＋outfit_names等を取得 |
+| `archive_unused` | 未使用画像を確認用フォルダへ退避 |
+
+### 画像の取得・目視評価
+| やること | 手段 |
+|---|---|
+| Drive画像のURL取得 | scenes エンドポイント |
+| 画像をブラウザに読ませて評価 | WebFetch → Read tool（PNG）でマルチモーダル目視 |
+
+### できないこと（ユーザーに頼む必要あり）
+- GASエディタUIの操作（フォーム表示、トリガー手動設定等）
+- フロントの実機モバイル動作確認（スマホでの見え方）
+- スプレッドシートの手動編集（自動はAPI経由のみ）
+- 課金・APIキー発行・OAuth承認
+
+### ルール
+- ユーザーに「やっといて」等の任せ判断をされたら、上記範囲は **自力で実行**して結果報告
+- 「確認していい？」「これでいい？」は**不要**。設計判断レベルでない限り聞かない
+- やった結果（コミットhash、デプロイ番号、画像URL等）は簡潔に報告
+
+---
+
 ## 完成形仕様
 
 ### シート構造（WoW_Database）
