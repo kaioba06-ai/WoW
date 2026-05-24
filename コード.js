@@ -234,19 +234,20 @@ function doGet(e) {
       }
       try {
         // 1) 行1ヘッダーを最新形(25列)に拡張（既に v2 なら上書きしない値も多いが冪等で安全）
-        var fullHeader = ['同期日時','性別','年代','身長','体重','体格','骨格','肩幅','胸囲','首回り','裄丈','腹囲','ウエスト','ヒップ','股下','太もも','靴','手首','肌の色','顔の形','髪型','髪色','眼鏡','ひげ','化粧'];
+        var fullHeader = ['同期日時','性別','年代','身長','体重','体格','骨格','肩幅','胸囲','首回り','裄丈','腹囲','ウエスト','ヒップ','股下','太もも','靴','手首','肌の色','顔の形','髪型','髪色','眼鏡','ひげ','化粧','髪型詳細'];
         sh3.getRange(1, 1, 1, fullHeader.length).setValues([fullHeader]);
 
         // 2) プロフィール行2を上書き
         //    パラメータ: gender, age, height, weight, body_type, skeletal_type, face_shape, hair_style, hair_color, skin_color, glasses, beard, makeup
-        var headerRow = sh3.getRange(1, 1, 1, 25).getValues()[0];
-        var existing  = sh3.getRange(2, 1, 1, 25).getValues()[0];
+        var headerRow = sh3.getRange(1, 1, 1, 26).getValues()[0];
+        var existing  = sh3.getRange(2, 1, 1, 26).getValues()[0];
         var keyMap = {
           gender: '性別', age: '年代', height: '身長', weight: '体重',
           body_type: '体格', skeletal_type: '骨格',
           face_shape: '顔の形', hair_style: '髪型', hair_color: '髪色',
           skin_color: '肌の色',
-          glasses: '眼鏡', beard: 'ひげ', makeup: '化粧'
+          glasses: '眼鏡', beard: 'ひげ', makeup: '化粧',
+          hair_detail: '髪型詳細'
         };
         for (var k in keyMap) {
           if (params[k]) {
@@ -255,7 +256,7 @@ function doGet(e) {
           }
         }
         existing[0] = new Date().toISOString();  // 同期日時
-        sh3.getRange(2, 1, 1, 25).setValues([existing]);
+        sh3.getRange(2, 1, 1, 26).setValues([existing]);
 
         // 2) アバター再生成
         var pd = {};
@@ -264,7 +265,8 @@ function doGet(e) {
           gender: pd['性別'], age: pd['年代'], height: pd['身長'], weight: pd['体重'],
           body_type: pd['体格'], skeletal_type: pd['骨格'], skin_color: pd['肌の色'],
           face_shape: pd['顔の形'], hair_style: pd['髪型'], hair_color: pd['髪色'],
-          glasses: pd['眼鏡'], beard: pd['ひげ'], makeup: pd['化粧']
+          glasses: pd['眼鏡'], beard: pd['ひげ'], makeup: pd['化粧'],
+          hair_detail: pd['髪型詳細']
         };
         var prompt = generateAvatarPrompt(avData);
         sh3.getRange(4, 1).setValue(Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss"));
@@ -354,8 +356,8 @@ function doGet(e) {
       // 失敗時にA5が「画像生成中...」のまま残らないよう finally でクリーンアップ
       try {
         // 行1ヘッダー → 行2データを取得して連想配列化
-        var headerRow = sh2.getRange(1, 1, 1, 25).getValues()[0];
-        var dataRow = sh2.getRange(2, 1, 1, 25).getValues()[0];
+        var headerRow = sh2.getRange(1, 1, 1, 26).getValues()[0];
+        var dataRow = sh2.getRange(2, 1, 1, 26).getValues()[0];
         var profileData = {};
         for (var hi = 0; hi < headerRow.length; hi++) {
           profileData[headerRow[hi]] = dataRow[hi];
@@ -374,7 +376,8 @@ function doGet(e) {
           hair_color: profileData['髪色'],
           glasses: profileData['眼鏡'],
           beard: profileData['ひげ'],
-          makeup: profileData['化粧']
+          makeup: profileData['化粧'],
+          hair_detail: profileData['髪型詳細']
         };
         var prompt = generateAvatarPrompt(data);
         sh2.getRange(4, 1).setValue(Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss"));
@@ -448,8 +451,8 @@ function doGet(e) {
         b5_value: String(sheet.getRange(5, 2).getValue()).substring(0, 300),
         b5_formula: sheet.getRange(5, 2).getFormula().substring(0, 300),
         b4_prompt: String(sheet.getRange(4, 2).getValue()).substring(0, 1000),
-        profile_row1: sheet.getRange(1, 1, 1, 25).getValues()[0],
-        profile_row2: sheet.getRange(2, 1, 1, 25).getValues()[0],
+        profile_row1: sheet.getRange(1, 1, 1, 26).getValues()[0],
+        profile_row2: sheet.getRange(2, 1, 1, 26).getValues()[0],
         c14_value: String(sheet.getRange(14, 3).getValue()),
         c14_formula: sheet.getRange(14, 3).getFormula(),
         c15_value: String(sheet.getRange(15, 3).getValue()),
@@ -633,6 +636,11 @@ function analyzeFacePhoto(data) {
     '',
     'face_shape: "卵型" | "丸顔" | "面長" | "逆三角形"',
     'hair_style: "ベリーショート" | "ショート" | "ミディアム" | "ロング" | "ボブ"',
+    'hair_detail: free-text English description of the hair shape, MAX 80 chars.',
+    '  Include: parting (center/side/none), bangs (yes/no/style), layering, wave/curl/straight, volume, edge style (e.g. undercut/asymmetric).',
+    '  Example: "side-parted with side-swept bangs, slight wave on top, tapered sides"',
+    '  Example: "center-parted long straight hair past shoulders, no bangs"',
+    '  DO NOT include identifying details (specific salon names, named cuts of specific people).',
     'hair_color: "ブラック" | "ダークブラウン" | "ライトブラウン" | "ブロンド" | "グレー/白"',
     'skin_color: "色白" | "普通" | "小麦色" | "褐色"',
     'glasses: "なし" | "度付き" | "サングラス"',
@@ -647,13 +655,14 @@ function analyzeFacePhoto(data) {
     properties: {
       face_shape:  { type: "STRING" },
       hair_style:  { type: "STRING" },
+      hair_detail: { type: "STRING" },
       hair_color:  { type: "STRING" },
       skin_color:  { type: "STRING" },
       glasses:     { type: "STRING" },
       beard:       { type: "STRING" },
       makeup:      { type: "STRING" }
     },
-    required: ["face_shape","hair_style","hair_color","skin_color","glasses","beard","makeup"]
+    required: ["face_shape","hair_style","hair_detail","hair_color","skin_color","glasses","beard","makeup"]
   };
 
   var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
@@ -768,7 +777,7 @@ function syncProfileData(data) {
     var timestamp = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
 
     // 1行目のヘッダー
-    var header = ['同期日時', '性別', '年代', '身長', '体重', '体格', '骨格', '肩幅', '胸囲', '首回り', '裄丈', '腹囲', 'ウエスト', 'ヒップ', '股下', '太もも', '靴', '手首', '肌の色', '顔の形', '髪型', '髪色', '眼鏡', 'ひげ', '化粧'];
+    var header = ['同期日時', '性別', '年代', '身長', '体重', '体格', '骨格', '肩幅', '胸囲', '首回り', '裄丈', '腹囲', 'ウエスト', 'ヒップ', '股下', '太もも', '靴', '手首', '肌の色', '顔の形', '髪型', '髪色', '眼鏡', 'ひげ', '化粧', '髪型詳細'];
     sheet.getRange(1, 1, 1, header.length).setValues([header]);
     sheet.getRange(1, 1, 1, header.length).setFontWeight('bold').setBackground('#f3f3f3');
     sheet.setFrozenRows(1);
@@ -799,7 +808,8 @@ function syncProfileData(data) {
       data.hair_color || '',
       data.glasses || '',
       data.beard || '',
-      data.makeup || ''
+      data.makeup || '',
+      data.hair_detail || ''
     ];
     sheet.getRange(2, 1, 1, row.length).setValues([row]);
 
@@ -831,7 +841,8 @@ function syncProfileData(data) {
       hair_color:    sheetRow[21],
       glasses:       sheetRow[22],
       beard:         sheetRow[23],
-      makeup:        sheetRow[24]
+      makeup:        sheetRow[24],
+      hair_detail:   sheetRow[25]
     };
 
     // プロンプトに使う全フィールドが埋まっているかチェック（1つでも空なら生成しない）
@@ -975,7 +986,7 @@ function syncWeatherData(data) {
       // G9:T12 にコーディネート4案を生成
       try {
         // プロフィール情報を2行目から読み取り
-        var profileRow = sheet.getRange(2, 1, 1, 25).getValues()[0];
+        var profileRow = sheet.getRange(2, 1, 1, 26).getValues()[0];
         var profile = {
           gender: profileRow[1],
           age: profileRow[2],
@@ -1220,6 +1231,17 @@ function generateAvatarPrompt(data) {
     ? "wearing a plain neutral fitted tank top and matching leggings"
     : "wearing a plain neutral fitted tank top and matching shorts";
 
+  // 髪型: hair_detail (自由記述) があれば優先、無ければ enum ベース
+  var hairDetail = (data.hair_detail || '').toString().trim();
+  var hairText;
+  if (hairDetail) {
+    hairText = hairCol ? (hairCol + ' hair: ' + hairDetail) : ('hair: ' + hairDetail);
+  } else if (hairSt) {
+    hairText = hairSt + ' ' + hairCol + ' hair';
+  } else {
+    hairText = '';
+  }
+
   var parts = [
     "A full-body photorealistic image of a " + gender,
     age ? "in their " + age : '',
@@ -1229,7 +1251,7 @@ function generateAvatarPrompt(data) {
     skeletal ? skeletal + " bone structure" : '',
     skin,
     face ? face + " face shape" : '',
-    hairSt ? hairSt + " " + hairCol + " hair" : '',
+    hairText,
     glasses,
     beard,
     makeup

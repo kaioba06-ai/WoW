@@ -440,13 +440,14 @@ const _FACE_FEATURE_VALUE_MAP = {
  * 性別/年代は手動入力させるため対象外
  */
 const _FACE_FEATURE_FORM_MAP = {
-    face_shape: { type: 'buttonGroup', selector: '.profile-opt-face-shape' },
-    hair_style: { type: 'buttonGroup', selector: '.profile-opt-hair-style' },
-    hair_color: { type: 'buttonGroup', selector: '.profile-opt-hair-color' },
-    skin_color: { type: 'buttonGroup', selector: '.profile-opt-skin-tone' },
-    glasses:    { type: 'buttonGroup', selector: '.profile-opt-glasses' },
-    beard:      { type: 'buttonGroup', selector: '.profile-opt-beard' },
-    makeup:     { type: 'buttonGroup', selector: '.profile-opt-makeup' }
+    face_shape:  { type: 'buttonGroup', selector: '.profile-opt-face-shape' },
+    hair_style:  { type: 'buttonGroup', selector: '.profile-opt-hair-style' },
+    hair_detail: { type: 'text',        selector: '#hair-detail' },
+    hair_color:  { type: 'buttonGroup', selector: '.profile-opt-hair-color' },
+    skin_color:  { type: 'buttonGroup', selector: '.profile-opt-skin-tone' },
+    glasses:     { type: 'buttonGroup', selector: '.profile-opt-glasses' },
+    beard:       { type: 'buttonGroup', selector: '.profile-opt-beard' },
+    makeup:      { type: 'buttonGroup', selector: '.profile-opt-makeup' }
 };
 
 /**
@@ -455,14 +456,25 @@ const _FACE_FEATURE_FORM_MAP = {
 function _applyFeaturesToProfileForm(features) {
     if (!features) return;
     Object.keys(_FACE_FEATURE_FORM_MAP).forEach(key => {
-        const jpVal = features[key];
-        if (!jpVal) return;
-        const enVal = (_FACE_FEATURE_VALUE_MAP[key] || {})[jpVal];
-        if (!enVal) {
-            console.warn('[analyze_face] unmapped value:', key, jpVal);
+        const rawVal = features[key];
+        if (rawVal == null || rawVal === '') return;
+        const target = _FACE_FEATURE_FORM_MAP[key];
+
+        // text型はマッピング不要、生の値をそのまま入れる
+        if (target.type === 'text') {
+            const el = document.querySelector(target.selector);
+            if (el) {
+                el.value = String(rawVal);
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
             return;
         }
-        const target = _FACE_FEATURE_FORM_MAP[key];
+
+        const enVal = (_FACE_FEATURE_VALUE_MAP[key] || {})[rawVal];
+        if (!enVal) {
+            console.warn('[analyze_face] unmapped value:', key, rawVal);
+            return;
+        }
         if (target.type === 'select') {
             const sel = document.querySelector(target.selector);
             if (sel) {

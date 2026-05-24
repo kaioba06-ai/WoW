@@ -497,6 +497,11 @@
                                         <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="false" data-value="very-short" data-label="ベリーショート">ベリーショート</button>
                                     </div>
                                 </div>
+                                <!-- 髪型詳細（AI自由記述） -->
+                                <div class="space-y-2">
+                                    <label class="wow-label !text-[10px]">髪型詳細(英語自由記述・AI自動入力)</label>
+                                    <input id="hair-detail" type="text" maxlength="100" placeholder='e.g. side-parted with side-swept bangs, slight wave on top' onchange="debouncedSaveProfile()" class="wow-input-base !px-3 !py-2 !text-xs" />
+                                </div>
                                 <!-- 髪色 -->
                                 <div class="space-y-2">
                                     <label class="wow-label !text-[10px]">髪色</label>
