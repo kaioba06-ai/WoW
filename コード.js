@@ -320,6 +320,13 @@ function doGet(e) {
           one_points: onePoints
         })).setMimeType(ContentService.MimeType.JSON);
       } catch (te) {
+        // 失敗時: A5の「画像生成中...」を残さない
+        try {
+          var stuckVal2 = String(sh3.getRange(5, 1).getValue());
+          if (stuckVal2 === '画像生成中...') {
+            sh3.getRange(5, 1).setValue('画像生成失敗: ' + Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm"));
+          }
+        } catch (_) {}
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: te.toString(), stack: te.stack }))
           .setMimeType(ContentService.MimeType.JSON);
       }
@@ -338,6 +345,7 @@ function doGet(e) {
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'sheet not found' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
+      // 失敗時にA5が「画像生成中...」のまま残らないよう finally でクリーンアップ
       try {
         // 行1ヘッダー → 行2データを取得して連想配列化
         var headerRow = sh2.getRange(1, 1, 1, 22).getValues()[0];
@@ -379,6 +387,13 @@ function doGet(e) {
         return ContentService.createTextOutput(JSON.stringify({ success: true, imageUrl: imageUrl }))
           .setMimeType(ContentService.MimeType.JSON);
       } catch (re) {
+        // 失敗時: A5の「画像生成中...」を残さない
+        try {
+          var stuckVal = String(sh2.getRange(5, 1).getValue());
+          if (stuckVal === '画像生成中...') {
+            sh2.getRange(5, 1).setValue('画像生成失敗: ' + Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm"));
+          }
+        } catch (_) {}
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: re.toString() }))
           .setMimeType(ContentService.MimeType.JSON);
       }
@@ -1070,7 +1085,11 @@ function generateAvatarPrompt(data) {
 
   var prompt = parts.join(", ") + ". ";
   prompt += clothing + ". Standing pose, facing camera, plain white studio background, 8K photorealistic. ";
-  prompt += "The image must contain no text, no numbers, no labels of any kind.";
+  prompt += "The image must contain no text, no numbers, no labels of any kind. ";
+  // 50代以上の年齢忠実性: 既知の傾向としてAIが若く描きがちなため明示
+  if (age === '50s' || age === '60s or older') {
+    prompt += "IMPORTANT: render the age realistically — show natural signs of maturity appropriate for the stated age (skin texture, hairline, facial structure consistent with " + age + "). Do NOT depict the person as significantly younger than stated. ";
+  }
 
   return prompt;
 }
