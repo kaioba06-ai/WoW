@@ -233,15 +233,20 @@ function doGet(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
       try {
-        // 1) プロフィール行2を上書き
-        //    パラメータ: gender, age, height, weight, body_type, skeletal_type, face_shape, hair_style, hair_color, skin_color
+        // 1) 行1ヘッダーを最新形(25列)に拡張（既に v2 なら上書きしない値も多いが冪等で安全）
+        var fullHeader = ['同期日時','性別','年代','身長','体重','体格','骨格','肩幅','胸囲','首回り','裄丈','腹囲','ウエスト','ヒップ','股下','太もも','靴','手首','肌の色','顔の形','髪型','髪色','眼鏡','ひげ','化粧'];
+        sh3.getRange(1, 1, 1, fullHeader.length).setValues([fullHeader]);
+
+        // 2) プロフィール行2を上書き
+        //    パラメータ: gender, age, height, weight, body_type, skeletal_type, face_shape, hair_style, hair_color, skin_color, glasses, beard, makeup
         var headerRow = sh3.getRange(1, 1, 1, 25).getValues()[0];
         var existing  = sh3.getRange(2, 1, 1, 25).getValues()[0];
         var keyMap = {
           gender: '性別', age: '年代', height: '身長', weight: '体重',
           body_type: '体格', skeletal_type: '骨格',
           face_shape: '顔の形', hair_style: '髪型', hair_color: '髪色',
-          skin_color: '肌の色'
+          skin_color: '肌の色',
+          glasses: '眼鏡', beard: 'ひげ', makeup: '化粧'
         };
         for (var k in keyMap) {
           if (params[k]) {
@@ -258,7 +263,8 @@ function doGet(e) {
         var avData = {
           gender: pd['性別'], age: pd['年代'], height: pd['身長'], weight: pd['体重'],
           body_type: pd['体格'], skeletal_type: pd['骨格'], skin_color: pd['肌の色'],
-          face_shape: pd['顔の形'], hair_style: pd['髪型'], hair_color: pd['髪色']
+          face_shape: pd['顔の形'], hair_style: pd['髪型'], hair_color: pd['髪色'],
+          glasses: pd['眼鏡'], beard: pd['ひげ'], makeup: pd['化粧']
         };
         var prompt = generateAvatarPrompt(avData);
         sh3.getRange(4, 1).setValue(Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss"));
@@ -365,7 +371,10 @@ function doGet(e) {
           skin_color: profileData['肌の色'],
           face_shape: profileData['顔の形'],
           hair_style: profileData['髪型'],
-          hair_color: profileData['髪色']
+          hair_color: profileData['髪色'],
+          glasses: profileData['眼鏡'],
+          beard: profileData['ひげ'],
+          makeup: profileData['化粧']
         };
         var prompt = generateAvatarPrompt(data);
         sh2.getRange(4, 1).setValue(Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss"));
@@ -819,10 +828,14 @@ function syncProfileData(data) {
       skin_tone:     sheetRow[18],
       face_shape:    sheetRow[19],
       hair_style:    sheetRow[20],
-      hair_color:    sheetRow[21]
+      hair_color:    sheetRow[21],
+      glasses:       sheetRow[22],
+      beard:         sheetRow[23],
+      makeup:        sheetRow[24]
     };
 
     // プロンプトに使う全フィールドが埋まっているかチェック（1つでも空なら生成しない）
+    // 眼鏡/ひげ/化粧は未入力でも生成する（必須ではなく装飾）
     var promptFields = [sheetData.gender, sheetData.age, sheetData.height, sheetData.weight,
                         sheetData.body_type, sheetData.skeletal_type, sheetData.skin_tone,
                         sheetData.face_shape, sheetData.hair_style, sheetData.hair_color];
@@ -1172,6 +1185,19 @@ function generateAvatarPrompt(data) {
   var ageMap = {
     "10代":"teens", "20代":"20s", "30代":"30s", "40代":"40s", "50代":"50s", "60代以上":"60s or older"
   };
+  // 「なし」は空文字にして parts.filter で除外する
+  var glassesMap = {
+    "なし":"", "度付き":"wearing prescription eyeglasses", "サングラス":"wearing sunglasses",
+    "none":"", "prescription":"wearing prescription eyeglasses", "sunglasses":"wearing sunglasses"
+  };
+  var beardMap = {
+    "なし":"", "薄い無精ひげ":"with light stubble", "しっかり生やしている":"with a full beard", "整えたデザインひげ":"with a well-groomed designer beard",
+    "none":"", "light-stubble":"with light stubble", "full":"with a full beard", "designed":"with a well-groomed designer beard"
+  };
+  var makeupMap = {
+    "ノーメイク":"", "ナチュラル":"with natural light makeup", "しっかり":"with defined makeup (visible eye makeup and lip color)", "モード/個性的":"with bold avant-garde makeup",
+    "none":"", "natural":"with natural light makeup", "strong":"with defined makeup (visible eye makeup and lip color)", "mode":"with bold avant-garde makeup"
+  };
 
   var gender   = data.gender === "女性" ? "woman" : (data.gender === "男性" ? "man" : "person");
   var age      = ageMap[data.age] || data.age || '';
@@ -1183,6 +1209,10 @@ function generateAvatarPrompt(data) {
   var face     = faceMap[data.face_shape] || data.face_shape || '';
   var hairSt   = hairStyleMap[data.hair_style] || data.hair_style || '';
   var hairCol  = hairColorMap[data.hair_color] || data.hair_color || '';
+  // 眼鏡/ひげ/化粧（マップに無い値はそのまま、空/「なし」相当は空文字に）
+  var glasses  = (data.glasses in glassesMap) ? glassesMap[data.glasses] : (data.glasses || '');
+  var beard    = (data.beard   in beardMap)   ? beardMap[data.beard]     : (data.beard   || '');
+  var makeup   = (data.makeup  in makeupMap)  ? makeupMap[data.makeup]   : (data.makeup  || '');
 
   // 安全フィルタ回避: topless/briefs は高齢者や特定組合せでImagenが弾くため、
   // 軽量で身体ラインが分かる無地下着系の表現に統一
@@ -1199,7 +1229,10 @@ function generateAvatarPrompt(data) {
     skeletal ? skeletal + " bone structure" : '',
     skin,
     face ? face + " face shape" : '',
-    hairSt ? hairSt + " " + hairCol + " hair" : ''
+    hairSt ? hairSt + " " + hairCol + " hair" : '',
+    glasses,
+    beard,
+    makeup
   ].filter(function(x){ return x; });
 
   var prompt = parts.join(", ") + ". ";
