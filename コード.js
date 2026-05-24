@@ -222,6 +222,193 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // フェーズ5 品質評価用: プロフィール上書き＋カスタム予報で全パイプライン実行
+    // 用途: alessandro_riva をテストアカウントとして使い、様々な属性・条件を試す
+    if (params.action === 'test_pipeline') {
+      var userId = params.user_id || 'alessandro_riva';
+      var ss3 = SpreadsheetApp.getActiveSpreadsheet();
+      var sh3 = ss3.getSheetByName(userId);
+      if (!sh3) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'sheet not found: ' + userId }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      try {
+        // 1) プロフィール行2を上書き
+        //    パラメータ: gender, age, height, weight, body_type, skeletal_type, face_shape, hair_style, hair_color, skin_color
+        var headerRow = sh3.getRange(1, 1, 1, 22).getValues()[0];
+        var existing  = sh3.getRange(2, 1, 1, 22).getValues()[0];
+        var keyMap = {
+          gender: '性別', age: '年代', height: '身長', weight: '体重',
+          body_type: '体格', skeletal_type: '骨格',
+          face_shape: '顔の形', hair_style: '髪型', hair_color: '髪色',
+          skin_color: '肌の色'
+        };
+        for (var k in keyMap) {
+          if (params[k]) {
+            var colIdx = headerRow.indexOf(keyMap[k]);
+            if (colIdx >= 0) existing[colIdx] = params[k];
+          }
+        }
+        existing[0] = new Date().toISOString();  // 同期日時
+        sh3.getRange(2, 1, 1, 22).setValues([existing]);
+
+        // 2) アバター再生成
+        var pd = {};
+        for (var hh = 0; hh < headerRow.length; hh++) pd[headerRow[hh]] = existing[hh];
+        var avData = {
+          gender: pd['性別'], age: pd['年代'], height: pd['身長'], weight: pd['体重'],
+          body_type: pd['体格'], skeletal_type: pd['骨格'], skin_color: pd['肌の色'],
+          face_shape: pd['顔の形'], hair_style: pd['髪型'], hair_color: pd['髪色']
+        };
+        var prompt = generateAvatarPrompt(avData);
+        sh3.getRange(4, 1).setValue(Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss"));
+        sh3.getRange(4, 2).setValue(prompt);
+        var prevAvId = extractIdFromCell_(sh3.getRange(5, 2));
+        if (prevAvId) archiveImageById_(prevAvId);
+        sh3.getRange(5, 1).setValue('画像生成中...');
+        SpreadsheetApp.flush();
+        var avUrl = generateAvatarImage(prompt);
+        sh3.getRange(5, 1).setValue(Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss"));
+        var idM = avUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/) || avUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        var dispUrl = idM ? ('https://drive.google.com/thumbnail?id=' + idM[1] + '&sz=w1000') : avUrl;
+        sh3.getRange(5, 2).setFormula('=IMAGE("' + dispUrl + '")');
+        sh3.setRowHeight(5, 280);
+
+        // 3) カスタム予報でパイプライン実行
+        //    パラメータ: temp1..temp4, lv1..lv4, weather1..weather4 (個別指定)、なければデフォルト
+        var defaultForecast = [
+          ['NOW', 16, 5, '快晴'], ['+3h', 15, 5, '快晴'], ['+6h', 14, 5, '快晴'], ['+12h', 18, 4, '晴れ']
+        ];
+        var forecast = [];
+        for (var fi = 0; fi < 4; fi++) {
+          var slot = defaultForecast[fi].slice();
+          if (params['temp' + (fi+1)])    slot[1] = Number(params['temp' + (fi+1)]);
+          if (params['lv' + (fi+1)])      slot[2] = Number(params['lv' + (fi+1)]);
+          if (params['weather' + (fi+1)]) slot[3] = params['weather' + (fi+1)];
+          forecast.push(slot);
+        }
+        var pipeResult = syncWeatherData({
+          user_id: userId,
+          forecast_data: forecast,
+          regenerate_outfits: true
+        });
+
+        // 4) 結果URLを集めて返す
+        var sceneFormulas = [];
+        for (var sr = 14; sr <= 17; sr++) {
+          var sf = sh3.getRange(sr, 3).getFormula();
+          var mm = sf.match(/=IMAGE\("([^"]+)"\)/);
+          sceneFormulas.push(mm ? mm[1] : String(sh3.getRange(sr, 3).getValue()));
+        }
+        var outfitNames = sh3.getRange(9, 21, 4, 1).getValues().map(function(r){return r[0];});
+        var onePoints   = sh3.getRange(9, 22, 4, 1).getValues().map(function(r){return r[0];});
+
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          avatarUrl: avUrl,
+          avatarDisplay: dispUrl,
+          profile: avData,
+          forecast: forecast,
+          pipeResult: pipeResult,
+          scenes: sceneFormulas,
+          outfit_names: outfitNames,
+          one_points: onePoints
+        })).setMimeType(ContentService.MimeType.JSON);
+      } catch (te) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: te.toString(), stack: te.stack }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // フェーズ5 動作確認用: 既存プロフィール(行2)からアバターのみ再生成
+    if (params.action === 'regenerate_avatar') {
+      var userId = params.user_id;
+      if (!userId) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'user_id required' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var ss2 = SpreadsheetApp.getActiveSpreadsheet();
+      var sh2 = ss2.getSheetByName(userId);
+      if (!sh2) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'sheet not found' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      try {
+        // 行1ヘッダー → 行2データを取得して連想配列化
+        var headerRow = sh2.getRange(1, 1, 1, 22).getValues()[0];
+        var dataRow = sh2.getRange(2, 1, 1, 22).getValues()[0];
+        var profileData = {};
+        for (var hi = 0; hi < headerRow.length; hi++) {
+          profileData[headerRow[hi]] = dataRow[hi];
+        }
+        // generateAvatarPrompt が期待するキー名にマップ
+        var data = {
+          gender: profileData['性別'],
+          age: profileData['年代'],
+          height: profileData['身長'],
+          weight: profileData['体重'],
+          body_type: profileData['体格'],
+          skeletal_type: profileData['骨格'],
+          skin_color: profileData['肌の色'],
+          face_shape: profileData['顔の形'],
+          hair_style: profileData['髪型'],
+          hair_color: profileData['髪色']
+        };
+        var prompt = generateAvatarPrompt(data);
+        sh2.getRange(4, 1).setValue(Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss"));
+        sh2.getRange(4, 2).setValue(prompt);
+        // 旧アバターをアーカイブ
+        var prevId = extractIdFromCell_(sh2.getRange(5, 2));
+        if (prevId) archiveImageById_(prevId);
+        sh2.getRange(5, 1).setValue('画像生成中...');
+        SpreadsheetApp.flush();
+        var imageUrl = generateAvatarImage(prompt);
+        sh2.getRange(5, 1).setValue(Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss"));
+        var idMatch = imageUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/) || imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        var displayUrl = idMatch
+          ? 'https://drive.google.com/thumbnail?id=' + idMatch[1] + '&sz=w1000'
+          : imageUrl;
+        sh2.getRange(5, 2).setFormula('=IMAGE("' + displayUrl + '")');
+        sh2.setRowHeight(5, 280);
+        if (sh2.getColumnWidth(2) < 250) sh2.setColumnWidth(2, 280);
+        return ContentService.createTextOutput(JSON.stringify({ success: true, imageUrl: imageUrl }))
+          .setMimeType(ContentService.MimeType.JSON);
+      } catch (re) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: re.toString() }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // デバッグ用: 指定ユーザーシートの主要セルをダンプ
+    if (params.action === 'debug_dump') {
+      var userId = params.user_id;
+      if (!userId) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'user_id required' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = ss.getSheetByName(userId);
+      if (!sheet) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'sheet not found' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var dump = {
+        a5_timestamp: String(sheet.getRange(5, 1).getValue()),
+        b5_value: String(sheet.getRange(5, 2).getValue()).substring(0, 300),
+        b5_formula: sheet.getRange(5, 2).getFormula().substring(0, 300),
+        b4_prompt: String(sheet.getRange(4, 2).getValue()).substring(0, 1000),
+        profile_row1: sheet.getRange(1, 1, 1, 22).getValues()[0],
+        profile_row2: sheet.getRange(2, 1, 1, 22).getValues()[0],
+        c14_value: String(sheet.getRange(14, 3).getValue()),
+        c14_formula: sheet.getRange(14, 3).getFormula(),
+        c15_value: String(sheet.getRange(15, 3).getValue()),
+        c16_value: String(sheet.getRange(16, 3).getValue()),
+        c17_value: String(sheet.getRange(17, 3).getValue())
+      };
+      return ContentService.createTextOutput(JSON.stringify({ success: true, dump: dump }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // フェーズ2 動作確認用: 指定ユーザーのコーデ＋シーン画像をテスト再生成
     // 既存B5を流用、ダミー予報データで全パイプラインを通す
     if (params.action === 'test_regenerate') {
@@ -836,9 +1023,11 @@ function generateAvatarPrompt(data) {
   var hairSt   = hairStyleMap[data.hair_style] || data.hair_style || '';
   var hairCol  = hairColorMap[data.hair_color] || data.hair_color || '';
 
+  // 安全フィルタ回避: topless/briefs は高齢者や特定組合せでImagenが弾くため、
+  // 軽量で身体ラインが分かる無地下着系の表現に統一
   var clothing = (data.gender === "女性")
-    ? "wearing a plain neutral fitted tank top and leggings"
-    : "topless, wearing only plain neutral briefs";
+    ? "wearing a plain neutral fitted tank top and matching leggings"
+    : "wearing a plain neutral fitted tank top and matching shorts";
 
   var parts = [
     "A full-body photorealistic image of a " + gender,
