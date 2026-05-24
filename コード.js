@@ -379,6 +379,28 @@ function doGet(e) {
       }
     }
 
+    // フェーズ6 検証用: DebugLog から最近のFAILED系を抽出
+    if (params.action === 'recent_failures') {
+      var ssX = SpreadsheetApp.getActiveSpreadsheet();
+      var dbg = ssX.getSheetByName('DebugLog');
+      if (!dbg) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'DebugLog not found' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var lastRow = dbg.getLastRow();
+      var startRow = Math.max(2, lastRow - 200);
+      var rows = dbg.getRange(startRow, 1, lastRow - startRow + 1, 3).getValues();
+      var failures = [];
+      rows.forEach(function(r) {
+        var label = String(r[1] || '');
+        if (label.indexOf('FAILED') !== -1 || label.indexOf('SAFETY') !== -1 || label.indexOf('failed') !== -1) {
+          failures.push({ ts: String(r[0]), label: label, detail: String(r[2] || '').substring(0, 200) });
+        }
+      });
+      return ContentService.createTextOutput(JSON.stringify({ success: true, total: failures.length, failures: failures.slice(-30) }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // デバッグ用: 指定ユーザーシートの主要セルをダンプ
     if (params.action === 'debug_dump') {
       var userId = params.user_id;
