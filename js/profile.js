@@ -316,6 +316,178 @@ function handleProfilePhotoChange(input) {
     reader.readAsDataURL(file);
 }
 
+/**
+ * 顔写真→AI特徴抽出→プロフィール自動入力（似顔絵2ステップ方式）
+ *
+ * プライバシー設計:
+ * - 写真はサーバーDriveに保存しない（GAS analyze_face は応答後に変数破棄）
+ * - 抽象enum値のみ取得（個人識別情報なし）
+ * - クライアント側で512px縮小してアップロード負荷低減
+ * - 利用前に同意確認（18歳以上・自分の顔のみ）
+ */
+async function analyzePhotoForProfile() {
+    // 同意確認
+    const consent = confirm(
+        '以下に同意いただける場合のみ進めてください:\n\n' +
+        '1. 18歳以上です\n' +
+        '2. これは自分自身の顔写真です\n' +
+        '3. 写真はサーバーに保存されません（特徴抽出にのみ使用）\n' +
+        '4. 抽出される情報はプロフィール選択肢（性別/年代/髪型等）のみ\n\n' +
+        '同意してファイルを選択しますか？'
+    );
+    if (!consent) return;
+
+    // ファイル選択
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        await _runFaceAnalysis(file);
+    };
+    input.click();
+}
+
+async function _runFaceAnalysis(file) {
+    try {
+        // 512pxに縮小（プライバシー＋帯域削減）
+        const dataUrl = await _resizeImageToBase64(file, 512);
+        const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+        const mime = (dataUrl.match(/^data:(image\/\w+);/) || [])[1] || 'image/jpeg';
+
+        if (typeof WOW_CONFIG === 'undefined' || !WOW_CONFIG.cloudUrl) {
+            alert('クラウド設定が無いため分析できません');
+            return;
+        }
+
+        // ローディング表示
+        const btn = document.getElementById('analyze-photo-btn');
+        if (btn) { btn.disabled = true; btn.textContent = 'AI分析中...'; }
+
+        const resp = await fetch(WOW_CONFIG.cloudUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                apiKey: WOW_CONFIG.apiKey,
+                type: 'analyze_face',
+                data: { mime_type: mime, image_base64: base64 }
+            }),
+            redirect: 'follow'
+        });
+        const result = await resp.json();
+
+        if (btn) { btn.disabled = false; btn.textContent = '📷 写真からAIで自動入力'; }
+
+        if (!result.success) {
+            alert('分析に失敗しました: ' + (result.error || 'unknown'));
+            return;
+        }
+
+        _applyFeaturesToProfileForm(result.features);
+        alert('プロフィールに自動入力しました。内容を確認・編集してから保存してください。');
+    } catch (err) {
+        console.error('[analyzePhoto] error', err);
+        alert('エラーが発生しました: ' + err.message);
+        const btn = document.getElementById('analyze-photo-btn');
+        if (btn) { btn.disabled = false; btn.textContent = '📷 写真からAIで自動入力'; }
+    }
+}
+
+/**
+ * 画像を指定サイズに縮小してbase64 data URLを返す
+ */
+function _resizeImageToBase64(file, maxDim) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
+                else if (h >= w && h > maxDim) { w = w * maxDim / h; h = maxDim; }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * 抽出特徴(日本語enum)をフォームの英語コード値に変換するマップ
+ * 既存フォームの data-value と一致させる
+ */
+const _FACE_FEATURE_VALUE_MAP = {
+    gender:     { '男性': 'male', '女性': 'female' },
+    age:        { '10代':'10s','20代':'20s','30代':'30s','40代':'40s','50代':'50s','60代以上':'60s' },
+    face_shape: { '卵型':'oval','丸顔':'round','面長':'oblong','逆三角形':'heart' },
+    hair_style: { 'ベリーショート':'very-short','ショート':'short','ミディアム':'medium','ロング':'long','ボブ':'bob' },
+    hair_color: { 'ブラック':'black','ダークブラウン':'dark-brown','ライトブラウン':'light-brown','ブロンド':'blond','グレー/白':'gray' },
+    skin_color: { '色白':'fair','普通':'natural','小麦色':'tan','褐色':'deep' }
+};
+
+/**
+ * 各特徴キー → 既存フォームのターゲットセレクタ
+ * select の場合は #id、ボタングループの場合は .profile-opt-XXX
+ */
+const _FACE_FEATURE_FORM_MAP = {
+    gender:     { type: 'buttonGroup', selector: '.profile-opt-body-gender' },
+    age:        { type: 'select',      selector: '#body-age' },
+    face_shape: { type: 'buttonGroup', selector: '.profile-opt-face-shape' },
+    hair_style: { type: 'buttonGroup', selector: '.profile-opt-hair-style' },
+    hair_color: { type: 'buttonGroup', selector: '.profile-opt-hair-color' },
+    skin_color: { type: 'buttonGroup', selector: '.profile-opt-skin-tone' }
+};
+
+/**
+ * 抽出特徴をプロフィール編集フォームに反映
+ */
+function _applyFeaturesToProfileForm(features) {
+    if (!features) return;
+    Object.keys(_FACE_FEATURE_FORM_MAP).forEach(key => {
+        const jpVal = features[key];
+        if (!jpVal) return;
+        const enVal = (_FACE_FEATURE_VALUE_MAP[key] || {})[jpVal];
+        if (!enVal) {
+            console.warn('[analyze_face] unmapped value:', key, jpVal);
+            return;
+        }
+        const target = _FACE_FEATURE_FORM_MAP[key];
+        if (target.type === 'select') {
+            const sel = document.querySelector(target.selector);
+            if (sel) {
+                sel.value = enVal;
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        } else if (target.type === 'buttonGroup') {
+            const btns = document.querySelectorAll(target.selector);
+            btns.forEach(btn => {
+                const btnVal = btn.dataset.value || btn.innerText.trim();
+                const active = (btnVal === enVal);
+                btn.dataset.active = active ? 'true' : 'false';
+                btn.setAttribute('data-active', active ? 'true' : 'false');
+                // ハイライト用クラスも更新（既存のselectProfileOptionと整合）
+                if (active) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+    });
+    // 自動保存トリガー
+    if (typeof debouncedSaveProfile === 'function') debouncedSaveProfile();
+}
+
+// グローバル公開（HTMLからonclickで呼べるよう）
+window.analyzePhotoForProfile = analyzePhotoForProfile;
+
 function removeProfilePhoto() {
     _profilePhotoPending = '__remove__';
     const img = document.getElementById('profile-avatar-img');

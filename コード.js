@@ -552,33 +552,145 @@ function doGet(e) {
 function doPost(e) {
   try {
     var contents = e.postData.contents;
-    logDebug('doPost called', contents);
-    
+    // analyze_face は画像base64が巨大かつPIIなので、本体はログに残さない
     var params = JSON.parse(contents);
-    
+    if (params.type === 'analyze_face') {
+      logDebug('doPost called', 'type=analyze_face (image body redacted)');
+    } else {
+      logDebug('doPost called', contents);
+    }
+
     // APIキーの簡易認証
-    var API_KEY = PropertiesService.getScriptProperties().getProperty('SYNC_API_KEY') || "kion_sync_99"; 
+    var API_KEY = PropertiesService.getScriptProperties().getProperty('SYNC_API_KEY') || "kion_sync_99";
     if (params.apiKey !== API_KEY) {
       logDebug('Auth Failed', { received: params.apiKey, expected: API_KEY });
       return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Unauthorized" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
-    
+
     var result;
-    if (params.type === 'weather' || params.type === 'weather_v2') {
+    if (params.type === 'analyze_face') {
+      result = analyzeFacePhoto(params.data);
+    } else if (params.type === 'weather' || params.type === 'weather_v2') {
       result = syncWeatherData(params.data);
     } else {
       result = syncProfileData(params.data);
     }
-    logDebug('Sync result (' + (params.type || 'profile') + ')', result);
-    
+    // analyze_face の結果も画像base64は含まれないがログ短縮
+    logDebug('Sync result (' + (params.type || 'profile') + ')', params.type === 'analyze_face' ? { success: result.success } : result);
+
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
-      
+
   } catch (err) {
     logDebug('Error in doPost', err.toString());
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * 顔写真→特徴抽出（写真は保存しない・破棄する）
+ *
+ * 規約・法的配慮:
+ *   - 写真はDriveに保存せず、Gemini Vision応答後に変数破棄のみで終わる
+ *   - DebugLogにbase64は出さない
+ *   - 抽象度を上げて「本人と判別できない」レベルに留める
+ *   - 出力はプロフィール画面のドロップダウン選択肢と互換のenum値のみ
+ *
+ * @param {Object} data
+ * @param {string} data.image_base64  画像のbase64(プレフィックスなし)
+ * @param {string} [data.mime_type]   "image/jpeg" 等。省略時 image/jpeg
+ * @return {{success:boolean, features?:Object, error?:string}}
+ */
+function analyzeFacePhoto(data) {
+  if (!data || !data.image_base64) {
+    return { success: false, error: 'image_base64 required' };
+  }
+  var apiKey = PropertiesService.getScriptProperties().getProperty('GOOGLE_API_KEY');
+  if (!apiKey) return { success: false, error: 'GOOGLE_API_KEY not set' };
+
+  var mime = data.mime_type || 'image/jpeg';
+
+  // プロンプト: 抽象度の高いenum値のみを返させる
+  // 個人識別に繋がる「ほくろ位置」「目の間隔」等の詳細は出さない
+  var promptText = [
+    'Analyze this photo and extract abstract avatar features ONLY.',
+    'DO NOT describe the person\'s identity, name, or any identifying marks (moles, scars, tattoos).',
+    'DO NOT attempt to recognize who this person is.',
+    'Choose the closest value from each enum below. Return JSON.',
+    '',
+    'gender: "男性" | "女性"',
+    'age: "10代" | "20代" | "30代" | "40代" | "50代" | "60代以上"',
+    'face_shape: "卵型" | "丸顔" | "面長" | "逆三角形"',
+    'hair_style: "ベリーショート" | "ショート" | "ミディアム" | "ロング" | "ボブ"',
+    'hair_color: "ブラック" | "ダークブラウン" | "ライトブラウン" | "ブロンド" | "グレー/白"',
+    'skin_color: "色白" | "普通" | "小麦色" | "褐色"',
+    '',
+    'If the image does not contain a clear single human face, return {"success":false,"error":"no_face"}.'
+  ].join('\n');
+
+  var schema = {
+    type: "OBJECT",
+    properties: {
+      gender:      { type: "STRING" },
+      age:         { type: "STRING" },
+      face_shape:  { type: "STRING" },
+      hair_style:  { type: "STRING" },
+      hair_color:  { type: "STRING" },
+      skin_color:  { type: "STRING" }
+    },
+    required: ["gender","age","face_shape","hair_style","hair_color","skin_color"]
+  };
+
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+  var payload = {
+    contents: [{
+      role: "user",
+      parts: [
+        { inlineData: { mimeType: mime, data: data.image_base64 } },
+        { text: promptText }
+      ]
+    }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: schema,
+      temperature: 0.2
+    }
+  };
+
+  logDebug('analyze_face start', 'mime=' + mime);
+  try {
+    var resp = UrlFetchApp.fetch(url, {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+    var code = resp.getResponseCode();
+    var text = resp.getContentText();
+    // 重要: 入力画像のbase64は変数からも明示的に外す（GAS GCで回収される）
+    payload = null;
+    if (code !== 200) {
+      logDebug('analyze_face failed', 'code=' + code + ' ' + text.substring(0, 200));
+      return { success: false, error: 'Vision API ' + code };
+    }
+    var json = JSON.parse(text);
+    var inner = json.candidates && json.candidates[0] && json.candidates[0].content
+                && json.candidates[0].content.parts && json.candidates[0].content.parts[0].text;
+    if (!inner) {
+      var fr = json.candidates && json.candidates[0] && json.candidates[0].finishReason;
+      if (fr === 'SAFETY' || fr === 'IMAGE_SAFETY') {
+        return { success: false, error: 'safety_blocked' };
+      }
+      return { success: false, error: 'empty_response' };
+    }
+    var features = JSON.parse(inner);
+    logDebug('analyze_face done', features);  // 抽象enum値のみ。個人識別情報なし
+    return { success: true, features: features };
+  } catch (e) {
+    logDebug('analyze_face error', e.toString());
+    return { success: false, error: e.toString() };
   }
 }
 

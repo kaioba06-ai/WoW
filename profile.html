@@ -279,6 +279,25 @@
                     </h4>
                     
                     <div id="body-data-settings-content" class="hidden wow-settings-card space-y-6">
+                        <!-- 顔写真→AIで自動入力（似顔絵2ステップ方式） -->
+                        <div class="p-3 rounded-xl bg-primary/5 dark:bg-blue-500/10 border border-primary/20 dark:border-blue-500/20 space-y-2">
+                            <p class="text-[11px] font-bold text-primary dark:text-blue-300 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+                                AI で性別・年代・髪型などを自動入力
+                            </p>
+                            <p class="text-[10px] text-on-surface-variant dark:text-white/60 leading-relaxed">
+                                自分の顔写真から特徴を抽出してフォームに反映します。<br>
+                                写真はサーバーに保存されません（特徴抽出にのみ使用）。
+                            </p>
+                            <button id="analyze-photo-btn" type="button" onclick="analyzePhotoForProfile()"
+                                class="w-full py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-sm active:scale-[0.98] transition-all">
+                                📷 写真からAIで自動入力
+                            </button>
+                            <p class="text-[9px] text-on-surface-variant/60 dark:text-white/40 text-center">
+                                ※ 18歳以上・自分自身の写真のみ
+                            </p>
+                        </div>
+
                         <!-- 1. 基本体型 -->
                         <div class="space-y-4">
                             <div class="grid grid-cols-2 gap-3">
