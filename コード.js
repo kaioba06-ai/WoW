@@ -51,15 +51,12 @@ function collectInUseImageIds_() {
   sheets.forEach(function(sheet) {
     var name = sheet.getName();
     if (name === 'DebugLog') return;
+    // バックアップシート（migrateSheetsToV2 が作成）は走査対象外
+    if (name.indexOf('_backup_') !== -1) return;
     // B5: アバター本体
     var avId = extractIdFromCell_(sheet.getRange(5, 2));
     if (avId) inUse[avId] = true;
-    // U9:U12: コーデ着替えアバター
-    for (var r = 9; r <= 12; r++) {
-      var id = extractIdFromCell_(sheet.getRange(r, 21));
-      if (id) inUse[id] = true;
-    }
-    // C14:C17: シーン画像
+    // C14:C17: シーン画像（U列のコーデ画像はフェーズ2で廃止）
     for (var r2 = 14; r2 <= 17; r2++) {
       var id2 = extractIdFromCell_(sheet.getRange(r2, 3));
       if (id2) inUse[id2] = true;
@@ -98,6 +95,90 @@ function archiveUnusedAvatars() {
 }
 
 /**
+ * フェーズ2: シートをv2構造へマイグレーション
+ *
+ * 変更内容:
+ *   - 行8 ヘッダーを日本語→英語に置換
+ *     旧: 体感気温/服装Lv/個人感度/補正後Lv/天気 + 14部位(日本語) + コーデ画像
+ *     新: feels_temp/lv_raw/sensitivity/lv_adj/weather + 14部位(英語) + outfit_name + one_point
+ *   - U列の旧コーデ画像をアーカイブフォルダへ退避
+ *   - U列をoutfit_nameに転用、V列にone_pointを新設
+ *   - 部位コーデのデータ(G9:T12)は破壊しない（次回再生成で英語に置き換わる）
+ *   - 行13 ヘッダーを location/pose/scene_image に置換
+ *
+ * 安全策:
+ *   - 実行前に各ユーザーシートを Duplicate（"<userId>_backup_YYYYMMDD"）
+ *   - 既に英語化済み（A8="time"系）のシートはスキップ（冪等性）
+ *   - 既にバックアップが存在する場合は新規バックアップを作らない（二重防止）
+ *
+ * 実行方法: GASエディタから本関数を選択して実行
+ */
+function migrateSheetsToV2() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+  var stamp = Utilities.formatDate(new Date(), 'GMT+9', 'yyyyMMdd');
+  var report = { migrated: [], skipped: [], backedUp: [] };
+
+  sheets.forEach(function(sheet) {
+    var name = sheet.getName();
+    if (name === 'DebugLog') return;
+    if (name.indexOf('_backup_') !== -1) return;
+
+    // 冪等性チェック: 既に英語化済みなら何もしない
+    var a8 = sheet.getRange(8, 1).getValue();
+    var b8 = sheet.getRange(8, 2).getValue();
+    if (b8 === 'feels_temp') {
+      report.skipped.push(name + '(already v2)');
+      return;
+    }
+
+    // バックアップ作成（重複防止）
+    var backupName = name + '_backup_' + stamp;
+    if (!ss.getSheetByName(backupName)) {
+      sheet.copyTo(ss).setName(backupName);
+      report.backedUp.push(backupName);
+    }
+
+    // ヘッダー書き換え（行8）
+    var bHeader = ['feels_temp', 'lv_raw', 'sensitivity', 'lv_adj', 'weather'];
+    var bodyHeader = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
+    sheet.getRange(8, 2, 1, bHeader.length).setValues([bHeader]);
+    sheet.getRange(8, 7, 1, bodyHeader.length).setValues([bodyHeader]);
+
+    // U列の旧コーデ画像を退避してから outfit_name ヘッダーへ
+    for (var r = 9; r <= 12; r++) {
+      var oldImgId = extractIdFromCell_(sheet.getRange(r, 21));
+      if (oldImgId) archiveImageById_(oldImgId);
+      sheet.getRange(r, 21).clearContent();  // U9:U12 を空に
+    }
+    sheet.getRange(8, 21).setValue('outfit_name');
+    sheet.getRange(8, 22).setValue('one_point');
+    sheet.getRange(8, 1, 1, 22)
+         .setFontWeight('bold')
+         .setBackground('#f3f3f3')
+         .setHorizontalAlignment('center');
+
+    // 行13 ヘッダー
+    sheet.getRange(13, 1).setValue('location');
+    sheet.getRange(13, 2).setValue('pose');
+    sheet.getRange(13, 3).setValue('scene_image');
+    sheet.getRange(13, 1, 1, 3)
+         .setFontWeight('bold')
+         .setBackground('#f3f3f3')
+         .setHorizontalAlignment('center');
+
+    // 部位コーデ(G9:T12)は次回再生成で英語に上書きされるためそのまま残す
+    // 既存の日本語データは見た目が混在するが、次回再生成で解消
+
+    report.migrated.push(name);
+    logDebug('Migrated to v2', name);
+  });
+
+  logDebug('migrateSheetsToV2 done', JSON.stringify(report));
+  return report;
+}
+
+/**
  * 指定IDの画像を確認用フォルダへ移動（前世代の画像を整理する用）
  */
 function archiveImageById_(fileId) {
@@ -132,6 +213,12 @@ function doGet(e) {
     if (params.action === 'archive_unused') {
       var result = archiveUnusedAvatars();
       return ContentService.createTextOutput(JSON.stringify({ success: true, result: result }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (params.action === 'migrate_v2') {
+      var migResult = migrateSheetsToV2();
+      return ContentService.createTextOutput(JSON.stringify({ success: true, result: migResult }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -436,14 +523,16 @@ function syncWeatherData(data) {
 
     var timestamp = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
 
-    // 8行目: 列見出し（A: 生成開始タイムスタンプ、B〜F: 予報、G〜T: 部位別、U: コーデ画像）
-    var bHeader = ['体感気温', '服装Lv', '個人感度', '補正後Lv', '天気'];
-    var bodyHeader = ['頭', '顔', '耳', '首', 'インナー', 'アウター', '手首', '手指', '腰', '脚', '脚～足首', '足', '手', '小物'];
+    // 8行目: 列見出し（英語、A: 生成開始タイムスタンプ、B〜F: 予報、G〜T: 部位別、U: コーデ名、V: ワンポイント）
+    // ※ フェーズ2でU列「コーデ画像」を廃止 → outfit_name に転用、V列に one_point を追加
+    var bHeader = ['feels_temp', 'lv_raw', 'sensitivity', 'lv_adj', 'weather'];
+    var bodyHeader = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
     sheet.getRange(8, 1).setValue(timestamp); // 生成開始タイムスタンプ
     sheet.getRange(8, 2, 1, bHeader.length).setValues([bHeader]);
     sheet.getRange(8, 7, 1, bodyHeader.length).setValues([bodyHeader]);
-    sheet.getRange(8, 21).setValue('コーデ画像');
-    sheet.getRange(8, 1, 1, 21)
+    sheet.getRange(8, 21).setValue('outfit_name');
+    sheet.getRange(8, 22).setValue('one_point');
+    sheet.getRange(8, 1, 1, 22)
          .setFontWeight('bold')
          .setBackground('#f3f3f3')
          .setHorizontalAlignment('center');
@@ -510,86 +599,57 @@ function syncWeatherData(data) {
           };
         });
 
+        // ① コーデJSON一括生成（4スロット分・部位+名前+ワンポイント）
         var outfits = generateOutfitsForForecast(slots, profile);
 
-        var partKeys = ['頭','顔','耳','首','インナー','アウター','手首','手指','腰','脚','脚～足首','足','手','小物'];
+        // G9:T12 に部位コーデ書き込み（英語キー）
+        var partKeys = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
         var grid = [];
+        var nameCol = [];   // U列: outfit_name
+        var pointCol = [];  // V列: one_point
         for (var i = 0; i < 4; i++) {
           var o = outfits[i] || {};
           grid.push(partKeys.map(function(k) { return o[k] || ''; }));
+          nameCol.push([o.outfit_name || '']);
+          pointCol.push([o.one_point || '']);
         }
         sheet.getRange(9, 7, 4, partKeys.length).setValues(grid);
         sheet.getRange(9, 7, 4, partKeys.length).setVerticalAlignment('top').setWrap(true);
-        logDebug('Outfits written', 'rows 9-12, cols G-T');
+        sheet.getRange(9, 21, 4, 1).setValues(nameCol);   // U9:U12 outfit_name
+        sheet.getRange(9, 22, 4, 1).setValues(pointCol);  // V9:V12 one_point
+        sheet.getRange(9, 21, 4, 2).setVerticalAlignment('top').setWrap(true);
+        logDebug('Outfits written', 'rows 9-12, cols G-T + U(name) + V(one_point)');
 
-        // U9:U12 に着替えアバター画像を生成
-        try {
-          // B5 は =IMAGE("...") 式または素のURLのいずれか。両対応で抽出
-          var baseFormulaCell = sheet.getRange(5, 2);
-          var baseFormula = baseFormulaCell.getFormula();
-          var baseUrl = '';
-          if (baseFormula) {
-            var bm = baseFormula.match(/=IMAGE\("([^"]+)"\)/i);
-            if (bm) baseUrl = bm[1];
-          }
-          if (!baseUrl) {
-            var rawVal = baseFormulaCell.getValue();
-            if (typeof rawVal === 'string' && rawVal.indexOf('http') === 0) baseUrl = rawVal;
-          }
-          if (!baseUrl || typeof baseUrl !== 'string' || baseUrl.indexOf('http') !== 0) {
-            sheet.getRange(9, 21, 4, 1).setValues([['ベース画像なし'],['ベース画像なし'],['ベース画像なし'],['ベース画像なし']]);
-            logDebug('Outfit image skipped', 'B5 is not a valid URL');
-          } else {
-            // U列幅と行高を調整
-            sheet.setColumnWidth(21, 200);
-            for (var rh = 9; rh <= 12; rh++) sheet.setRowHeight(rh, 200);
-
-            var baseBlob = fetchDriveImageAsBlob(baseUrl);
-            for (var k = 0; k < 4; k++) {
-              try {
-                // 前のコーデ画像を確認用フォルダへ退避
-                var prevOutfitId = extractIdFromCell_(sheet.getRange(9 + k, 21));
-                if (prevOutfitId) archiveImageById_(prevOutfitId);
-
-                sheet.getRange(9 + k, 21).setValue('画像生成中...');
-                SpreadsheetApp.flush();
-                var imgUrl = generateOutfitImage(baseBlob, outfits[k] || {}, profile, sheetName, k + 1);
-                sheet.getRange(9 + k, 21).setFormula('=IMAGE("' + imgUrl + '")');
-                logDebug('Outfit image generated', 'slot ' + (k+1) + ': ' + imgUrl);
-              } catch (ie) {
-                var msg = ie.toString();
-                var cellText = (msg.indexOf('SAFETY') !== -1)
-                  ? 'セーフティでブロック'
-                  : '画像生成失敗';
-                sheet.getRange(9 + k, 21).setValue(cellText);
-                logDebug('Outfit image FAILED', 'slot ' + (k+1) + ': ' + msg);
-              }
-            }
-          }
-        } catch (uerr) {
-          logDebug('Outfit image stage FAILED', uerr.toString());
+        // ベースアバター画像(B5)を取得（シーン画像生成の入力に使う）
+        var baseFormulaCell = sheet.getRange(5, 2);
+        var baseFormula = baseFormulaCell.getFormula();
+        var baseUrl = '';
+        if (baseFormula) {
+          var bm = baseFormula.match(/=IMAGE\("([^"]+)"\)/i);
+          if (bm) baseUrl = bm[1];
+        }
+        if (!baseUrl) {
+          var rawVal = baseFormulaCell.getValue();
+          if (typeof rawVal === 'string' && rawVal.indexOf('http') === 0) baseUrl = rawVal;
+        }
+        var baseBlob = null;
+        if (baseUrl && baseUrl.indexOf('http') === 0) {
+          try { baseBlob = fetchDriveImageAsBlob(baseUrl); }
+          catch (be) { logDebug('Base avatar fetch FAILED', be.toString()); }
         }
 
-        // 13行目: シーン演出の列見出し（A:ロケーション B:ポーズ C:シーン画像）
-        sheet.getRange(13, 1).setValue('ロケーション');
-        sheet.getRange(13, 2).setValue('ポーズ');
-        sheet.getRange(13, 3).setValue('シーン画像');
+        // 13行目: シーン演出の列見出し（英語）
+        sheet.getRange(13, 1).setValue('location');
+        sheet.getRange(13, 2).setValue('pose');
+        sheet.getRange(13, 3).setValue('scene_image');
         sheet.getRange(13, 1, 1, 3)
              .setFontWeight('bold')
              .setBackground('#f3f3f3')
              .setHorizontalAlignment('center');
 
-        // 14-17行目: シーン演出
+        // ②-⑤ シーン演出生成＋画像生成（4スロット分）
         try {
-          // U9-U12 のアバター画像URLを取得
-          var outfitUrls = [];
-          for (var u = 9; u <= 12; u++) {
-            var f = sheet.getRange(u, 21).getFormula();
-            var m = f.match(/=IMAGE\("([^"]+)"\)/);
-            outfitUrls.push(m ? m[1] : null);
-          }
-
-          // 4スロット分のロケーション+ポーズを一括生成
+          // ロケーション+ポーズを一括生成
           var scenes = generateScenesForOutfits(outfits, slots, profile);
           logDebug('Scenes generated', JSON.stringify(scenes).substring(0, 500));
 
@@ -608,28 +668,39 @@ function syncWeatherData(data) {
           sheet.setColumnWidth(2, 200);
           for (var rh = 14; rh <= 17; rh++) sheet.setRowHeight(rh, 450);
 
-          // C14:C17 にシーン画像を生成
-          for (var sk = 0; sk < 4; sk++) {
-            try {
-              if (!outfitUrls[sk]) {
-                sheet.getRange(14 + sk, 3).setValue('元コーデ画像なし');
-                continue;
-              }
-              sheet.getRange(14 + sk, 3).setValue('シーン画像生成中...');
-              // 前のシーン画像を確認用フォルダへ退避
-              var prevSceneId = extractIdFromCell_(sheet.getRange(14 + sk, 3));
-              if (prevSceneId) archiveImageById_(prevSceneId);
+          // C14:C17 にシーン画像を生成（ベースアバター+コーデtext+シーンを1ステップ統合）
+          if (!baseBlob) {
+            for (var nb = 0; nb < 4; nb++) {
+              sheet.getRange(14 + nb, 3).setValue('ベースアバターなし');
+            }
+            logDebug('Scene image skipped', 'baseBlob unavailable');
+          } else {
+            for (var sk = 0; sk < 4; sk++) {
+              // C案: 失敗時に前回画像を残置するため、事前にFormulaを記憶
+              var prevSceneCell = sheet.getRange(14 + sk, 3);
+              var prevSceneFormula = prevSceneCell.getFormula();
+              var prevSceneId = extractIdFromCell_(prevSceneCell);
 
+              prevSceneCell.setValue('シーン画像生成中...');
               SpreadsheetApp.flush();
-              var srcBlob = fetchDriveImageAsBlob(outfitUrls[sk]);
-              var sceneUrl = generateSceneImage(srcBlob, scenes[sk] || {}, profile, slots[sk], sheetName, sk + 1);
-              sheet.getRange(14 + sk, 3).setFormula('=IMAGE("' + sceneUrl + '")');
-              logDebug('Scene image generated', 'slot ' + (sk+1) + ': ' + sceneUrl);
-            } catch (se) {
-              var smsg = se.toString();
-              var sCellText = (smsg.indexOf('SAFETY') !== -1) ? 'セーフティでブロック' : 'シーン画像失敗';
-              sheet.getRange(14 + sk, 3).setValue(sCellText);
-              logDebug('Scene image FAILED', 'slot ' + (sk+1) + ': ' + smsg);
+              try {
+                var sceneUrl = generateSceneImage(baseBlob, scenes[sk] || {}, profile, slots[sk], sheetName, sk + 1, outfits[sk] || {});
+                prevSceneCell.setFormula('=IMAGE("' + sceneUrl + '")');
+                // 成功時のみ旧画像をアーカイブ
+                if (prevSceneId) archiveImageById_(prevSceneId);
+                logDebug('Scene image generated', 'slot ' + (sk+1) + ': ' + sceneUrl);
+              } catch (se) {
+                var smsg = se.toString();
+                // 失敗時は前回画像を復元（C案）。前回画像が無ければエラー文言を残す
+                if (prevSceneFormula && prevSceneFormula.indexOf('=IMAGE(') === 0) {
+                  prevSceneCell.setFormula(prevSceneFormula);
+                  logDebug('Scene image FAILED (kept previous)', 'slot ' + (sk+1) + ': ' + smsg);
+                } else {
+                  var sCellText = (smsg.indexOf('SAFETY') !== -1) ? 'セーフティでブロック' : 'シーン画像失敗';
+                  prevSceneCell.setValue(sCellText);
+                  logDebug('Scene image FAILED (no previous)', 'slot ' + (sk+1) + ': ' + smsg);
+                }
+              }
             }
           }
         } catch (serr) {
@@ -780,20 +851,59 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
   }).join("\n");
 
   var partDef = [
-    '- 頭: 帽子全般(キャップ/ニット帽/ハット/ベレー帽/サンバイザー)、ヘアバンド、ヘアアクセ。※サングラスは顔へ',
-    '- 顔: サングラス、メガネ、マスク、フェイスシールド。※ピアスは耳へ',
-    '- 耳: イヤリング、ピアス、イヤーカフ、イヤーマフ、ヘッドホン',
-    '- 首: マフラー、ストール、スカーフ、ネックレス、チョーカー、ネックウォーマー、ネクタイ',
-    '- インナー: Tシャツ、長袖カットソー、シャツ、ブラウス、ヒートテック、タンクトップ、1枚着のニット/セーター',
-    '- アウター: コート、ジャケット、ブルゾン、カーディガン、羽織りパーカー、ベスト、レインコート',
-    '- 手首: 腕時計、ブレスレット、バングル',
-    '- 手指: 手袋、ミトン、リング',
-    '- 腰: ベルト、ウエストバッグ、ウエストポーチ、サスペンダー',
-    '- 脚: メインのボトムス1点(パンツ/スカート/ショートパンツ/単体着用レギンス)',
-    '- 脚～足首: 靴下、タイツ、ストッキング、レッグウォーマー(脚に重ねるもの)',
-    '- 足: スニーカー、ブーツ、ローファー、パンプス、サンダル、レインブーツ',
-    '- 手: 持ち運ぶもの(ハンドバッグ/トート/クラッチ/傘/リュック)',
-    '- 小物: 香水、ハンカチ、メガネチェーン、キーケース、ブローチ、他に分類できないアイテム'
+    '- head: 帽子全般(キャップ/ニット帽/ハット/ベレー帽/サンバイザー)、ヘアバンド、ヘアアクセ。※サングラスはfaceへ',
+    '- face: サングラス、メガネ、マスク、フェイスシールド。※ピアスはearへ',
+    '- ear: イヤリング、ピアス、イヤーカフ、イヤーマフ、ヘッドホン',
+    '- neck: マフラー、ストール、スカーフ、ネックレス、チョーカー、ネックウォーマー、ネクタイ',
+    '- inner: Tシャツ、長袖カットソー、シャツ、ブラウス、ヒートテック、タンクトップ、1枚着のニット/セーター',
+    '- outer: コート、ジャケット、ブルゾン、カーディガン、羽織りパーカー、ベスト、レインコート',
+    '- wrist: 腕時計、ブレスレット、バングル',
+    '- finger: 手袋、ミトン、リング',
+    '- waist: ベルト、ウエストバッグ、ウエストポーチ、サスペンダー',
+    '- leg: メインのボトムス1点(パンツ/スカート/ショートパンツ/単体着用レギンス)',
+    '- ankle: 靴下、タイツ、ストッキング、レッグウォーマー(脚に重ねるもの)',
+    '- foot: スニーカー、ブーツ、ローファー、パンプス、サンダル、レインブーツ',
+    '- hand: 持ち運ぶもの(ハンドバッグ/トート/クラッチ/傘/リュック)',
+    '- accessory: 香水、ハンカチ、メガネチェーン、キーケース、ブローチ、他に分類できないアイテム'
+  ].join('\n');
+
+  // lv_adj × 部位数ルール: 体感レベルに応じた使用部位数の目安と必須部位
+  var partCountRules = [
+    '════════════════════════════════════════',
+    '【部位数ルール (lv_adj厳守・実用性のために絶対遵守)】',
+    '════════════════════════════════════════',
+    '14部位はすべて使える可能性のあるスタイリング位置。',
+    'コーデの完成度を上げる結果として空く部位があるのはOK。',
+    'ただし以下を厳守:',
+    '',
+    '◆ 絶対上限: 1コーデで使う部位は最大10個まで(残りは必ず空文字 "")',
+    '',
+    '◆ 体感レベル(Lv)別の目標部位数と必須部位:',
+    '  Lv 1-2 (極寒): 9-10部位 / 必須: outer + leg + foot + (head または neck で防寒)',
+    '  Lv 3-4 (寒い): 7-9部位 / 必須: outer + leg + foot',
+    '  Lv 5-6 (心地よい): 5-7部位 / 必須: leg + foot (inner または outer の少なくとも1つ)',
+    '  Lv 7-8 (暖かい): 4-6部位 / 必須: 軽量inner + leg + foot',
+    '  Lv 9-10 (暑い): 3-5部位 / 必須: 軽量inner + leg + foot',
+    '',
+    '◆ 理由: 寒いのに薄着・暑いのに重ね着は実用性として絶対NG。',
+    '◆ 「使わない部位」は必ず空文字 "" で出力。null/省略は不可。'
+  ].join('\n');
+
+  // outfit_name (英語短縮ネーム) と one_point (日本語実用アドバイス) のルール
+  var outputMetaRules = [
+    '════════════════════════════════════════',
+    '【outfit_name と one_point】',
+    '════════════════════════════════════════',
+    '◆ outfit_name: 英語の短い洗練されたコーデ名 (2-3単語)',
+    '  例: "Spring Trench" / "Tokyo Minimalist" / "Velvet Hour" / "Soft Power"',
+    '  各案のmood_descriptorと整合する名前。4案で重複しないこと。',
+    '',
+    '◆ one_point: 日本語の実用的な着こなしアドバイス (40-60字)',
+    '  天気・気温・シーンに即した具体的な行動指針を1-2文で記述。',
+    '  例: "肌寒い朝はインナーを重ね、日中は脱ぎ着で温度調節を。"',
+    '  例: "風が強いので首元を覆うストールを忘れずに。"',
+    '  例: "雨上がりは撥水素材のシューズで足元の濡れを防いで。"',
+    '  抽象的・詩的表現は避け、必ず実用Tipsを含める。'
   ].join('\n');
 
   var promptText = [
@@ -879,9 +989,13 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
     '- 攻める時は1案だけ、それ以外3案は誰が見ても "おしゃれ" な王道〜ハイセンス',
     '',
     '════════════════════════════════════════',
-    '【14部位の定義(振り分け先を厳守)】',
+    '【14部位の定義(振り分け先を厳守・キーは英語)】',
     '════════════════════════════════════════',
     partDef,
+    '',
+    partCountRules,
+    '',
+    outputMetaRules,
     '',
     '════════════════════════════════════════',
     '【4案の分散ルール(被り防止の具体軸)】',
@@ -920,14 +1034,15 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
     '════════════════════════════════════════',
     '【鉄則】',
     '════════════════════════════════════════',
-    '- 1コーデのアイテム合計を10点以下に収める',
+    '- 1コーデのアイテム合計を10点以下に収める(部位数ルール参照)',
     '- 色・素材・シルエットを具体的に記述',
     '- 各アイテムには「特徴的な見え方」を括弧書きで添える:',
     '  例: アイボリーのサテンフレアスカート(裾が大きく外に広がるAライン、光沢面)',
     '  例: バーガンディのチャンキーヒールショートブーツ(太めヒール、つや消し本革)',
     '- 降水時は撥水素材・サイドゴアブーツ・レインコート等を必須で組み込む',
-    '- 各部位は1アイテムのみ記述。不要な部位は空文字でよい',
-    '- 各アイテムは必ず定義された部位に振り分ける',
+    '- 各部位は1アイテムのみ記述。使わない部位は必ず空文字 "" を出力',
+    '- 各アイテムは必ず定義された部位(英語キー)に振り分ける',
+    '- アイテムの値は英語で記述(例: "beige trench coat", "navy chino pants")',
     '',
     '════════════════════════════════════════',
     '【画像安全フィルタ回避(絶対遵守)】',
@@ -955,7 +1070,7 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
     '迷ったら必ず再設計する。',
     '',
     '【出力フォーマット】',
-    '14部位 + color_descriptor + mood_descriptor を JSONで4案返す。',
+    'outfit_name(英) + one_point(日) + color_descriptor + mood_descriptor + 14部位(英キー・値も英) を JSONで4案返す。',
     '時間帯1→outfits[0], 時間帯2→outfits[1], 時間帯3→outfits[2], 時間帯4→outfits[3]。'
   ].join('\n');
 
@@ -984,24 +1099,30 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
         items: {
           type: "OBJECT",
           properties: {
+            outfit_name:      stringProp,
+            one_point:        stringProp,
             color_descriptor: stringProp,
             mood_descriptor:  stringProp,
-            "頭":       stringProp,
-            "顔":       stringProp,
-            "耳":       stringProp,
-            "首":       stringProp,
-            "インナー": stringProp,
-            "アウター": stringProp,
-            "手首":     stringProp,
-            "手指":     stringProp,
-            "腰":       stringProp,
-            "脚":       stringProp,
-            "脚～足首": stringProp,
-            "足":       stringProp,
-            "手":       stringProp,
-            "小物":     stringProp
+            head:       stringProp,
+            face:       stringProp,
+            ear:        stringProp,
+            neck:       stringProp,
+            inner:      stringProp,
+            outer:      stringProp,
+            wrist:      stringProp,
+            finger:     stringProp,
+            waist:      stringProp,
+            leg:        stringProp,
+            ankle:      stringProp,
+            foot:       stringProp,
+            hand:       stringProp,
+            accessory:  stringProp
           },
-          required: ["color_descriptor","mood_descriptor","頭","顔","耳","首","インナー","アウター","手首","手指","腰","脚","脚～足首","足","手","小物"]
+          required: [
+            "outfit_name","one_point","color_descriptor","mood_descriptor",
+            "head","face","ear","neck","inner","outer","wrist","finger",
+            "waist","leg","ankle","foot","hand","accessory"
+          ]
         }
       }
     },
@@ -1060,10 +1181,11 @@ function generateScenesForOutfits(outfits, slots, profile) {
 
   var slotsText = slots.map(function(s, i) {
     var o = outfits[i] || {};
-    var keyItems = ['アウター','インナー','脚','足','頭','顔','手']
+    var keyItems = ['outer','inner','leg','foot','head','face','hand']
       .map(function(k){ return o[k] ? (k + ':' + o[k]) : null; })
       .filter(function(x){return x;}).slice(0, 5).join(' / ');
-    return (i+1) + '. ' + s.time + ' / 体感' + s.temp + '℃ / ' + (s.weather||'') + ' / Lv' + s.lv + ' / コーデ抜粋: ' + keyItems;
+    var nameTag = o.outfit_name ? ' [' + o.outfit_name + ']' : '';
+    return (i+1) + '. ' + s.time + ' / 体感' + s.temp + '℃ / ' + (s.weather||'') + ' / Lv' + s.lv + nameTag + ' / コーデ抜粋: ' + keyItems;
   }).join('\n');
 
   var promptText = [
@@ -1163,24 +1285,54 @@ function generateScenesForOutfits(outfits, slots, profile) {
 }
 
 /**
- * 着替え済みアバターをロケーション+ポーズに配置したシーン画像を生成
+ * ベースアバター(B5)に、コーデ・ロケーション・ポーズを1ステップ合成してシーン画像を生成
+ * フェーズ2でU列(中間コーデ画像)を廃止したため、この関数がコーデ着替え＋シーン演出を一括で行う
+ *
+ * @param {Blob} baseBlob 素のアバター画像(B5)
+ * @param {Object} scene  {location, pose}
+ * @param {Object} profile プロフィール
+ * @param {Object} slot   {time, temp, weather, lv}
+ * @param {string} userId シート名(ファイル名用)
+ * @param {number} slotIndex 1-4
+ * @param {Object} outfit 部位コーデ {head, face, ear, ..., accessory}
  */
-function generateSceneImage(srcBlob, scene, profile, slot, userId, slotIndex) {
-  // APIキーチェックは ImageProvider_generate 内で実施
+function generateSceneImage(baseBlob, scene, profile, slot, userId, slotIndex, outfit) {
+  outfit = outfit || {};
+
+  // 部位コーデを OUTFIT セクションのテキストに整形（空の部位は省略）
+  var partOrder = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
+  var outfitLines = partOrder
+    .map(function(k) { return outfit[k] ? '- ' + k + ': ' + outfit[k] : null; })
+    .filter(function(x) { return x; })
+    .join('\n');
+
   var promptText = [
     'High-fashion editorial hero card composition for a daily lookbook app "Today" page.',
     'The output will be the main visual card, so make it visually striking and saveable.',
     '',
     'IDENTITY PRESERVATION (critical):',
-    '- Preserve the exact face, body type, hairstyle, hair color, skin tone, age, AND all clothing/accessories from the reference image.',
-    '- The person and the outfit must remain completely identical to the reference.',
-    '- Only the background and the pose are changing.',
+    '- Preserve the exact face, body type, hairstyle, hair color, skin tone, and age from the reference image.',
+    '- The reference image shows the subject in plain studio clothing — you must COMPLETELY REPLACE that clothing with the OUTFIT specified below.',
+    '- Only the person\'s identity (face/body/hair/skin) carries over. Clothing, background, and pose ALL change.',
+    '',
+    'OUTFIT (apply these clothing items exactly — colors, materials, silhouettes as specified):',
+    outfitLines || '(no outfit items specified)',
+    '',
+    'OUTFIT EXECUTION RULES:',
+    '- Render every specified item with its exact color, material, texture, and silhouette',
+    '- Items NOT specified above must NOT appear (do not invent extras)',
+    '- Layering: when multiple tops are specified (inner + outer), all must be visibly distinguishable',
+    '- Vests/gilets must be clearly visible as a separate outer layer with visible armholes',
+    '- Wide/flared/A-line/oversized items must show their distinctive volume, NOT averaged to straight',
+    '- Material fidelity: satin/silk = specular highlights; leather = slight gloss + grain; suede = matte velvety; knit = soft matte with stitch texture; linen = subtle creasing; denim = visible twill weave; metallic = actual reflective sheen',
+    '- Color accuracy: every specified color must be unmistakable at a glance (a "wine red bag" reads as wine red, NOT muted brown)',
+    '- Accessories (sunglasses, bags, jewelry, scarves, belts) must be clearly visible and prominent',
     '',
     'NEW BACKGROUND:',
     scene.location || 'a stylish urban location',
     '',
     '⚠️ NEW POSE — MUST FULLY REPLACE THE REFERENCE POSE ⚠️',
-    'The reference image shows the subject standing front-facing in a studio. ',
+    'The reference image shows the subject standing front-facing in a studio.',
     'You MUST completely abandon that pose and adopt the following pose instead.',
     'Do NOT default to "standing facing forward". Do NOT just rotate the head or shift the gaze.',
     'The body position, weight distribution, limb arrangement, and camera angle must all change to match:',
@@ -1210,14 +1362,14 @@ function generateSceneImage(srcBlob, scene, profile, slot, userId, slotIndex) {
     '',
     'STRICT CONSTRAINTS:',
     '- NO text, NO numbers, NO labels, NO captions, NO watermarks anywhere',
-    '- Do NOT change the outfit colors or items in any way',
-    '- ' + (profile.gender === '女性' ? 'Feminine silhouette and proportions' : 'Masculine silhouette and proportions')
+    '- ' + (profile.gender === '女性' ? 'Feminine silhouette and proportions' : 'Masculine silhouette and proportions'),
+    '- Avoid safety-blocking content: no sheer/see-through fabric without opaque underlayer, no underwear-like exposure'
   ].join('\n');
 
   // 画像APIアダプタ層経由（フェーズ1で抽象化）
   var result = ImageProvider_generate({
     prompt: promptText,
-    referenceBlob: srcBlob,
+    referenceBlob: baseBlob,
     outputName: 'scene_' + userId + '_' + new Date().getTime() + '_' + slotIndex + '.png',
     outputFolder: 'WoW_Avatars'
   });
@@ -1332,77 +1484,7 @@ function fetchDriveImageAsBlob(url) {
   return resp.getBlob();
 }
 
-/**
- * Nano Banana (gemini-2.5-flash-image) で B5 のアバターを着替えさせた画像を生成
- * @param {Blob} baseBlob 元アバターのBlob
- * @param {Object} outfit 14部位のオブジェクト
- * @param {Object} profile プロフィール
- * @param {string} userId シート名（ファイル名用）
- * @param {number} slotIndex 1-4
- * @return {string} 生成画像のDrive共有URL
- */
-function generateOutfitImage(baseBlob, outfit, profile, userId, slotIndex) {
-  // APIキーチェックは ImageProvider_generate 内で実施
-  // ※ この関数はフェーズ2でU列廃止と共に削除予定
-  var partOrder = ['頭','顔','耳','首','インナー','アウター','手首','手指','腰','脚','脚～足首','足','手','小物'];
-  var outfitLines = partOrder
-    .map(function(k) { return outfit[k] ? '- ' + k + ': ' + outfit[k] : null; })
-    .filter(function(x) { return x; })
-    .join('\n');
-
-  var promptText = [
-    'High-fashion editorial photograph in the style of Vogue 2026.',
-    'Preserve the exact identity from the reference image: face, body type, hairstyle, hair color, skin tone, and apparent age must remain perfectly consistent.',
-    'The output must depict the same person — only the clothing is changed.',
-    '',
-    'Replace the outfit completely with the following styling. Render every item with its exact color, material, texture, and silhouette as specified:',
-    outfitLines,
-    '',
-    'Photography & rendering instructions:',
-    '- Full-body shot, front-facing, neutral confident pose',
-    '- Pure white minimalist studio background, soft directional natural light',
-    '- Photorealistic, 8K, sharp focus on garment materials and stitching',
-    '- Faithful reproduction of fabric weight, drape, and tailoring as described',
-    '- ' + (profile.gender === '女性' ? 'Feminine silhouette and proportions' : 'Masculine silhouette and proportions'),
-    '',
-    'CRITICAL — Color accuracy:',
-    '- Every specified color MUST be visually unmistakable at a glance. A "wine red bag" must clearly read as wine red, NOT muted brown or black.',
-    '- A "sax blue shirt" must clearly read as sax blue, NOT grey. A "camel coat" must be a warm tan camel, NOT beige.',
-    '- Avoid the tendency to desaturate, mute, or neutralize specified colors. Render them at full saturation.',
-    '',
-    'CRITICAL — Silhouette fidelity (render distinctly, do NOT average to generic shapes):',
-    '- Vests / gilets: must be clearly visible as a separate outer layer over the inner top, with visible armholes and edges. NEVER blend into a single garment with the inner.',
-    '- Flared / A-line / pleated skirts: must show visible outward volume at the hem (the fabric clearly swings away from the body). NEVER render as a straight column.',
-    '- Oversized items: must show actual oversized volume (drape, fall, slouch). NOT a regular-fit version of the item.',
-    '- Tailored / structured items: must show clear lapels, defined shoulder lines, crisp seams.',
-    '- Wide / cocoon / balloon / mermaid / pencil silhouettes: each must show its distinctive shape, NOT defaulted to straight.',
-    '- Layering: when multiple tops are specified (inner + outer + over-layer), all must be visibly distinguishable and rendered as separate garments.',
-    '',
-    'CRITICAL — Material fidelity (render visible surface properties):',
-    '- Satin / silk: clear specular highlights and light reflection across folds and curves.',
-    '- Leather (smooth / nappa): visible slight gloss and grain on surface.',
-    '- Suede: matte velvety texture, no shine.',
-    '- Cashmere / wool / knit: soft matte surface with visible fiber density and stitch texture for knits.',
-    '- Linen: subtle natural creasing and slightly rough weave texture.',
-    '- Denim: visible twill weave and indigo wash variation.',
-    '- Metallic (gold / silver / chrome): actual reflective metallic sheen, NOT flat color.',
-    '- Sheer (organza / tulle / mesh): visible transparency.',
-    '- Each material must look distinct from the others in the same outfit.',
-    '',
-    'Accessories (sunglasses, bags, jewelry, scarves, belts) must be clearly visible and prominent, not blurred or de-emphasized.',
-    '',
-    'Strict constraints:',
-    '- The image must contain NO text, NO numbers, NO labels, NO captions, NO measurement annotations, NO watermarks anywhere',
-    '- Do NOT render any body measurements, height, weight, or size values visually',
-    '- No catalog-style basic styling — aim for a contemporary, fashion-forward editorial look'
-  ].join('\n');
-
-  // 画像APIアダプタ層経由（フェーズ1で抽象化）
-  var result = ImageProvider_generate({
-    prompt: promptText,
-    referenceBlob: baseBlob,
-    outputName: 'outfit_' + userId + '_' + new Date().getTime() + '_' + slotIndex + '.png',
-    outputFolder: 'WoW_Avatars'
-  });
-  return result.url;
-}
+// generateOutfitImage はフェーズ2で削除（U列廃止・シーン画像生成に統合）。
+// 旧: ベースアバター → 着替え画像(U列) → シーン画像(C列) の2段階画像生成
+// 新: ベースアバター + コーデtext → シーン画像(C列) の1段階統合
+// 結果: 画像生成回数を 4回(U列分) 削減 → 1再生成あたり 10回 → 5回 に
