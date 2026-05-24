@@ -167,17 +167,20 @@
             if (data) {
                 console.log('[Profile] Loaded from Supabase:', data.username);
 
-                // localStorage と互換性のある形式で保存
-                const profile = {
-                    name: data.username || '',
-                    handle: data.username || '',
-                    avatar: data.avatar_emoji || '🧣',
-                    bio: data.bio || '',
-                    temp_preference: data.temp_preference || 'normal',
-                    styles: data.styles || [],
-                    photo: data.avatar_url || '',
-                    email: data.email || ''
+                // 既存の localStorage プロフィールを保持しつつ、Supabase 由来のフィールドだけマージ
+                // （身長/体重/採寸/personalize 等の詳細データを潰さないため）
+                const existing = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+                const supabaseFields = {
+                    name: data.username || existing.name || '',
+                    handle: data.username || existing.handle || '',
+                    avatar: data.avatar_emoji || existing.avatar || '🧣',
+                    bio: data.bio || existing.bio || '',
+                    temp_preference: data.temp_preference || existing.temp_preference || 'normal',
+                    styles: data.styles || existing.styles || [],
+                    photo: data.avatar_url || existing.photo || '',
+                    email: data.email || existing.email || ''
                 };
+                const profile = Object.assign({}, existing, supabaseFields);
                 localStorage.setItem('kion_profile', JSON.stringify(profile));
                 window.currentProfile = profile;
 

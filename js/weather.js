@@ -621,15 +621,37 @@ function selectSuggestion(index) {
     const leftBadge = document.getElementById('suggest-badge-left-0');
     const rightBadge = document.getElementById('suggest-badge-right-0');
 
+    // フェーズ4: シート由来のメタ(outfit_name/one_point/feels_temp)をキャッシュから取得
+    const sheetMeta = (function() {
+        try {
+            const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+            const userId = profile.handle || 'unknown';
+            if (userId === 'unknown') return null;
+            const cached = JSON.parse(localStorage.getItem('kion_scene_images_' + userId) || 'null');
+            if (!cached) return null;
+            return {
+                sceneUrl:    Array.isArray(cached.scenes)       ? cached.scenes[index]       : null,
+                outfitName:  Array.isArray(cached.outfit_names) ? cached.outfit_names[index] : null,
+                onePoint:    Array.isArray(cached.one_points)   ? cached.one_points[index]   : null,
+                feelsTemp:   Array.isArray(cached.feels_temps)  ? cached.feels_temps[index]  : null
+            };
+        } catch (_) { return null; }
+    })();
+
+    const aiUrl = sheetMeta && sheetMeta.sceneUrl && typeof sheetMeta.sceneUrl === 'string' && sheetMeta.sceneUrl.startsWith('http')
+        ? sheetMeta.sceneUrl : null;
+
     if (imgEl) {
-        imgEl.src = data.meta.img;
+        imgEl.src = aiUrl || data.meta.img;
         imgEl.onerror = () => {
             imgEl.src = "https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800";
             imgEl.onerror = null;
         };
     }
-    if (titleEl) titleEl.textContent = data.meta.title;
-    if (descEl) descEl.textContent = data.meta.desc;
+    // タイトル: シート U列 (outfit_name) を優先、無ければ静的カタログのtitle
+    if (titleEl) titleEl.textContent = (sheetMeta && sheetMeta.outfitName) || data.meta.title;
+    // 説明: シート V列 (one_point) を優先、無ければ静的カタログのdesc
+    if (descEl)  descEl.textContent  = (sheetMeta && sheetMeta.onePoint)   || data.meta.desc;
 
     // 統合インフォバーを更新
     const emojiEl    = document.getElementById('suggest-weather-emoji');
@@ -638,7 +660,12 @@ function selectSuggestion(index) {
 
     if (emojiEl)    emojiEl.textContent    = data.weather.emoji;
     if (timeEl)     timeEl.textContent     = data.dateString;
-    if (apparentEl) apparentEl.textContent = `${data.apparentTemp}°`;    // 夜間・昼間に応じてメインカードと画面全体の背景を切り替え
+    // 気温: シート B列 (feels_temp) を優先、無ければ気象API由来
+    if (apparentEl) {
+        const t = (sheetMeta && sheetMeta.feelsTemp !== null && sheetMeta.feelsTemp !== undefined && sheetMeta.feelsTemp !== '')
+            ? sheetMeta.feelsTemp : data.apparentTemp;
+        apparentEl.textContent = `${t}°`;
+    }    // 夜間・昼間に応じてメインカードと画面全体の背景を切り替え
     // 背景の動的な色変更を削除（ニュートラルなUIを維持するため）
     const mainCard = document.getElementById('grid-card-main');
     if (mainCard) {
@@ -841,11 +868,26 @@ function updateHourlyTimeline(data) {
         const imgEl = document.getElementById(`grid-img-${i}`);
         
         if (imgEl) {
-            imgEl.src = bestOutfit.img;
+            // フェーズ4修正: キャッシュにAIシーン画像があれば優先、なければ静的カタログ
+            let imgSrc = bestOutfit.img;
+            try {
+                const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+                const userId = profile.handle || 'unknown';
+                if (userId !== 'unknown') {
+                    const cached = JSON.parse(localStorage.getItem('kion_scene_images_' + userId) || 'null');
+                    const aiUrl = cached && Array.isArray(cached.scenes) ? cached.scenes[i] : null;
+                    if (aiUrl && typeof aiUrl === 'string' && aiUrl.startsWith('http')) {
+                        imgSrc = aiUrl;
+                    }
+                }
+            } catch (_) { /* fall through to static */ }
+            imgEl.src = imgSrc;
             imgEl.onerror = () => {
                 imgEl.src = "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&q=80&w=400";
                 imgEl.onerror = null;
             };
+            imgEl.classList.remove('opacity-0');
+            if (imgEl.parentElement) imgEl.parentElement.classList.remove('skeleton');
         }
         
         if (leftEl && rightEl) {
@@ -975,6 +1017,8 @@ function refreshWeeklyData() {
 // 天気データの取得を開始
 window.addEventListener('sectionsLoaded', () => {
     initWeather();
+    // 即座にキャッシュ済みのシーン画像を反映、その後最新を取りに行く
+    fetchAndApplySceneImages();
 });
 
 /**
@@ -1009,8 +1053,8 @@ function getWeatherForecastSummary() {
     
     if (startIndex < 0) return null;
     
-    // 現在・+3h・+6h・+12h・+24h の5時点
-    const offsets = [0, 3, 6, 12, 24];
+    // 現在・+3h・+6h・+12h の4時点
+    const offsets = [0, 3, 6, 12];
     const forecastData = [];
 
     offsets.forEach((offset) => {
@@ -1019,39 +1063,317 @@ function getWeatherForecastSummary() {
             const t = Math.round(apparentTemps[idx]);
             const hour = new Date(times[idx]).getHours();
             const timeLabel = offset === 0 ? `現在 (${hour}:00)` : `+${offset}h (${hour}:00)`;
-            const thermalLevel = getThermalLevel(t);
+            const thermalLevel = getThermalLevel(t); // 感度補正なしの素のLv
+            const weatherDesc = (codes && codes[idx] !== undefined)
+                ? getWeatherInfo(codes[idx]).desc
+                : '';
 
-            // [時刻ラベル, 体感気温(数値), 服装レベル(1-10)]
-            forecastData.push([timeLabel, t, thermalLevel]);
+            // [時刻ラベル, 体感気温(数値), 服装レベル(1-10), 天気(日本語)]
+            forecastData.push([timeLabel, t, thermalLevel, weatherDesc]);
         }
     });
 
     return forecastData;
 }
 
-async function syncWeatherToCloud(data) {
-    console.log('[Weather] Starting cloud sync (8-11 rows)...');
+// 直近の同期時刻（多重起動防止）
+let __lastWeatherSyncAt = 0;
+const __WEATHER_SYNC_COOLDOWN_MS = 30 * 1000; // 30秒
+
+/**
+ * GAS からシーン画像URLを取得し、ホームページの画像に反映
+ * - localStorage キャッシュを先に適用（瞬時表示）
+ * - そのあと GAS から最新を取りに行って差し替え
+ */
+async function fetchAndApplySceneImages() {
+    console.log('[SceneFetch] start');
+    if (typeof WOW_CONFIG === 'undefined' || !WOW_CONFIG.cloudUrl) {
+        console.warn('[SceneFetch] WOW_CONFIG.cloudUrl missing');
+        return;
+    }
     const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
     const userId = profile.handle || 'unknown';
-    
+    console.log('[SceneFetch] userId =', userId);
+    if (!userId || userId === 'unknown') {
+        console.warn('[SceneFetch] handle is unknown, abort');
+        return;
+    }
+
+    const cacheKey = 'kion_scene_images_' + userId;
+
+    // 1) キャッシュ即時適用
+    try {
+        const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+        if (cached && Array.isArray(cached.scenes) && cached.scenes.length === 4) {
+            console.log('[SceneFetch] applying cached scenes', cached.scenes);
+            applySceneImages(cached.scenes);
+            applyOutfitMeta(cached);
+        } else {
+            console.log('[SceneFetch] no cache for', cacheKey);
+        }
+    } catch (e) {
+        console.warn('[SceneFetch] cache parse error', e);
+    }
+
+    // 2) GASから最新取得
+    try {
+        const url = `${WOW_CONFIG.cloudUrl}?action=scenes`
+                  + `&apiKey=${encodeURIComponent(WOW_CONFIG.apiKey)}`
+                  + `&user_id=${encodeURIComponent(userId)}`;
+        console.log('[SceneFetch] GET', url);
+        const resp = await fetch(url, { method: 'GET', redirect: 'follow' });
+        console.log('[SceneFetch] response status', resp.status, resp.ok);
+        if (!resp.ok) {
+            console.warn('[SceneFetch] non-OK response');
+            return;
+        }
+        const data = await resp.json();
+        console.log('[SceneFetch] data', data);
+        if (data && data.success && Array.isArray(data.scenes)) {
+            const hasAny = data.scenes.some(u => u && typeof u === 'string' && u.startsWith('http'));
+            console.log('[SceneFetch] hasAny URLs?', hasAny, data.scenes);
+            if (hasAny) {
+                // フェーズ4: outfit_names / one_points / feels_temps も同梱でキャッシュ
+                const cachePayload = {
+                    scenes: data.scenes,
+                    outfit_names: data.outfit_names || [],
+                    one_points: data.one_points || [],
+                    feels_temps: data.feels_temps || [],
+                    ts: Date.now()
+                };
+                localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
+                applySceneImages(data.scenes);
+                applyOutfitMeta(cachePayload);
+                console.log('[SceneFetch] applied fresh scenes + meta');
+            } else {
+                console.warn('[SceneFetch] all scenes are null/invalid');
+            }
+        } else {
+            console.warn('[SceneFetch] data.success=false or missing scenes', data);
+        }
+    } catch (e) {
+        console.warn('[SceneFetch] fetch failed:', e);
+    }
+}
+
+/**
+ * フェーズ4: シート U/V/B列(outfit_name / one_point / feels_temp) を
+ * ルックバナーへ反映
+ *   data = { outfit_names, one_points, feels_temps }
+ */
+function applyOutfitMeta(data) {
+    if (!data) return;
+    const names = Array.isArray(data.outfit_names) ? data.outfit_names : [];
+    const points = Array.isArray(data.one_points) ? data.one_points : [];
+    const temps = Array.isArray(data.feels_temps) ? data.feels_temps : [];
+
+    // hourlySuggestions が初期化済みなら meta を上書き
+    if (Array.isArray(hourlySuggestions)) {
+        for (let i = 0; i < Math.min(4, hourlySuggestions.length); i++) {
+            const s = hourlySuggestions[i];
+            if (!s || !s.meta) continue;
+            if (names[i])  s.meta.title = names[i];
+            if (points[i]) s.meta.desc  = points[i];
+            if (temps[i] !== null && temps[i] !== undefined && temps[i] !== '') {
+                s.apparentTemp = temps[i];
+            }
+        }
+    }
+
+    // 現在選択中スロットの表示を即更新
+    const idx = (typeof currentSelectedIndex === 'number') ? currentSelectedIndex : 0;
+    if (names[idx]) {
+        const el = document.getElementById('suggest-title-0');
+        if (el) el.textContent = names[idx];
+    }
+    if (points[idx]) {
+        const el = document.getElementById('suggest-desc-0');
+        if (el) el.textContent = points[idx];
+    }
+    if (temps[idx] !== null && temps[idx] !== undefined && temps[idx] !== '') {
+        const el = document.getElementById('suggest-apparent-temp');
+        if (el) el.textContent = `${temps[idx]}°`;
+    }
+}
+
+function applySceneImages(scenes) {
+    if (!Array.isArray(scenes)) return;
+    const setImg = (el, url) => {
+        if (!el) return;
+        el.onerror = () => {
+            console.warn('[Weather] AI scene image load failed:', url);
+            el.onerror = null;
+            // フォールバックは既存onerror or 何もしない（既存表示維持）
+        };
+        el.src = url;
+        el.classList.remove('opacity-0');
+        if (el.parentElement) el.parentElement.classList.remove('skeleton');
+    };
+    for (let i = 0; i < 4; i++) {
+        const url = scenes[i];
+        if (!url || typeof url !== 'string' || !url.startsWith('http')) continue;
+        setImg(document.getElementById(`grid-img-${i}`), url);
+    }
+    // メイン画像は現在選択中のスロットを反映
+    const idx = (typeof currentSelectedIndex === 'number') ? currentSelectedIndex : 0;
+    const mainUrl = scenes[idx];
+    if (mainUrl && typeof mainUrl === 'string' && mainUrl.startsWith('http')) {
+        setImg(document.getElementById('suggest-img-0'), mainUrl);
+    }
+}
+
+async function syncWeatherToCloud(data, opts) {
+    opts = opts || {};
+    const regenerateOutfits = opts.regenerateOutfits === true;
+    const skipCooldown = opts.skipCooldown === true || regenerateOutfits;
+
+    const __now = Date.now();
+    if (!skipCooldown && __now - __lastWeatherSyncAt < __WEATHER_SYNC_COOLDOWN_MS) {
+        console.log('[Weather] Sync skipped (cooldown, last was ' +
+            Math.round((__now - __lastWeatherSyncAt) / 1000) + 's ago)');
+        return;
+    }
+    __lastWeatherSyncAt = __now;
+
+    console.log('[Weather] Starting cloud sync', regenerateOutfits ? '(WITH outfit regeneration)' : '(forecast only)');
+    const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+    const userId = profile.handle || 'unknown';
+
     const forecastData = getWeatherForecastSummary();
     if (!forecastData) return;
 
     const syncData = {
         user_id: userId,
-        forecast_data: forecastData // 新しい配列形式
+        forecast_data: forecastData,
+        regenerate_outfits: regenerateOutfits
     };
 
     if (typeof google !== 'undefined' && google.script && google.script.run) {
-        google.script.run.withSuccessHandler(res => console.log('[Weather] Sync success:', res))
-                         .withFailureHandler(err => console.error('[Weather] Sync error:', err))
-                         .syncWeatherData(syncData);
+        google.script.run.withSuccessHandler(res => {
+            console.log('[Weather] Sync success:', res);
+            fetchAndApplySceneImages();
+        }).withFailureHandler(err => console.error('[Weather] Sync error:', err))
+          .syncWeatherData(syncData);
     } else if (typeof WOW_CONFIG !== 'undefined' && WOW_CONFIG.cloudUrl) {
-        const payload = JSON.stringify({ 
-            apiKey: WOW_CONFIG.apiKey, 
-            type: 'weather_v2', // バージョン2として送信
-            data: syncData 
+        const payload = JSON.stringify({
+            apiKey: WOW_CONFIG.apiKey,
+            type: 'weather_v2',
+            data: syncData
         });
         fetch(WOW_CONFIG.cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload });
+        // コーデ再生成時のみポーリング開始（予報のみなら不要）
+        if (regenerateOutfits) {
+            startSceneImagePolling();
+        }
+    }
+}
+
+/**
+ * 手動コーデ再生成（「コーデ更新」ボタンから呼ばれる）
+ * - 強制的にGASに regenerate_outfits=true を送信
+ * - クールダウン無視
+ * - 完了までポーリング
+ */
+function __setRefreshBtnBusy(busy) {
+    const btn = document.getElementById('refresh-outfits-btn');
+    if (!btn) return;
+    if (busy) {
+        btn.dataset.busy = 'true';
+        btn.classList.add('opacity-50', 'pointer-events-none');
+        // アイコンをくるくる回す
+        const icon = btn.querySelector('.material-symbols-outlined');
+        if (icon) icon.classList.add('animate-spin');
+    } else {
+        btn.dataset.busy = 'false';
+        btn.classList.remove('opacity-50', 'pointer-events-none');
+        const icon = btn.querySelector('.material-symbols-outlined');
+        if (icon) icon.classList.remove('animate-spin');
+    }
+}
+
+async function manualRegenerateOutfits() {
+    console.log('[Weather] Manual outfit regeneration triggered');
+    if (!lastWeatherData) {
+        alert('天気データがまだ取得できていません。少し待ってからもう一度試してください。');
+        return;
+    }
+    __setRefreshBtnBusy(true);
+
+    await syncWeatherToCloud(lastWeatherData, { regenerateOutfits: true, skipCooldown: true });
+
+    // フェイルセーフ: 3分経ってもポーリングが解放しなければ強制解放
+    setTimeout(() => __setRefreshBtnBusy(false), 3 * 60 * 1000);
+}
+
+// グローバル公開
+window.manualRegenerateOutfits = manualRegenerateOutfits;
+
+// ポーリング状態の管理（多重起動防止）
+let __scenePollingTimer = null;
+let __scenePollAttempts = 0;
+const __SCENE_POLL_INTERVAL_MS = 8 * 1000;       // 8秒ごと
+const __SCENE_POLL_MAX_ATTEMPTS = 22;            // 最大22回 ≒ 3分弱
+const __SCENE_POLL_INITIAL_DELAY_MS = 25 * 1000; // 最初の25秒は同期中なのでスキップ
+
+function startSceneImagePolling() {
+    // 既存ポーリングがあればキャンセル
+    if (__scenePollingTimer) {
+        clearTimeout(__scenePollingTimer);
+        __scenePollingTimer = null;
+    }
+    __scenePollAttempts = 0;
+    console.log('[ScenePoll] starting');
+
+    // 初回は同期完了見込みの25秒後
+    __scenePollingTimer = setTimeout(__scenePollTick, __SCENE_POLL_INITIAL_DELAY_MS);
+}
+
+async function __scenePollTick() {
+    __scenePollAttempts++;
+    console.log('[ScenePoll] attempt', __scenePollAttempts);
+
+    const ready = await __scenePollFetchOnce();
+    if (ready) {
+        console.log('[ScenePoll] READY - stopping');
+        __scenePollingTimer = null;
+        if (typeof __setRefreshBtnBusy === 'function') __setRefreshBtnBusy(false);
+        return;
+    }
+    if (__scenePollAttempts >= __SCENE_POLL_MAX_ATTEMPTS) {
+        console.warn('[ScenePoll] max attempts reached - stopping');
+        __scenePollingTimer = null;
+        if (typeof __setRefreshBtnBusy === 'function') __setRefreshBtnBusy(false);
+        return;
+    }
+    __scenePollingTimer = setTimeout(__scenePollTick, __SCENE_POLL_INTERVAL_MS);
+}
+
+// 1回ぶんの取得 → ready なら true を返す
+async function __scenePollFetchOnce() {
+    if (typeof WOW_CONFIG === 'undefined' || !WOW_CONFIG.cloudUrl) return true; // 何もできないので止める
+    const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+    const userId = profile.handle || 'unknown';
+    if (!userId || userId === 'unknown') return true;
+
+    try {
+        const url = `${WOW_CONFIG.cloudUrl}?action=scenes`
+                  + `&apiKey=${encodeURIComponent(WOW_CONFIG.apiKey)}`
+                  + `&user_id=${encodeURIComponent(userId)}`;
+        const resp = await fetch(url, { method: 'GET', redirect: 'follow' });
+        if (!resp.ok) return false;
+        const data = await resp.json();
+        if (data && data.success && data.ready && Array.isArray(data.scenes)) {
+            const hasAll = data.scenes.length === 4 && data.scenes.every(u => u && typeof u === 'string' && u.startsWith('http'));
+            if (hasAll) {
+                const cacheKey = 'kion_scene_images_' + userId;
+                localStorage.setItem(cacheKey, JSON.stringify({ scenes: data.scenes, ts: Date.now(), generatedAt: data.generatedAt }));
+                applySceneImages(data.scenes);
+                return true;
+            }
+        }
+        return false;
+    } catch (e) {
+        console.warn('[ScenePoll] fetch failed:', e);
+        return false;
     }
 }
