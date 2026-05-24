@@ -676,69 +676,15 @@ function setupApiKeys() {
  * AI画像生成API（Imagen 3.0）を呼び出し
  */
 function generateAvatarImage(prompt) {
-  var API_KEY = PropertiesService.getScriptProperties().getProperty('GOOGLE_API_KEY');
-  
-  if (!API_KEY) {
-    logDebug('Error', 'API_KEY is NULL in PropertiesService');
-    throw new Error("API_KEY is not set in Script Properties (GOOGLE_API_KEY)");
-  }
-  
-  logDebug('System Check', 'API_KEY length: ' + API_KEY.length + ' chars. Starts with: ' + API_KEY.substring(0, 4));
-
-  // 検証済み：あなたの環境で動作が確認されたモデル
-  var url = "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=" + API_KEY;
-  
-  var payload = {
-    "instances": [
-      {
-        "prompt": prompt
-      }
-    ],
-    "parameters": {
-      "sampleCount": 1,
-      "aspectRatio": "1:1",
-      "outputMimeType": "image/png"
-    }
-  };
-  
-  var options = {
-    "method": "post",
-    "contentType": "application/json",
-    "payload": JSON.stringify(payload),
-    "muteHttpExceptions": true
-  };
-  
-  logDebug('API Call Start', 'Model: imagen-4.0-generate-001');
-  var response = UrlFetchApp.fetch(url, options);
-  var responseCode = response.getResponseCode();
-  var responseText = response.getContentText();
-  
-  logDebug('API Response Received', 'Code: ' + responseCode);
-  
-  var json;
-  try {
-    json = JSON.parse(responseText);
-  } catch(e) {
-    logDebug('JSON Parse Error', responseText);
-    throw new Error("Invalid JSON response from API");
-  }
-  
-  if (json.predictions && json.predictions.length > 0) {
-    var base64Image = json.predictions[0].bytesBase64Encoded;
-    var blob = Utilities.newBlob(Utilities.base64Decode(base64Image), "image/png", "avatar_" + new Date().getTime() + ".png");
-    
-    var folderName = "WoW_Avatars";
-    var folders = DriveApp.getFoldersByName(folderName);
-    var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
-    
-    var file = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    
-    return file.getUrl();
-  } else {
-    logDebug('API Response Error', responseText);
-    throw new Error("Image Generation Failed: " + (json.error ? json.error.message : responseText));
-  }
+  // 画像APIアダプタ層経由（フェーズ1で抽象化）
+  // 旧: Imagen 4 を直接呼び出し → 新: ImageProvider_generate() に委譲
+  var result = ImageProvider_generate({
+    prompt: prompt,
+    aspectRatio: '1:1',
+    outputName: 'avatar_' + new Date().getTime() + '.png',
+    outputFolder: 'WoW_Avatars'
+  });
+  return result.url;
 }
 
 /**
@@ -1220,9 +1166,7 @@ function generateScenesForOutfits(outfits, slots, profile) {
  * 着替え済みアバターをロケーション+ポーズに配置したシーン画像を生成
  */
 function generateSceneImage(srcBlob, scene, profile, slot, userId, slotIndex) {
-  var API_KEY = PropertiesService.getScriptProperties().getProperty('GOOGLE_API_KEY');
-  if (!API_KEY) throw new Error("GOOGLE_API_KEY not set");
-
+  // APIキーチェックは ImageProvider_generate 内で実施
   var promptText = [
     'High-fashion editorial hero card composition for a daily lookbook app "Today" page.',
     'The output will be the main visual card, so make it visually striking and saveable.',
@@ -1270,59 +1214,14 @@ function generateSceneImage(srcBlob, scene, profile, slot, userId, slotIndex) {
     '- ' + (profile.gender === '女性' ? 'Feminine silhouette and proportions' : 'Masculine silhouette and proportions')
   ].join('\n');
 
-  var base64 = Utilities.base64Encode(srcBlob.getBytes());
-  var mime = srcBlob.getContentType() || 'image/png';
-
-  var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=" + API_KEY;
-  var payload = {
-    contents: [{
-      role: "user",
-      parts: [
-        { inlineData: { mimeType: mime, data: base64 } },
-        { text: promptText }
-      ]
-    }],
-    generationConfig: {
-      responseModalities: ["IMAGE"]
-    }
-  };
-  var resp = UrlFetchApp.fetch(url, {
-    method: "post",
-    contentType: "application/json",
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
+  // 画像APIアダプタ層経由（フェーズ1で抽象化）
+  var result = ImageProvider_generate({
+    prompt: promptText,
+    referenceBlob: srcBlob,
+    outputName: 'scene_' + userId + '_' + new Date().getTime() + '_' + slotIndex + '.png',
+    outputFolder: 'WoW_Avatars'
   });
-  var code = resp.getResponseCode();
-  var text = resp.getContentText();
-  if (code !== 200) throw new Error('Scene image ' + code + ': ' + text.substring(0, 300));
-
-  var json = JSON.parse(text);
-  var parts = json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts;
-  if (!parts) throw new Error('Scene: no content');
-
-  var imgPart = null;
-  for (var i = 0; i < parts.length; i++) {
-    if (parts[i].inlineData && parts[i].inlineData.data) { imgPart = parts[i]; break; }
-  }
-  if (!imgPart) {
-    var fr = json.candidates && json.candidates[0] && json.candidates[0].finishReason;
-    if (fr === 'IMAGE_SAFETY' || fr === 'SAFETY') {
-      throw new Error('SAFETY: シーン画像セーフティでブロック');
-    }
-    throw new Error('Scene: no image in response');
-  }
-
-  var outBlob = Utilities.newBlob(
-    Utilities.base64Decode(imgPart.inlineData.data),
-    imgPart.inlineData.mimeType || 'image/png',
-    'scene_' + userId + '_' + new Date().getTime() + '_' + slotIndex + '.png'
-  );
-  var folderName = "WoW_Avatars";
-  var folders = DriveApp.getFoldersByName(folderName);
-  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
-  var file = folder.createFile(outBlob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  return 'https://drive.google.com/uc?export=view&id=' + file.getId();
+  return result.url;
 }
 
 /**
@@ -1443,9 +1342,8 @@ function fetchDriveImageAsBlob(url) {
  * @return {string} 生成画像のDrive共有URL
  */
 function generateOutfitImage(baseBlob, outfit, profile, userId, slotIndex) {
-  var API_KEY = PropertiesService.getScriptProperties().getProperty('GOOGLE_API_KEY');
-  if (!API_KEY) throw new Error("GOOGLE_API_KEY not set");
-
+  // APIキーチェックは ImageProvider_generate 内で実施
+  // ※ この関数はフェーズ2でU列廃止と共に削除予定
   var partOrder = ['頭','顔','耳','首','インナー','アウター','手首','手指','腰','脚','脚～足首','足','手','小物'];
   var outfitLines = partOrder
     .map(function(k) { return outfit[k] ? '- ' + k + ': ' + outfit[k] : null; })
@@ -1499,65 +1397,12 @@ function generateOutfitImage(baseBlob, outfit, profile, userId, slotIndex) {
     '- No catalog-style basic styling — aim for a contemporary, fashion-forward editorial look'
   ].join('\n');
 
-  var base64 = Utilities.base64Encode(baseBlob.getBytes());
-  var mime = baseBlob.getContentType() || 'image/png';
-
-  var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=" + API_KEY;
-  var payload = {
-    contents: [{
-      role: "user",
-      parts: [
-        { inlineData: { mimeType: mime, data: base64 } },
-        { text: promptText }
-      ]
-    }],
-    generationConfig: {
-      responseModalities: ["IMAGE"]
-    }
-  };
-  var options = {
-    method: "post",
-    contentType: "application/json",
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  };
-
-  var resp = UrlFetchApp.fetch(url, options);
-  var code = resp.getResponseCode();
-  var text = resp.getContentText();
-  if (code !== 200) {
-    throw new Error('Nano Banana ' + code + ': ' + text.substring(0, 300));
-  }
-
-  var json = JSON.parse(text);
-  var parts = json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts;
-  if (!parts) throw new Error('No content in response: ' + text.substring(0, 200));
-
-  var imgPart = null;
-  for (var i = 0; i < parts.length; i++) {
-    if (parts[i].inlineData && parts[i].inlineData.data) { imgPart = parts[i]; break; }
-  }
-  if (!imgPart) {
-    // セーフティフィルタで弾かれたケースを判別
-    var finishReason = json.candidates && json.candidates[0] && json.candidates[0].finishReason;
-    if (finishReason === 'IMAGE_SAFETY' || finishReason === 'SAFETY') {
-      throw new Error('SAFETY: セーフティフィルタでブロック(透過表現/下着的要素の可能性)');
-    }
-    throw new Error('No image in response: ' + text.substring(0, 200));
-  }
-
-  var outBlob = Utilities.newBlob(
-    Utilities.base64Decode(imgPart.inlineData.data),
-    imgPart.inlineData.mimeType || 'image/png',
-    'outfit_' + userId + '_' + new Date().getTime() + '_' + slotIndex + '.png'
-  );
-
-  var folderName = "WoW_Avatars";
-  var folders = DriveApp.getFoldersByName(folderName);
-  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
-  var file = folder.createFile(outBlob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-  // =IMAGE() 用に直接画像が返るURLを使う
-  return 'https://drive.google.com/uc?export=view&id=' + file.getId();
+  // 画像APIアダプタ層経由（フェーズ1で抽象化）
+  var result = ImageProvider_generate({
+    prompt: promptText,
+    referenceBlob: baseBlob,
+    outputName: 'outfit_' + userId + '_' + new Date().getTime() + '_' + slotIndex + '.png',
+    outputFolder: 'WoW_Avatars'
+  });
+  return result.url;
 }
