@@ -222,6 +222,29 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // フェーズ2 動作確認用: 指定ユーザーのコーデ＋シーン画像をテスト再生成
+    // 既存B5を流用、ダミー予報データで全パイプラインを通す
+    if (params.action === 'test_regenerate') {
+      var userId = params.user_id;
+      if (!userId) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'user_id required' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var dummyForecast = [
+        ['NOW',  16, 5, '快晴'],
+        ['+3h',  15, 5, '快晴'],
+        ['+6h',  14, 5, '快晴'],
+        ['+12h', 18, 4, '晴れ']
+      ];
+      var testResult = syncWeatherData({
+        user_id: userId,
+        forecast_data: dummyForecast,
+        regenerate_outfits: true
+      });
+      return ContentService.createTextOutput(JSON.stringify({ success: true, result: testResult }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (params.action === 'scenes') {
       var userId = params.user_id;
       if (!userId) {
@@ -256,6 +279,17 @@ function doGet(e) {
         poses.push(sheet.getRange(r, 2).getValue() || '');
       }
 
+      // フェーズ2追加: U9:U12 = outfit_name (英), V9:V12 = one_point (日)
+      // フェーズ4でルックバナーに流す
+      var outfitNames = [];
+      var onePoints = [];
+      var feelsTemps = [];  // B9:B12 体感気温 (バナー表示用)
+      for (var rr = 9; rr <= 12; rr++) {
+        outfitNames.push(sheet.getRange(rr, 21).getValue() || '');
+        onePoints.push(sheet.getRange(rr, 22).getValue() || '');
+        feelsTemps.push(sheet.getRange(rr, 2).getValue());
+      }
+
       // 完了シグナル: 4枚全部に有効な画像URLがあるか
       var ready = scenes.length === 4 && scenes.every(function(u){ return u && typeof u === 'string' && u.indexOf('http') === 0; });
       // 最新生成時刻（A5タイムスタンプを流用、なければ現在）
@@ -270,7 +304,10 @@ function doGet(e) {
           generatedAt: generatedAt,
           scenes: scenes,
           locations: locations,
-          poses: poses
+          poses: poses,
+          outfit_names: outfitNames,
+          one_points: onePoints,
+          feels_temps: feelsTemps
         }))
         .setMimeType(ContentService.MimeType.JSON);
     }

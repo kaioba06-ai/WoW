@@ -621,17 +621,25 @@ function selectSuggestion(index) {
     const leftBadge = document.getElementById('suggest-badge-left-0');
     const rightBadge = document.getElementById('suggest-badge-right-0');
 
-    // AIシーン画像（C14-C17 から取得済）があればそれを優先、無ければストック画像
-    const aiUrl = (function() {
+    // フェーズ4: シート由来のメタ(outfit_name/one_point/feels_temp)をキャッシュから取得
+    const sheetMeta = (function() {
         try {
             const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
             const userId = profile.handle || 'unknown';
             if (userId === 'unknown') return null;
             const cached = JSON.parse(localStorage.getItem('kion_scene_images_' + userId) || 'null');
-            const u = cached && Array.isArray(cached.scenes) ? cached.scenes[index] : null;
-            return (u && typeof u === 'string' && u.startsWith('http')) ? u : null;
+            if (!cached) return null;
+            return {
+                sceneUrl:    Array.isArray(cached.scenes)       ? cached.scenes[index]       : null,
+                outfitName:  Array.isArray(cached.outfit_names) ? cached.outfit_names[index] : null,
+                onePoint:    Array.isArray(cached.one_points)   ? cached.one_points[index]   : null,
+                feelsTemp:   Array.isArray(cached.feels_temps)  ? cached.feels_temps[index]  : null
+            };
         } catch (_) { return null; }
     })();
+
+    const aiUrl = sheetMeta && sheetMeta.sceneUrl && typeof sheetMeta.sceneUrl === 'string' && sheetMeta.sceneUrl.startsWith('http')
+        ? sheetMeta.sceneUrl : null;
 
     if (imgEl) {
         imgEl.src = aiUrl || data.meta.img;
@@ -640,8 +648,10 @@ function selectSuggestion(index) {
             imgEl.onerror = null;
         };
     }
-    if (titleEl) titleEl.textContent = data.meta.title;
-    if (descEl) descEl.textContent = data.meta.desc;
+    // タイトル: シート U列 (outfit_name) を優先、無ければ静的カタログのtitle
+    if (titleEl) titleEl.textContent = (sheetMeta && sheetMeta.outfitName) || data.meta.title;
+    // 説明: シート V列 (one_point) を優先、無ければ静的カタログのdesc
+    if (descEl)  descEl.textContent  = (sheetMeta && sheetMeta.onePoint)   || data.meta.desc;
 
     // 統合インフォバーを更新
     const emojiEl    = document.getElementById('suggest-weather-emoji');
@@ -650,7 +660,12 @@ function selectSuggestion(index) {
 
     if (emojiEl)    emojiEl.textContent    = data.weather.emoji;
     if (timeEl)     timeEl.textContent     = data.dateString;
-    if (apparentEl) apparentEl.textContent = `${data.apparentTemp}°`;    // 夜間・昼間に応じてメインカードと画面全体の背景を切り替え
+    // 気温: シート B列 (feels_temp) を優先、無ければ気象API由来
+    if (apparentEl) {
+        const t = (sheetMeta && sheetMeta.feelsTemp !== null && sheetMeta.feelsTemp !== undefined && sheetMeta.feelsTemp !== '')
+            ? sheetMeta.feelsTemp : data.apparentTemp;
+        apparentEl.textContent = `${t}°`;
+    }    // 夜間・昼間に応じてメインカードと画面全体の背景を切り替え
     // 背景の動的な色変更を削除（ニュートラルなUIを維持するため）
     const mainCard = document.getElementById('grid-card-main');
     if (mainCard) {
@@ -1077,6 +1092,7 @@ async function fetchAndApplySceneImages() {
         if (cached && Array.isArray(cached.scenes) && cached.scenes.length === 4) {
             console.log('[SceneFetch] applying cached scenes', cached.scenes);
             applySceneImages(cached.scenes);
+            applyOutfitMeta(cached);
         } else {
             console.log('[SceneFetch] no cache for', cacheKey);
         }
@@ -1102,9 +1118,18 @@ async function fetchAndApplySceneImages() {
             const hasAny = data.scenes.some(u => u && typeof u === 'string' && u.startsWith('http'));
             console.log('[SceneFetch] hasAny URLs?', hasAny, data.scenes);
             if (hasAny) {
-                localStorage.setItem(cacheKey, JSON.stringify({ scenes: data.scenes, ts: Date.now() }));
+                // フェーズ4: outfit_names / one_points / feels_temps も同梱でキャッシュ
+                const cachePayload = {
+                    scenes: data.scenes,
+                    outfit_names: data.outfit_names || [],
+                    one_points: data.one_points || [],
+                    feels_temps: data.feels_temps || [],
+                    ts: Date.now()
+                };
+                localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
                 applySceneImages(data.scenes);
-                console.log('[SceneFetch] applied fresh scenes');
+                applyOutfitMeta(cachePayload);
+                console.log('[SceneFetch] applied fresh scenes + meta');
             } else {
                 console.warn('[SceneFetch] all scenes are null/invalid');
             }
@@ -1113,6 +1138,46 @@ async function fetchAndApplySceneImages() {
         }
     } catch (e) {
         console.warn('[SceneFetch] fetch failed:', e);
+    }
+}
+
+/**
+ * フェーズ4: シート U/V/B列(outfit_name / one_point / feels_temp) を
+ * ルックバナーへ反映
+ *   data = { outfit_names, one_points, feels_temps }
+ */
+function applyOutfitMeta(data) {
+    if (!data) return;
+    const names = Array.isArray(data.outfit_names) ? data.outfit_names : [];
+    const points = Array.isArray(data.one_points) ? data.one_points : [];
+    const temps = Array.isArray(data.feels_temps) ? data.feels_temps : [];
+
+    // hourlySuggestions が初期化済みなら meta を上書き
+    if (Array.isArray(hourlySuggestions)) {
+        for (let i = 0; i < Math.min(4, hourlySuggestions.length); i++) {
+            const s = hourlySuggestions[i];
+            if (!s || !s.meta) continue;
+            if (names[i])  s.meta.title = names[i];
+            if (points[i]) s.meta.desc  = points[i];
+            if (temps[i] !== null && temps[i] !== undefined && temps[i] !== '') {
+                s.apparentTemp = temps[i];
+            }
+        }
+    }
+
+    // 現在選択中スロットの表示を即更新
+    const idx = (typeof currentSelectedIndex === 'number') ? currentSelectedIndex : 0;
+    if (names[idx]) {
+        const el = document.getElementById('suggest-title-0');
+        if (el) el.textContent = names[idx];
+    }
+    if (points[idx]) {
+        const el = document.getElementById('suggest-desc-0');
+        if (el) el.textContent = points[idx];
+    }
+    if (temps[idx] !== null && temps[idx] !== undefined && temps[idx] !== '') {
+        const el = document.getElementById('suggest-apparent-temp');
+        if (el) el.textContent = `${temps[idx]}°`;
     }
 }
 
