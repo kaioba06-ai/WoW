@@ -868,11 +868,26 @@ function updateHourlyTimeline(data) {
         const imgEl = document.getElementById(`grid-img-${i}`);
         
         if (imgEl) {
-            imgEl.src = bestOutfit.img;
+            // フェーズ4修正: キャッシュにAIシーン画像があれば優先、なければ静的カタログ
+            let imgSrc = bestOutfit.img;
+            try {
+                const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+                const userId = profile.handle || 'unknown';
+                if (userId !== 'unknown') {
+                    const cached = JSON.parse(localStorage.getItem('kion_scene_images_' + userId) || 'null');
+                    const aiUrl = cached && Array.isArray(cached.scenes) ? cached.scenes[i] : null;
+                    if (aiUrl && typeof aiUrl === 'string' && aiUrl.startsWith('http')) {
+                        imgSrc = aiUrl;
+                    }
+                }
+            } catch (_) { /* fall through to static */ }
+            imgEl.src = imgSrc;
             imgEl.onerror = () => {
                 imgEl.src = "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&q=80&w=400";
                 imgEl.onerror = null;
             };
+            imgEl.classList.remove('opacity-0');
+            if (imgEl.parentElement) imgEl.parentElement.classList.remove('skeleton');
         }
         
         if (leftEl && rightEl) {
