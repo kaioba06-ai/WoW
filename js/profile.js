@@ -365,9 +365,11 @@ async function _runFaceAnalysis(file) {
         const btn = document.getElementById('analyze-photo-btn');
         if (btn) { btn.disabled = true; btn.textContent = 'AI分析中...'; }
 
+        // CORS プリフライト回避のため Content-Type は text/plain で送る
+        // (GAS doPost は e.postData.contents をそのままJSON.parseするのでContent-Type非依存)
         const resp = await fetch(WOW_CONFIG.cloudUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({
                 apiKey: WOW_CONFIG.apiKey,
                 type: 'analyze_face',
