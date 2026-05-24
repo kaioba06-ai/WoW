@@ -188,7 +188,139 @@
                     }
                 };
             }
+
+            // クローゼットも Supabase から読み込み
+            await loadClosetData();
         }
+
+        // ===== クローゼットデータを Supabase から読み込み =====
+        async function loadClosetData() {
+            const items = await window.loadClosetFromSupabase();
+
+            // Supabase 形式 → ローカル形式へ変換
+            const closetItems = items.map(item => ({
+                id: item.id,  // UUID をそのまま使用
+                name: item.name,
+                category: item.category,
+                color: item.color,
+                colorName: item.color_name,
+                memo: item.memo,
+                img: item.image_url,
+                addedAt: item.created_at ? new Date(item.created_at).toLocaleDateString('ja-JP') : ''
+            }));
+
+            // localStorage と互換性のある形式で保存
+            localStorage.setItem('kion_closet_items', JSON.stringify(closetItems));
+
+            // グローバル変数にも反映（app.js で参照されている）
+            if (typeof window.closetItems !== 'undefined') {
+                window.closetItems = closetItems;
+            }
+        }
+
+        // ============================================
+        // ===== クローゼット連携機能 =====
+        // ============================================
+
+        // クローゼットアイテムを Supabase から読み込み
+        window.loadClosetFromSupabase = async function() {
+            if (!window.currentUser) return [];
+
+            const { data, error } = await window.supabaseClient
+                .from('closet_items')
+                .select('*')
+                .eq('user_id', window.currentUser.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('[Closet] Load error:', error);
+                return [];
+            }
+
+            console.log('[Closet] Loaded from Supabase:', data?.length || 0, 'items');
+            return data || [];
+        };
+
+        // クローゼットアイテムを Supabase に保存（新規）
+        window.addClosetItemToSupabase = async function(item) {
+            if (!window.currentUser) {
+                console.error('[Closet] Not logged in');
+                return { success: false };
+            }
+
+            const insertData = {
+                user_id: window.currentUser.id,
+                name: item.name || '',
+                category: item.category || 'other',
+                color: item.color || '#888',
+                color_name: item.colorName || '',
+                image_url: item.img || '',
+                memo: item.memo || ''
+            };
+
+            const { data, error } = await window.supabaseClient
+                .from('closet_items')
+                .insert(insertData)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('[Closet] Add error:', error);
+                return { success: false, error: error.message };
+            }
+
+            console.log('[Closet] Added to Supabase:', data.id);
+            return { success: true, data };
+        };
+
+        // クローゼットアイテムを Supabase で更新
+        window.updateClosetItemInSupabase = async function(itemId, item) {
+            if (!window.currentUser) return { success: false };
+
+            const updateData = {
+                name: item.name,
+                category: item.category,
+                color: item.color,
+                color_name: item.colorName || '',
+                image_url: item.img || '',
+                memo: item.memo || '',
+                updated_at: new Date().toISOString()
+            };
+
+            const { data, error } = await window.supabaseClient
+                .from('closet_items')
+                .update(updateData)
+                .eq('id', itemId)
+                .eq('user_id', window.currentUser.id)
+                .select();
+
+            if (error) {
+                console.error('[Closet] Update error:', error);
+                return { success: false, error: error.message };
+            }
+
+            console.log('[Closet] Updated in Supabase:', itemId);
+            return { success: true, data };
+        };
+
+        // クローゼットアイテムを Supabase から削除
+        window.deleteClosetItemFromSupabase = async function(itemId) {
+            if (!window.currentUser) return { success: false };
+
+            const { error } = await window.supabaseClient
+                .from('closet_items')
+                .delete()
+                .eq('id', itemId)
+                .eq('user_id', window.currentUser.id);
+
+            if (error) {
+                console.error('[Closet] Delete error:', error);
+                return { success: false, error: error.message };
+            }
+
+            console.log('[Closet] Deleted from Supabase:', itemId);
+            return { success: true };
+        };
 
         // ===== プロフィール情報を Supabase に保存 =====
         window.saveProfileToSupabase = async function(profileData) {

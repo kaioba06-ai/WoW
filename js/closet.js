@@ -285,6 +285,7 @@ function submitClosetItem() {
                 img: imgVal || closetItems[idx].img,
             };
         }
+        const updatedItem = closetItems[idx];
         editingItemId = null;
         saveCloset();
         renderClosetGrid();
@@ -293,9 +294,20 @@ function submitClosetItem() {
             if(navigator.vibrate) navigator.vibrate([10,5,20]);
             alert(`「${name}」を更新しました！`);
         }, 350);
+
+        // Supabase でも更新
+        if (typeof window.updateClosetItemInSupabase === 'function' && updatedItem) {
+            window.updateClosetItemInSupabase(updatedItem.id, updatedItem).then(result => {
+                if (result.success) {
+                    console.log('[Closet] Updated in Supabase');
+                } else {
+                    console.warn('[Closet] Supabase update failed:', result.error);
+                }
+            });
+        }
     } else {
         const item = {
-            id: Date.now(),
+            id: Date.now(),  // 仮 ID（Supabase 保存後に UUID に置き換え）
             name,
             category: closetSelectedCategory,
             color: closetSelectedColor || '#888',
@@ -312,6 +324,23 @@ function submitClosetItem() {
             if(navigator.vibrate) navigator.vibrate([10,5,20]);
             alert(`「${name}」をクローゼットに追加しました！✨`);
         }, 350);
+
+        // Supabase にも保存
+        if (typeof window.addClosetItemToSupabase === 'function') {
+            window.addClosetItemToSupabase(item).then(result => {
+                if (result.success && result.data) {
+                    // ローカルの id を Supabase の UUID に置き換える
+                    const idx = closetItems.findIndex(i => i.id === item.id);
+                    if (idx !== -1) {
+                        closetItems[idx].id = result.data.id;
+                        saveCloset();
+                    }
+                    console.log('[Closet] Synced to Supabase');
+                } else {
+                    console.warn('[Closet] Supabase sync failed:', result.error);
+                }
+            });
+        }
     }
 }
 
@@ -342,11 +371,23 @@ function deleteClosetItem(id) {
 
 function confirmDeleteCloset() {
     if (pendingDeleteId === null) return;
+    const idToDelete = pendingDeleteId;
     closetItems = closetItems.filter(i => i.id !== pendingDeleteId);
     pendingDeleteId = null;
     saveCloset();
     renderClosetGrid();
     document.getElementById('delete-confirm-overlay').classList.add('hidden');
+
+    // Supabase からも削除
+    if (typeof window.deleteClosetItemFromSupabase === 'function') {
+        window.deleteClosetItemFromSupabase(idToDelete).then(result => {
+            if (result.success) {
+                console.log('[Closet] Deleted from Supabase');
+            } else {
+                console.warn('[Closet] Supabase delete failed:', result.error);
+            }
+        });
+    }
 }
 
 function cancelDeleteCloset() {

@@ -272,6 +272,16 @@ window.addEventListener('sectionsLoaded', () => {
         }
     }
 
+    // クローゼットデータを Supabase から取得済みの場合、再描画
+    const supabaseCloset = JSON.parse(localStorage.getItem('kion_closet_items') || '[]');
+    if (supabaseCloset.length > 0 && typeof closetItems !== 'undefined') {
+        closetItems.length = 0;
+        supabaseCloset.forEach(item => closetItems.push(item));
+        if (typeof renderClosetGrid === 'function') {
+            renderClosetGrid();
+        }
+    }
+
     // ドラッグスクロール初期化
     initDragScroll();
 
