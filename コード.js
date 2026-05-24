@@ -276,8 +276,13 @@ function doGet(e) {
 
         // 3) カスタム予報でパイプライン実行
         //    パラメータ: temp1..temp4, lv1..lv4, weather1..weather4 (個別指定)、なければデフォルト
+        // デフォルトは昼14時起点で +3h=17時, +6h=20時, +12h=2時(深夜)
+        // フロントの getWeatherForecastSummary と同じ形式 "現在 (HH:00)" にする
         var defaultForecast = [
-          ['NOW', 16, 5, '快晴'], ['+3h', 15, 5, '快晴'], ['+6h', 14, 5, '快晴'], ['+12h', 18, 4, '晴れ']
+          ['現在 (14:00)', 16, 5, '快晴'],
+          ['+3h (17:00)',  15, 5, '快晴'],
+          ['+6h (20:00)',  14, 5, '快晴'],
+          ['+12h (2:00)',  18, 4, '晴れ']
         ];
         var forecast = [];
         for (var fi = 0; fi < 4; fi++) {
@@ -1423,6 +1428,26 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
  * 4スロットそれぞれにロケーションとポーズをGeminiで一括生成
  * @return {Array<{location, pose}>}
  */
+/**
+ * 時刻文字列("現在 (19:00)" や "+12h (2:00)") から hour を抽出し、
+ * AIが理解しやすい時間帯ラベル(英語)を返す。
+ * 02:00 を「2 AM」と曖昧に渡すと昼間に描かれる事故が起きるので明示する。
+ */
+function describeTimeOfDay_(timeStr) {
+  if (!timeStr) return 'unknown time of day';
+  var m = String(timeStr).match(/(\d{1,2}):\d{2}/);
+  if (!m) return String(timeStr);
+  var h = parseInt(m[1], 10);
+  if (h >= 5  && h < 8)  return h + ':00 — early morning, soft dawn light, sky brightening, low warm sun';
+  if (h >= 8  && h < 11) return h + ':00 — mid morning, bright clear daylight';
+  if (h >= 11 && h < 14) return h + ':00 — midday, high overhead sun, brightest hours of the day';
+  if (h >= 14 && h < 17) return h + ':00 — afternoon, warm slanted light';
+  if (h >= 17 && h < 19) return h + ':00 — golden hour / sunset, low warm sun, long shadows, orange-pink sky';
+  if (h >= 19 && h < 21) return h + ':00 — early evening / blue hour, dim twilight, street lights starting to glow';
+  if (h >= 21 || h < 5)  return h + ':00 — DEEP NIGHT, fully dark sky, scene illuminated ONLY by street lights, neon signs, shop windows, or moonlight. NO daylight, NO sun, NO bright sky.';
+  return h + ':00';
+}
+
 function generateScenesForOutfits(outfits, slots, profile) {
   var API_KEY = PropertiesService.getScriptProperties().getProperty('GOOGLE_API_KEY');
   if (!API_KEY) throw new Error("GOOGLE_API_KEY not set");
@@ -1433,7 +1458,8 @@ function generateScenesForOutfits(outfits, slots, profile) {
       .map(function(k){ return o[k] ? (k + ':' + o[k]) : null; })
       .filter(function(x){return x;}).slice(0, 5).join(' / ');
     var nameTag = o.outfit_name ? ' [' + o.outfit_name + ']' : '';
-    return (i+1) + '. ' + s.time + ' / 体感' + s.temp + '℃ / ' + (s.weather||'') + ' / Lv' + s.lv + nameTag + ' / コーデ抜粋: ' + keyItems;
+    var timeLabel = describeTimeOfDay_(s.time);
+    return (i+1) + '. ' + s.time + ' [' + timeLabel + '] / 体感' + s.temp + '℃ / ' + (s.weather||'') + ' / Lv' + s.lv + nameTag + ' / コーデ抜粋: ' + keyItems;
   }).join('\n');
 
   var promptText = [
@@ -1598,8 +1624,10 @@ function generateSceneImage(baseBlob, scene, profile, slot, userId, slotIndex, o
     'Default standing front-facing pose is FORBIDDEN unless the pose instruction explicitly says so.',
     '',
     'LIGHTING & MOOD:',
-    '- Match the time of day "' + (slot.time || '') + '" and weather "' + (slot.weather || '') + '"',
-    '- Render natural ambient light consistent with both (e.g. golden hour for sunset, soft daylight for clear day, moody street light for night)',
+    '- Time of day: ' + describeTimeOfDay_(slot.time),
+    '- Weather: ' + (slot.weather || ''),
+    '- The lighting MUST match the time-of-day description above. Pay especially strict attention to night hours — if it says DEEP NIGHT, the sky is fully dark and the scene must be lit ONLY by artificial lights (street lamps, neon, shop windows) or moonlight. Daylight in a night scene is a CRITICAL ERROR.',
+    '- Weather effects must also be visible (rain = wet surfaces + droplets; snow = accumulated snow + flakes; cloudy = diffused soft light; clear = sharp shadows)',
     '- Cinematic, atmospheric, fashion editorial quality',
     '',
     'COMPOSITION:',
