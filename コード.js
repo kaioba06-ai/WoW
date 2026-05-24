@@ -1,3 +1,117 @@
+// ============================================================
+// アバター画像の自動アーカイブ機構
+// 「WoW_Avatars」フォルダ → 不要になった画像は「WoW_Avatars_確認用」へ移動
+// 完全削除はせず、人間が見て削除する運用を想定
+// ============================================================
+
+var AVATAR_FOLDER_NAME = 'WoW_Avatars';
+var AVATAR_ARCHIVE_FOLDER_NAME = 'WoW_Avatars_確認用';
+
+/**
+ * 確認用フォルダ取得（無ければ作成）
+ */
+function getAvatarArchiveFolder_() {
+  var folders = DriveApp.getFoldersByName(AVATAR_ARCHIVE_FOLDER_NAME);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(AVATAR_ARCHIVE_FOLDER_NAME);
+}
+
+/**
+ * URL から Drive ファイルIDを抽出
+ */
+function extractDriveFileId_(url) {
+  if (!url || typeof url !== 'string') return null;
+  var m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+/**
+ * セルの =IMAGE() 式 or 素のURL から Drive ファイルIDを抽出
+ */
+function extractIdFromCell_(range) {
+  var formula = range.getFormula();
+  var url = '';
+  if (formula) {
+    var fm = formula.match(/=IMAGE\("([^"]+)"\)/i);
+    if (fm) url = fm[1];
+  }
+  if (!url) {
+    var v = range.getValue();
+    if (typeof v === 'string' && v.indexOf('http') === 0) url = v;
+  }
+  return extractDriveFileId_(url);
+}
+
+/**
+ * 全ユーザーシートを走査し、現在「使用中」の画像ID一覧を返す
+ */
+function collectInUseImageIds_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var inUse = {};
+  var sheets = ss.getSheets();
+  sheets.forEach(function(sheet) {
+    var name = sheet.getName();
+    if (name === 'DebugLog') return;
+    // B5: アバター本体
+    var avId = extractIdFromCell_(sheet.getRange(5, 2));
+    if (avId) inUse[avId] = true;
+    // U9:U12: コーデ着替えアバター
+    for (var r = 9; r <= 12; r++) {
+      var id = extractIdFromCell_(sheet.getRange(r, 21));
+      if (id) inUse[id] = true;
+    }
+    // C14:C17: シーン画像
+    for (var r2 = 14; r2 <= 17; r2++) {
+      var id2 = extractIdFromCell_(sheet.getRange(r2, 3));
+      if (id2) inUse[id2] = true;
+    }
+  });
+  return inUse;
+}
+
+/**
+ * 「WoW_Avatars」内で現在使われていない画像を「確認用」フォルダへ移動
+ * GASエディタから1回実行して既存ゴミを片付ける
+ */
+function archiveUnusedAvatars() {
+  var inUse = collectInUseImageIds_();
+  var sourceFolders = DriveApp.getFoldersByName(AVATAR_FOLDER_NAME);
+  if (!sourceFolders.hasNext()) {
+    logDebug('archiveUnusedAvatars', 'WoW_Avatars folder not found, nothing to do');
+    return { moved: 0, kept: 0 };
+  }
+  var sourceFolder = sourceFolders.next();
+  var archive = getAvatarArchiveFolder_();
+  var files = sourceFolder.getFiles();
+  var moved = 0;
+  var kept = 0;
+  while (files.hasNext()) {
+    var f = files.next();
+    if (inUse[f.getId()]) {
+      kept++;
+    } else {
+      f.moveTo(archive);
+      moved++;
+    }
+  }
+  logDebug('archiveUnusedAvatars done', 'moved=' + moved + ' kept=' + kept);
+  return { moved: moved, kept: kept };
+}
+
+/**
+ * 指定IDの画像を確認用フォルダへ移動（前世代の画像を整理する用）
+ */
+function archiveImageById_(fileId) {
+  if (!fileId) return;
+  try {
+    var file = DriveApp.getFileById(fileId);
+    var archive = getAvatarArchiveFolder_();
+    file.moveTo(archive);
+  } catch (e) {
+    // 既に消えてる等は無視
+    logDebug('archiveImageById_ skip', fileId + ' : ' + e.toString());
+  }
+}
+
 /**
  * POSTリクエストを処理する（外部からのデータ受信用）
  */
@@ -12,6 +126,12 @@ function doGet(e) {
 
     if (params.apiKey !== API_KEY) {
       return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Unauthorized' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (params.action === 'archive_unused') {
+      var result = archiveUnusedAvatars();
+      return ContentService.createTextOutput(JSON.stringify({ success: true, result: result }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -244,10 +364,21 @@ function syncProfileData(data) {
 
       // 画像生成
       try {
+        // 前のアバターを確認用フォルダへ退避
+        var prevAvatarId = extractIdFromCell_(sheet.getRange(5, 2));
+        if (prevAvatarId) archiveImageById_(prevAvatarId);
+
         sheet.getRange(5, 1).setValue("画像生成中...");
         var imageUrl = generateAvatarImage(prompt);
         sheet.getRange(5, 1).setValue(timestamp);
-        sheet.getRange(5, 2).setValue(imageUrl);
+        // B5 にはセル内に画像表示できる =IMAGE() 形式で挿入
+        var idMatchAv = imageUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/) || imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        var imageDisplayUrl = idMatchAv
+          ? 'https://drive.google.com/thumbnail?id=' + idMatchAv[1] + '&sz=w1000'
+          : imageUrl;
+        sheet.getRange(5, 2).setFormula('=IMAGE("' + imageDisplayUrl + '")');
+        sheet.setRowHeight(5, 280);
+        if (sheet.getColumnWidth(2) < 250) sheet.setColumnWidth(2, 280);
         logDebug('Avatar Image Generated', imageUrl);
       } catch (imgErr) {
         sheet.getRange(5, 1).setValue(timestamp);
@@ -393,7 +524,18 @@ function syncWeatherData(data) {
 
         // U9:U12 に着替えアバター画像を生成
         try {
-          var baseUrl = sheet.getRange(5, 2).getValue(); // B5
+          // B5 は =IMAGE("...") 式または素のURLのいずれか。両対応で抽出
+          var baseFormulaCell = sheet.getRange(5, 2);
+          var baseFormula = baseFormulaCell.getFormula();
+          var baseUrl = '';
+          if (baseFormula) {
+            var bm = baseFormula.match(/=IMAGE\("([^"]+)"\)/i);
+            if (bm) baseUrl = bm[1];
+          }
+          if (!baseUrl) {
+            var rawVal = baseFormulaCell.getValue();
+            if (typeof rawVal === 'string' && rawVal.indexOf('http') === 0) baseUrl = rawVal;
+          }
           if (!baseUrl || typeof baseUrl !== 'string' || baseUrl.indexOf('http') !== 0) {
             sheet.getRange(9, 21, 4, 1).setValues([['ベース画像なし'],['ベース画像なし'],['ベース画像なし'],['ベース画像なし']]);
             logDebug('Outfit image skipped', 'B5 is not a valid URL');
@@ -405,6 +547,10 @@ function syncWeatherData(data) {
             var baseBlob = fetchDriveImageAsBlob(baseUrl);
             for (var k = 0; k < 4; k++) {
               try {
+                // 前のコーデ画像を確認用フォルダへ退避
+                var prevOutfitId = extractIdFromCell_(sheet.getRange(9 + k, 21));
+                if (prevOutfitId) archiveImageById_(prevOutfitId);
+
                 sheet.getRange(9 + k, 21).setValue('画像生成中...');
                 SpreadsheetApp.flush();
                 var imgUrl = generateOutfitImage(baseBlob, outfits[k] || {}, profile, sheetName, k + 1);
@@ -470,6 +616,10 @@ function syncWeatherData(data) {
                 continue;
               }
               sheet.getRange(14 + sk, 3).setValue('シーン画像生成中...');
+              // 前のシーン画像を確認用フォルダへ退避
+              var prevSceneId = extractIdFromCell_(sheet.getRange(14 + sk, 3));
+              if (prevSceneId) archiveImageById_(prevSceneId);
+
               SpreadsheetApp.flush();
               var srcBlob = fetchDriveImageAsBlob(outfitUrls[sk]);
               var sceneUrl = generateSceneImage(srcBlob, scenes[sk] || {}, profile, slots[sk], sheetName, sk + 1);
