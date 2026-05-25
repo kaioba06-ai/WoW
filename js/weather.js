@@ -715,7 +715,8 @@ function createHeaderItemElement(item) {
 
 // ハブリッド・ボトムシート（詳細表示）の制御
 // 部位英語キー→日本語ラベル＋絵文字（詳細ビュー表示用）
-const _PART_LABEL_MAP = {
+// var で宣言（スクリプト2回読み込み時の SyntaxError 回避）
+var _PART_LABEL_MAP = window._PART_LABEL_MAP || {
     head:      { jp: '頭まわり', icon: '🎩' },
     face:      { jp: '顔まわり', icon: '🕶️' },
     ear:       { jp: '耳',     icon: '👂' },
@@ -731,8 +732,10 @@ const _PART_LABEL_MAP = {
     hand:      { jp: 'バッグ',  icon: '👜' },
     accessory: { jp: '小物',    icon: '✨' }
 };
+window._PART_LABEL_MAP = _PART_LABEL_MAP;
 // 表示順（重要部位から）
-const _PART_DISPLAY_ORDER = ['outer','inner','leg','foot','head','face','neck','ankle','waist','wrist','finger','hand','accessory','ear'];
+var _PART_DISPLAY_ORDER = window._PART_DISPLAY_ORDER || ['outer','inner','leg','foot','head','face','neck','ankle','waist','wrist','finger','hand','accessory','ear'];
+window._PART_DISPLAY_ORDER = _PART_DISPLAY_ORDER;
 
 function openOutfitDetail(index) {
     const data = hourlySuggestions[index];
