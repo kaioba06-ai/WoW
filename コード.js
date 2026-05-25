@@ -531,6 +531,18 @@ function doGet(e) {
         feelsTemps.push(sheet.getRange(rr, 2).getValue());
       }
 
+      // 詳細ビュー用: G9:T12 (14部位) を構造化して返す
+      var partKeys = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
+      var partsAll = sheet.getRange(9, 7, 4, 14).getValues();  // 4行 × 14列
+      var parts = partsAll.map(function(row) {
+        var o = {};
+        for (var pi = 0; pi < partKeys.length; pi++) {
+          var v = row[pi];
+          if (v != null && String(v).trim() !== '' && v !== '-') o[partKeys[pi]] = v;
+        }
+        return o;
+      });
+
       // 完了シグナル: 4枚全部に有効な画像URLがあるか
       var ready = scenes.length === 4 && scenes.every(function(u){ return u && typeof u === 'string' && u.indexOf('http') === 0; });
       // 最新生成時刻（A5タイムスタンプを流用、なければ現在）
@@ -548,7 +560,8 @@ function doGet(e) {
           poses: poses,
           outfit_names: outfitNames,
           one_points: onePoints,
-          feels_temps: feelsTemps
+          feels_temps: feelsTemps,
+          parts: parts
         }))
         .setMimeType(ContentService.MimeType.JSON);
     }

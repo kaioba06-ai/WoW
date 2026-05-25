@@ -714,6 +714,26 @@ function createHeaderItemElement(item) {
 }
 
 // ハブリッド・ボトムシート（詳細表示）の制御
+// 部位英語キー→日本語ラベル＋絵文字（詳細ビュー表示用）
+const _PART_LABEL_MAP = {
+    head:      { jp: '頭まわり', icon: '🎩' },
+    face:      { jp: '顔まわり', icon: '🕶️' },
+    ear:       { jp: '耳',     icon: '👂' },
+    neck:      { jp: '首まわり', icon: '🧣' },
+    inner:     { jp: 'インナー', icon: '👕' },
+    outer:     { jp: 'アウター', icon: '🧥' },
+    wrist:     { jp: '手首',    icon: '⌚' },
+    finger:    { jp: '手指',    icon: '💍' },
+    waist:     { jp: '腰',     icon: '👖' },
+    leg:       { jp: 'ボトムス', icon: '👖' },
+    ankle:     { jp: '足首',    icon: '🧦' },
+    foot:      { jp: '靴',     icon: '👞' },
+    hand:      { jp: 'バッグ',  icon: '👜' },
+    accessory: { jp: '小物',    icon: '✨' }
+};
+// 表示順（重要部位から）
+const _PART_DISPLAY_ORDER = ['outer','inner','leg','foot','head','face','neck','ankle','waist','wrist','finger','hand','accessory','ear'];
+
 function openOutfitDetail(index) {
     const data = hourlySuggestions[index];
     if (!data) return;
@@ -721,52 +741,92 @@ function openOutfitDetail(index) {
     const overlay = document.getElementById('outfit-detail-overlay');
     const modal = document.getElementById('outfit-detail-modal');
     const scrollContainer = document.getElementById('outfit-detail-scroll-container');
-    
 
-    // 基本データ
-    document.getElementById('detail-hero-img').src = data.meta.img;
-    document.getElementById('detail-title').textContent = data.meta.title;
-    document.getElementById('detail-desc').textContent = data.meta.desc;
+    // シート由来のキャッシュデータ
+    const sheetMeta = (function() {
+        try {
+            const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+            const userId = profile.handle || 'unknown';
+            if (userId === 'unknown') return null;
+            const cached = JSON.parse(localStorage.getItem('kion_scene_images_' + userId) || 'null');
+            if (!cached) return null;
+            return {
+                sceneUrl:   Array.isArray(cached.scenes)       ? cached.scenes[index]       : null,
+                outfitName: Array.isArray(cached.outfit_names) ? cached.outfit_names[index] : null,
+                onePoint:   Array.isArray(cached.one_points)   ? cached.one_points[index]   : null,
+                feelsTemp:  Array.isArray(cached.feels_temps)  ? cached.feels_temps[index]  : null,
+                parts:      Array.isArray(cached.parts)        ? cached.parts[index]        : null
+            };
+        } catch (_) { return null; }
+    })();
 
-    // 天気チップ
+    // 1. Hero画像: AIシーン画像があれば優先
+    const heroUrl = (sheetMeta && sheetMeta.sceneUrl && sheetMeta.sceneUrl.startsWith('http'))
+        ? sheetMeta.sceneUrl : (data.meta && data.meta.img);
+    const heroEl = document.getElementById('detail-hero-img');
+    if (heroEl && heroUrl) {
+        heroEl.src = heroUrl;
+        heroEl.onerror = () => {
+            heroEl.src = 'https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800';
+            heroEl.onerror = null;
+        };
+    }
+
+    // 2. タイトル / 天気行
+    const titleEl = document.getElementById('detail-title');
+    if (titleEl) titleEl.textContent = (sheetMeta && sheetMeta.outfitName) || data.meta.title || '--';
+    const tempEl = document.getElementById('detail-weather-temp');
+    if (tempEl) {
+        const t = (sheetMeta && sheetMeta.feelsTemp != null && sheetMeta.feelsTemp !== '') ? sheetMeta.feelsTemp : data.apparentTemp;
+        tempEl.textContent = `${t}°`;
+    }
     const emojiEl = document.getElementById('detail-weather-emoji');
     const descEl  = document.getElementById('detail-weather-desc');
     const timeEl  = document.getElementById('detail-time-label');
     if (emojiEl) emojiEl.textContent = data.weather.emoji;
     if (descEl)  descEl.textContent  = data.weather.desc;
     if (timeEl)  timeEl.textContent  = data.dateString;
-
-    // 気温チップ
-    const tempChip = document.getElementById('detail-weather-temp');
-    if (tempChip) {
-        tempChip.textContent = `${data.apparentTemp}°`;
-    }
-
     const precipEl = document.getElementById('detail-weather-precip');
-    if (precipEl) {
-        precipEl.textContent = `0%`;
+    if (precipEl) precipEl.textContent = '0%';
+
+    // 3. Stylist's Note (one_point)
+    const noteEl = document.getElementById('detail-desc');
+    if (noteEl) {
+        noteEl.textContent = (sheetMeta && sheetMeta.onePoint) || data.meta.desc || '--';
     }
 
-    // アイテム一覧（画像下の横スクロールリスト）
-    const grid = document.getElementById('detail-items-grid');
-    grid.innerHTML = '';
-    data.meta.items.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'flex flex-col items-center gap-2 shrink-0 cursor-pointer group';
-        card.innerHTML = `
-            <div class="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 dark:bg-slate-800 border border-black/5 dark:border-white/10 shadow-md group-hover:scale-105 transition-transform">
-                <img src="${item.img}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&q=80&w=200'; this.onerror=null;"/>
-            </div>
-            <span class="text-[9px] font-black uppercase tracking-widest text-on-surface-variant dark:text-white/50 text-center">${item.label}</span>
-        `;
-        grid.appendChild(card);
-    });
+    // 4. The Outfit（部位リスト）— シートのpartsがあれば表示、無ければセクションごと非表示
+    const partsList = document.getElementById('detail-parts-list');
+    const partsSection = document.getElementById('detail-outfit-section');
+    if (partsList) partsList.innerHTML = '';
+    const parts = sheetMeta && sheetMeta.parts;
+    let hasAny = false;
+    if (partsList && parts && typeof parts === 'object') {
+        _PART_DISPLAY_ORDER.forEach(key => {
+            const val = parts[key];
+            if (!val || String(val).trim() === '' || String(val).trim() === '-') return;
+            hasAny = true;
+            const labelInfo = _PART_LABEL_MAP[key] || { jp: key, icon: '•' };
+            const row = document.createElement('div');
+            row.className = 'flex items-start gap-3 py-2 border-b border-black/5 dark:border-white/10 last:border-b-0';
+            row.innerHTML = `
+                <span class="text-[18px] leading-none mt-0.5 shrink-0">${labelInfo.icon}</span>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[9px] font-black uppercase tracking-[0.2em] text-on-surface-variant/60 dark:text-white/40">${labelInfo.jp}</p>
+                    <p class="text-[12px] font-bold text-on-surface dark:text-white leading-snug mt-0.5">${val}</p>
+                </div>
+            `;
+            partsList.appendChild(row);
+        });
+    }
+    if (partsSection) {
+        partsSection.style.display = hasAny ? '' : 'none';
+    }
 
     // 表示アニメーション
     if (overlay && modal) {
         overlay.classList.remove('hidden');
         modal.classList.remove('hidden');
-
         requestAnimationFrame(() => {
             overlay.style.opacity = '1';
             modal.style.transform = 'translateX(-50%) translateY(0)';
@@ -1134,11 +1194,13 @@ async function fetchAndApplySceneImages() {
             console.log('[SceneFetch] hasAny URLs?', hasAny, data.scenes);
             if (hasAny) {
                 // フェーズ4: outfit_names / one_points / feels_temps も同梱でキャッシュ
+                // 詳細ビュー用に parts (14部位コーデ) も保存
                 const cachePayload = {
                     scenes: data.scenes,
                     outfit_names: data.outfit_names || [],
                     one_points: data.one_points || [],
                     feels_temps: data.feels_temps || [],
+                    parts: data.parts || [],
                     ts: Date.now()
                 };
                 localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
