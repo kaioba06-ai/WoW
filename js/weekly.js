@@ -1,6 +1,15 @@
 // ===== [Component] weekly.js — 週間予報タブ専用 DOM 操作 =====
-// 依存: app.js (DAY_NAMES), weather.js (getWeatherInfo, getClothingSuggestion)
+// 依存: app.js (DAY_NAMES), weather.js (getWeatherInfo, getBestOutfit)
 // レイアウト: Home画面と同じ Main + Sub 並列。Todayはスキップ（Todayページで表示済み）
+
+// 気温帯に応じた簡易サジェスト文（旧 getClothingSuggestion 相当をインライン化）
+function _weeklyClothingSuggestion(maxT) {
+    if (maxT >= 28) return '半袖と通気性のいい服装で';
+    if (maxT >= 22) return '長袖1枚 or 薄手の羽織りで';
+    if (maxT >= 15) return '羽織りで温度調節を';
+    if (maxT >= 8)  return 'コートとインナーで防寒';
+    return 'しっかり厚着の重ね着スタイル';
+}
 
 // 週間コーデ画像（静的プレースホルダー）
 const WEEKLY_OUTFIT_IMGS = [
@@ -40,7 +49,7 @@ function updateWeeklyForecast(data) {
         const minT = Math.round(minTemps[i]);
         const weatherInfo = getWeatherInfo(codes[i]);
         const prob = precipProbs[i] || 0;
-        const suggestion = getClothingSuggestion(maxT);
+        const suggestion = _weeklyClothingSuggestion(maxT);
         const tip = prob >= 40
             ? `☂ 降水確率 ${prob}% — 折りたたみ傘を忘れずに`
             : `晴れ間を活かした ${suggestion} がおすすめ`;
