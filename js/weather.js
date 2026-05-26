@@ -245,34 +245,102 @@ function updateLocationDisplay(pref, city) {
     document.getElementById('location-ping').style.display = 'none';
 }
 
+const WEATHER_CACHE_KEY = 'kion_weather_cache_v1';
+const WEATHER_CACHE_MAX_AGE_MS = 30 * 60 * 1000; // 30分
+
+function _loadWeatherCache(lat, lon) {
+    try {
+        const raw = localStorage.getItem(WEATHER_CACHE_KEY);
+        if (!raw) return null;
+        const cache = JSON.parse(raw);
+        if (!cache || !cache.data) return null;
+        // 位置が一致するキャッシュのみ採用（0.01度=約1km単位で比較）
+        if (Math.abs(cache.lat - lat) > 0.01 || Math.abs(cache.lon - lon) > 0.01) return null;
+        return cache;
+    } catch (e) { return null; }
+}
+
+function _saveWeatherCache(lat, lon, data) {
+    try {
+        localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({ lat, lon, ts: Date.now(), data }));
+    } catch (e) { /* quota etc, ignore */ }
+}
+
 async function loadWeather(lat, lon, pref, city) {
     console.log(`[Weather] Loading weather for: ${pref} ${city} (${lat}, ${lon})`);
     updateLocationDisplay(pref, city);
+
+    // === キャッシュ即時表示 ===
+    const cache = _loadWeatherCache(lat, lon);
+    if (cache) {
+        const ageMin = Math.round((Date.now() - cache.ts) / 60000);
+        console.log(`[Weather] Using cached data (${ageMin}min old) for instant display`);
+        try {
+            lastWeatherData = cache.data;
+            updateCurrentWeather(cache.data);
+            updateHourlyTimeline(cache.data);
+            updateWeeklyForecast(cache.data);
+        } catch (e) { console.warn('[Weather] cache render failed:', e); }
+        // 新鮮ならネット取得をスキップ
+        if ((Date.now() - cache.ts) < WEATHER_CACHE_MAX_AGE_MS) {
+            console.log('[Weather] Cache fresh, skipping network fetch');
+            return;
+        }
+    }
+
+    // === ネット取得（裏で最新化、タイムアウト+リトライ付き） ===
+    const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+        + `&current=temperature_2m,apparent_temperature,weather_code,precipitation`
+        + `&hourly=temperature_2m,apparent_temperature,weather_code,precipitation_probability`
+        + `&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,weather_code,precipitation_probability_max`
+        + `&timezone=auto&forecast_days=8&past_days=1`;
+
+    async function _fetchWithTimeout(url, timeoutMs) {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+        try {
+            const r = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+            return r;
+        } finally { clearTimeout(tid); }
+    }
+
     try {
-        const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
-            + `&current=temperature_2m,apparent_temperature,weather_code,precipitation`
-            + `&hourly=temperature_2m,apparent_temperature,weather_code,precipitation_probability`
-            + `&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,weather_code,precipitation_probability_max`
-            + `&timezone=auto&forecast_days=8&past_days=1`;
-        const res = await fetch(apiUrl);
-        if (!res.ok) throw new Error(`Weather API error: ${res.status}`);
+        let res, lastErr;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                console.log(`[Weather] fetch attempt ${attempt}/3`);
+                res = await _fetchWithTimeout(apiUrl, 8000);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                break;
+            } catch (err) {
+                lastErr = err;
+                console.warn(`[Weather] attempt ${attempt} failed:`, err.message || err.name);
+                if (attempt < 3) await new Promise(r => setTimeout(r, 400 * attempt));
+            }
+        }
+        if (!res || !res.ok) throw lastErr || new Error('all attempts failed');
         const data = await res.json();
-        
+
         console.log('[Weather] Data fetched successfully. Updating UI...');
-        lastWeatherData = data; // キャッシュに保存
+        lastWeatherData = data;
+        _saveWeatherCache(lat, lon, data);
         updateCurrentWeather(data);
         updateHourlyTimeline(data);
         updateWeeklyForecast(data);
-        
+
         // クラウドへ自動同期
         syncWeatherToCloud(data);
     } catch(e) {
         console.error('[Weather] Failed to load weather:', e);
-        const descEl = document.getElementById('weather-desc');
-        if (descEl) descEl.textContent = '取得失敗';
-        // 不足している要素の参照エラーを防ぐ
-        const tempEl = document.getElementById('current-temp');
-        if (tempEl) tempEl.textContent = '--°C';
+        // キャッシュ表示済みなら触らない
+        if (!cache) {
+            const descEl = document.getElementById('weather-desc');
+            if (descEl) descEl.textContent = '取得失敗';
+            const tempEl = document.getElementById('current-temp');
+            if (tempEl) tempEl.textContent = '--°C';
+        } else {
+            console.log('[Weather] Network failed but cache is shown, ignoring');
+        }
     }
 }
 
@@ -738,8 +806,13 @@ var _PART_DISPLAY_ORDER = window._PART_DISPLAY_ORDER || ['outer','inner','leg','
 window._PART_DISPLAY_ORDER = _PART_DISPLAY_ORDER;
 
 function openOutfitDetail(index) {
-    const data = hourlySuggestions[index];
-    if (!data) return;
+    // hourlySuggestions が未取得でも、シートキャッシュがあればモーダルを開く
+    const data = hourlySuggestions[index] || {
+        meta: { title: '--', desc: '--', img: null },
+        weather: { emoji: '🌤️', desc: '' },
+        dateString: '',
+        apparentTemp: '--'
+    };
 
     const overlay = document.getElementById('outfit-detail-overlay');
     const modal = document.getElementById('outfit-detail-modal');

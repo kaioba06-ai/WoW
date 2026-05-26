@@ -1,5 +1,14 @@
     <section id="page-weekly" class="page-section hidden-section relative px-4 weekly-viewport">
 
+        <!-- ===== Generate Button (floating, top-right) ===== -->
+        <button id="weekly-generate-btn" onclick="generateWeeklyAll()"
+            class="absolute top-2 right-4 z-30 flex items-center gap-1.5 px-3 py-2 rounded-full
+                   bg-primary/90 dark:bg-blue-500/90 text-white text-[11px] font-black
+                   shadow-lg backdrop-blur-md hover:scale-105 active:scale-95 transition-all">
+            <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+            <span id="weekly-generate-btn-label">週間生成</span>
+        </button>
+
         <!-- ===== Top: Unified Main + Right3 panel ===== -->
         <div class="weekly-top-panel">
             <!-- Main Card (Left, large) -->
