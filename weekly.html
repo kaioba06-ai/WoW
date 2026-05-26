@@ -1,4 +1,4 @@
-    <section id="page-weekly" class="page-section hidden-section pb-32 relative px-4 pt-2">
+    <section id="page-weekly" class="page-section hidden-section relative px-4 pt-2 weekly-viewport">
 
         <!-- ===== Top: Unified Main + Right3 panel ===== -->
         <div class="weekly-top-panel">
@@ -64,8 +64,19 @@
     </section>
 
     <style>
+        /* セクション全体: スクロールせず1画面に収める。上6:下4。 */
+        /* 概算: 100vh - 上部天気バー(~70px) - ボトムナビ(~64px) - 余白(~20px) = 利用可能高さ */
+        .weekly-viewport {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: calc(100vh - 160px);
+            min-height: 480px;
+            overflow: hidden;
+        }
         /* Top panel: Main + Right3 を「ひとつの統合カード」として見せる */
         .weekly-top-panel {
+            flex: 6;
             display: grid;
             grid-template-columns: 2fr 1fr;
             gap: 8px;
@@ -75,21 +86,24 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             backdrop-filter: blur(12px);
-            min-height: 420px;
+            min-height: 0;
         }
         .dark .weekly-top-panel {
             background: rgba(255, 255, 255, 0.03);
         }
         .weekly-main-card {
+            position: relative;
+            overflow: hidden;
             border-radius: 24px;
             background: rgba(255, 255, 255, 0.1);
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-            min-height: 400px;
+            min-height: 0;
         }
         .weekly-right-column {
             display: flex;
             flex-direction: column;
             gap: 8px;
+            min-height: 0;
         }
         .weekly-slot-card {
             flex: 1;
@@ -107,15 +121,16 @@
 
         /* Bottom row: 5 day cards (画像+気温+曜日付き) */
         .weekly-bottom-row {
-            margin-top: 12px;
+            flex: 4;
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 8px;
+            min-height: 0;
         }
         .weekly-day-card {
             position: relative;
             overflow: hidden;
-            aspect-ratio: 3 / 4;
+            height: 100%;
             border-radius: 16px;
             background: rgba(255, 255, 255, 0.08);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
