@@ -102,10 +102,10 @@ function renderWeeklyRight() {
 
         // 選択中ハイライト
         if (s === _wkSelectedSlot) {
-            card.classList.add('ring-2', 'ring-primary', 'dark:ring-blue-400');
+            card.classList.add('is-active');
             card.classList.remove('opacity-60');
         } else {
-            card.classList.remove('ring-2', 'ring-primary', 'dark:ring-blue-400');
+            card.classList.remove('is-active');
             card.classList.add('opacity-60');
         }
     }
@@ -119,12 +119,25 @@ function renderWeeklyBottom() {
     for (let i = 0; i < _wkDays.length; i++) {
         if (i === _wkSelectedDay) continue;
         const day = _wkDays[i];
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'weekly-day-btn';
-        btn.textContent = `${day.day_label}曜`;
-        btn.onclick = () => selectWeeklyDay(i);
-        row.appendChild(btn);
+        // 代表スロット: 現在選択中の時間帯を維持して、その日の同じ時間帯を表示
+        const slot = day.slots[_wkSelectedSlot] || day.slots[0] || {};
+        const card = document.createElement('div');
+        card.className = 'weekly-day-card';
+        card.onclick = () => selectWeeklyDay(i);
+        const imgSrc = (slot.scene_image && slot.scene_image.startsWith('http'))
+            ? slot.scene_image
+            : 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        const tempText = (slot.feels_temp != null && slot.feels_temp !== '')
+            ? `${slot.feels_temp}°` : '--°';
+        card.innerHTML = `
+            <img src="${imgSrc}"
+                onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;"/>
+            <div class="weekly-day-overlay">
+                <span class="weekly-day-label">${day.day_label}曜</span>
+            </div>
+            <span class="weekly-day-temp">${tempText}</span>
+        `;
+        row.appendChild(card);
     }
 }
 
@@ -145,6 +158,7 @@ function selectWeeklySlot(slotIdx) {
     _wkSelectedSlot = slotIdx;
     renderWeeklyMain();
     renderWeeklyRight();
+    renderWeeklyBottom();  // 下5枚も同じ時間帯の画像に切替
 }
 
 /**

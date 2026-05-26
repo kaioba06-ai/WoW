@@ -1,17 +1,16 @@
     <section id="page-weekly" class="page-section hidden-section pb-32 relative px-4 pt-2">
 
-        <!-- ===== Weekly Layout (Main + Right 3 + Bottom 5) ===== -->
-        <div class="weekly-grid-layout">
-
+        <!-- ===== Top: Unified Main + Right3 panel ===== -->
+        <div class="weekly-top-panel">
             <!-- Main Card (Left, large) -->
-            <div id="weekly-main-card" class="weekly-main-card group relative overflow-hidden rounded-[28px] bg-white/40 dark:bg-black/20 border border-white/60 dark:border-white/10 shadow-2xl backdrop-blur-xl skeleton">
+            <div id="weekly-main-card" class="weekly-main-card group relative overflow-hidden skeleton">
                 <img id="weekly-main-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                     class="w-full h-full object-cover opacity-0"
                     onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton')"
                     onerror="this.src='https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800'; this.onerror=null;"
                     alt="Main Outfit"/>
-                <div class="absolute bottom-4 left-4 right-4 z-20">
-                    <div class="flex items-center gap-2.5 bg-white/60 dark:bg-black/55 backdrop-blur-xl px-4 py-3 rounded-2xl border border-white/60 dark:border-white/10 shadow-lg">
+                <div class="absolute bottom-3 left-3 right-3 z-20">
+                    <div class="flex items-center gap-2.5 bg-white/60 dark:bg-black/55 backdrop-blur-xl px-3 py-2.5 rounded-2xl border border-white/60 dark:border-white/10 shadow-lg">
                         <div class="flex flex-col shrink-0">
                             <span id="weekly-main-day-slot" class="text-[10px] font-black uppercase tracking-widest text-on-surface dark:text-white leading-none">--</span>
                             <div class="flex items-baseline mt-0.5">
@@ -29,60 +28,122 @@
                 </div>
             </div>
 
-            <!-- Right Column: selected day's 3 slots -->
+            <!-- Right Column: 3 slots -->
             <div class="weekly-right-column">
-                <div id="weekly-slot-0" class="weekly-slot-card cursor-pointer group relative overflow-hidden rounded-[18px] bg-white/30 dark:bg-black/20 border border-white/40 dark:border-white/10 shadow-md backdrop-blur-md transition-all">
-                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
-                    <div class="absolute inset-x-2 bottom-2 p-1.5 bg-black/40 dark:bg-black/60 backdrop-blur-md rounded-xl flex items-center justify-between">
+                <div id="weekly-slot-0" class="weekly-slot-card group relative overflow-hidden cursor-pointer transition-all">
+                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                        onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;"/>
+                    <div class="absolute inset-x-1.5 bottom-1.5 p-1.5 bg-black/55 backdrop-blur-md rounded-lg flex items-center justify-between">
                         <span class="weekly-slot-label text-[10px] font-black tracking-wider text-white/90 pl-1">--</span>
                         <span class="weekly-slot-temp text-[11px] font-black text-white pr-1">--°</span>
                     </div>
                 </div>
-                <div id="weekly-slot-1" class="weekly-slot-card cursor-pointer group relative overflow-hidden rounded-[18px] bg-white/30 dark:bg-black/20 border border-white/40 dark:border-white/10 shadow-md backdrop-blur-md transition-all">
-                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
-                    <div class="absolute inset-x-2 bottom-2 p-1.5 bg-black/40 dark:bg-black/60 backdrop-blur-md rounded-xl flex items-center justify-between">
+                <div id="weekly-slot-1" class="weekly-slot-card group relative overflow-hidden cursor-pointer transition-all">
+                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                        onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;"/>
+                    <div class="absolute inset-x-1.5 bottom-1.5 p-1.5 bg-black/55 backdrop-blur-md rounded-lg flex items-center justify-between">
                         <span class="weekly-slot-label text-[10px] font-black tracking-wider text-white/90 pl-1">--</span>
                         <span class="weekly-slot-temp text-[11px] font-black text-white pr-1">--°</span>
                     </div>
                 </div>
-                <div id="weekly-slot-2" class="weekly-slot-card cursor-pointer group relative overflow-hidden rounded-[18px] bg-white/30 dark:bg-black/20 border border-white/40 dark:border-white/10 shadow-md backdrop-blur-md transition-all">
-                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
-                    <div class="absolute inset-x-2 bottom-2 p-1.5 bg-black/40 dark:bg-black/60 backdrop-blur-md rounded-xl flex items-center justify-between">
+                <div id="weekly-slot-2" class="weekly-slot-card group relative overflow-hidden cursor-pointer transition-all">
+                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                        onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;"/>
+                    <div class="absolute inset-x-1.5 bottom-1.5 p-1.5 bg-black/55 backdrop-blur-md rounded-lg flex items-center justify-between">
                         <span class="weekly-slot-label text-[10px] font-black tracking-wider text-white/90 pl-1">--</span>
                         <span class="weekly-slot-temp text-[11px] font-black text-white pr-1">--°</span>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Bottom Row: 5 day buttons (other days, excluding selected) -->
-            <div id="weekly-bottom-row" class="weekly-bottom-row">
-                <!-- 動的生成 -->
-            </div>
+        <!-- ===== Bottom Row: 5 day cards (image + temp + day label) ===== -->
+        <div id="weekly-bottom-row" class="weekly-bottom-row">
+            <!-- 動的生成 -->
         </div>
     </section>
 
     <style>
-        .weekly-grid-layout {
+        /* Top panel: Main + Right3 を「ひとつの統合カード」として見せる */
+        .weekly-top-panel {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            grid-template-rows: minmax(380px, 1fr) 100px;
-            grid-template-areas: "main right" "bottom bottom";
-            gap: 12px;
-            height: calc(100vh - 150px);
-            min-height: 480px;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 32px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(12px);
+            min-height: 420px;
         }
-        .weekly-main-card { grid-area: main; }
-        .weekly-right-column { grid-area: right; display: flex; flex-direction: column; gap: 10px; }
-        .weekly-right-column > .weekly-slot-card { flex: 1; min-height: 0; position: relative; }
-        .weekly-bottom-row { grid-area: bottom; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-        .weekly-day-btn {
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 18px; font-size: 16px; font-weight: 800;
-            background: rgba(255,255,255,0.3); backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.4); color: inherit;
-            cursor: pointer; transition: all 0.2s;
+        .dark .weekly-top-panel {
+            background: rgba(255, 255, 255, 0.03);
         }
-        .weekly-day-btn:hover { transform: scale(1.03); background: rgba(255,255,255,0.5); }
-        .dark .weekly-day-btn { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); color: white; }
-        .weekly-slot-card.is-active { ring: 2px solid; box-shadow: 0 0 0 2px var(--md-sys-color-primary,#0060ad); }
+        .weekly-main-card {
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            min-height: 400px;
+        }
+        .weekly-right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .weekly-slot-card {
+            flex: 1;
+            min-height: 0;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .weekly-slot-card.is-active {
+            box-shadow: 0 0 0 2px #0060ad, 0 4px 12px rgba(0, 96, 173, 0.3);
+        }
+        .dark .weekly-slot-card.is-active {
+            box-shadow: 0 0 0 2px #60a5fa, 0 4px 12px rgba(96, 165, 250, 0.3);
+        }
+
+        /* Bottom row: 5 day cards (画像+気温+曜日付き) */
+        .weekly-bottom-row {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        .weekly-day-card {
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 3 / 4;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .weekly-day-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+        .weekly-day-card img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .weekly-day-card .weekly-day-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 60%);
+            display: flex; flex-direction: column; justify-content: flex-end;
+            padding: 8px;
+        }
+        .weekly-day-card .weekly-day-temp {
+            position: absolute; top: 8px; right: 8px;
+            background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+            color: white; font-weight: 900; font-size: 11px;
+            padding: 3px 7px; border-radius: 8px;
+        }
+        .weekly-day-card .weekly-day-label {
+            color: white; font-weight: 800; font-size: 13px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
     </style>
