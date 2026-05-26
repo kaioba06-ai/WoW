@@ -1,52 +1,88 @@
-    <section id="page-weekly" class="page-section hidden-section pb-32 relative">
+    <section id="page-weekly" class="page-section hidden-section pb-32 relative px-4 pt-2">
 
-        <!-- ===== Main + Sub Layout (HomeページのUIに統一) ===== -->
-        <div class="home-layout-inner">
+        <!-- ===== Weekly Layout (Main + Right 3 + Bottom 5) ===== -->
+        <div class="weekly-grid-layout">
+
             <!-- Main Card (Left, large) -->
-            <div class="home-main-card">
-                <div id="weekly-main-card" class="w-full h-full relative overflow-hidden rounded-[32px] bg-white/40 dark:bg-black/20 border border-white/60 dark:border-white/10 shadow-2xl backdrop-blur-xl transition-all duration-500 skeleton">
-                    <!-- 背景画像 -->
-                    <img id="weekly-main-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-                        class="w-full h-full object-cover opacity-0"
-                        onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton')"
-                        onerror="this.src='https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800'; this.onerror=null;"
-                        alt="Weekly Outfit"/>
-
-                    <!-- 下部の統合インフォバー -->
-                    <div class="absolute bottom-4 left-4 right-4 z-20">
-                        <div class="flex items-center gap-2.5 bg-white/60 dark:bg-black/55 backdrop-blur-xl px-4 py-3 rounded-2xl border border-white/60 dark:border-white/10 shadow-lg">
-                            <!-- 天気アイコン -->
-                            <span id="weekly-main-emoji" class="material-symbols-outlined text-xl leading-none shrink-0 text-orange-400">cloud</span>
-                            <span class="w-px h-5 bg-black/15 dark:bg-white/15 shrink-0"></span>
-                            <!-- 日付 + 気温 -->
-                            <div class="flex flex-col shrink-0">
-                                <span id="weekly-main-date" class="text-[9px] font-black uppercase tracking-widest text-on-surface dark:text-white leading-none">--</span>
-                                <div class="flex items-baseline mt-0.5">
-                                    <span id="weekly-main-temp" class="text-[16px] font-black text-primary dark:text-blue-300 leading-none">--°</span>
-                                    <span id="weekly-main-temp-min" class="text-[10px] font-bold text-on-surface-variant/60 dark:text-white/40 ml-1">/ --°</span>
-                                </div>
+            <div id="weekly-main-card" class="weekly-main-card group relative overflow-hidden rounded-[28px] bg-white/40 dark:bg-black/20 border border-white/60 dark:border-white/10 shadow-2xl backdrop-blur-xl skeleton">
+                <img id="weekly-main-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                    class="w-full h-full object-cover opacity-0"
+                    onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton')"
+                    onerror="this.src='https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800'; this.onerror=null;"
+                    alt="Main Outfit"/>
+                <div class="absolute bottom-4 left-4 right-4 z-20">
+                    <div class="flex items-center gap-2.5 bg-white/60 dark:bg-black/55 backdrop-blur-xl px-4 py-3 rounded-2xl border border-white/60 dark:border-white/10 shadow-lg">
+                        <div class="flex flex-col shrink-0">
+                            <span id="weekly-main-day-slot" class="text-[10px] font-black uppercase tracking-widest text-on-surface dark:text-white leading-none">--</span>
+                            <div class="flex items-baseline mt-0.5">
+                                <span id="weekly-main-temp" class="text-[16px] font-black text-primary dark:text-blue-300 leading-none">--°</span>
+                                <span class="text-[8px] font-bold text-on-surface-variant/60 dark:text-white/40 uppercase ml-1">feels</span>
                             </div>
-                            <span class="w-px h-5 bg-black/15 dark:bg-white/15 shrink-0"></span>
-                            <!-- 提案 -->
-                            <div class="flex-1 min-w-0">
-                                <p class="text-[7px] font-black text-primary dark:text-blue-400 uppercase tracking-[0.25em] leading-none mb-0.5">Suggestion</p>
-                                <h3 id="weekly-main-suggestion" class="font-headline font-bold text-sm text-on-surface dark:text-white leading-tight truncate">--</h3>
-                                <p id="weekly-main-tip" class="text-[8px] font-bold text-on-surface-variant dark:text-white/55 line-clamp-1 leading-snug mt-0.5">--</p>
-                            </div>
+                        </div>
+                        <span class="w-px h-5 bg-black/15 dark:bg-white/15 shrink-0"></span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[7px] font-black text-primary dark:text-blue-400 uppercase tracking-[0.25em] leading-none mb-0.5">Suggestion</p>
+                            <h3 id="weekly-main-name" class="font-headline font-bold text-sm text-on-surface dark:text-white leading-tight truncate">--</h3>
+                            <p id="weekly-main-tip" class="text-[8px] font-bold text-on-surface-variant dark:text-white/55 line-clamp-1 leading-snug mt-0.5">--</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Sub Column (Right, 6 day thumbnails) -->
-            <div id="weekly-sub-column" class="home-sub-column">
-                <!-- 動的生成（明日〜6日後）-->
-                <div class="home-sub-card skeleton" style="min-height: 80px;"></div>
-                <div class="home-sub-card skeleton" style="min-height: 80px;"></div>
-                <div class="home-sub-card skeleton" style="min-height: 80px;"></div>
-                <div class="home-sub-card skeleton" style="min-height: 80px;"></div>
-                <div class="home-sub-card skeleton" style="min-height: 80px;"></div>
-                <div class="home-sub-card skeleton" style="min-height: 80px;"></div>
+            <!-- Right Column: selected day's 3 slots -->
+            <div class="weekly-right-column">
+                <div id="weekly-slot-0" class="weekly-slot-card cursor-pointer group relative overflow-hidden rounded-[18px] bg-white/30 dark:bg-black/20 border border-white/40 dark:border-white/10 shadow-md backdrop-blur-md transition-all">
+                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
+                    <div class="absolute inset-x-2 bottom-2 p-1.5 bg-black/40 dark:bg-black/60 backdrop-blur-md rounded-xl flex items-center justify-between">
+                        <span class="weekly-slot-label text-[10px] font-black tracking-wider text-white/90 pl-1">--</span>
+                        <span class="weekly-slot-temp text-[11px] font-black text-white pr-1">--°</span>
+                    </div>
+                </div>
+                <div id="weekly-slot-1" class="weekly-slot-card cursor-pointer group relative overflow-hidden rounded-[18px] bg-white/30 dark:bg-black/20 border border-white/40 dark:border-white/10 shadow-md backdrop-blur-md transition-all">
+                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
+                    <div class="absolute inset-x-2 bottom-2 p-1.5 bg-black/40 dark:bg-black/60 backdrop-blur-md rounded-xl flex items-center justify-between">
+                        <span class="weekly-slot-label text-[10px] font-black tracking-wider text-white/90 pl-1">--</span>
+                        <span class="weekly-slot-temp text-[11px] font-black text-white pr-1">--°</span>
+                    </div>
+                </div>
+                <div id="weekly-slot-2" class="weekly-slot-card cursor-pointer group relative overflow-hidden rounded-[18px] bg-white/30 dark:bg-black/20 border border-white/40 dark:border-white/10 shadow-md backdrop-blur-md transition-all">
+                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
+                    <div class="absolute inset-x-2 bottom-2 p-1.5 bg-black/40 dark:bg-black/60 backdrop-blur-md rounded-xl flex items-center justify-between">
+                        <span class="weekly-slot-label text-[10px] font-black tracking-wider text-white/90 pl-1">--</span>
+                        <span class="weekly-slot-temp text-[11px] font-black text-white pr-1">--°</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Row: 5 day buttons (other days, excluding selected) -->
+            <div id="weekly-bottom-row" class="weekly-bottom-row">
+                <!-- 動的生成 -->
             </div>
         </div>
     </section>
+
+    <style>
+        .weekly-grid-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: minmax(380px, 1fr) 100px;
+            grid-template-areas: "main right" "bottom bottom";
+            gap: 12px;
+            height: calc(100vh - 150px);
+            min-height: 480px;
+        }
+        .weekly-main-card { grid-area: main; }
+        .weekly-right-column { grid-area: right; display: flex; flex-direction: column; gap: 10px; }
+        .weekly-right-column > .weekly-slot-card { flex: 1; min-height: 0; position: relative; }
+        .weekly-bottom-row { grid-area: bottom; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .weekly-day-btn {
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 18px; font-size: 16px; font-weight: 800;
+            background: rgba(255,255,255,0.3); backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.4); color: inherit;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .weekly-day-btn:hover { transform: scale(1.03); background: rgba(255,255,255,0.5); }
+        .dark .weekly-day-btn { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); color: white; }
+        .weekly-slot-card.is-active { ring: 2px solid; box-shadow: 0 0 0 2px var(--md-sys-color-primary,#0060ad); }
+    </style>
