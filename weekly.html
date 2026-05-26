@@ -1,4 +1,4 @@
-    <section id="page-weekly" class="page-section hidden-section relative px-4 pt-2 weekly-viewport">
+    <section id="page-weekly" class="page-section hidden-section relative px-4 weekly-viewport">
 
         <!-- ===== Top: Unified Main + Right3 panel ===== -->
         <div class="weekly-top-panel">
@@ -70,9 +70,11 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            height: calc(100vh - 160px);
+            margin-top: -8px;             /* 天気バーとの間隔を詰める */
+            height: calc(100vh - 130px);  /* 上部余白を切り詰めて利用域を広げる */
             min-height: 480px;
             overflow: hidden;
+            padding-top: 0;
         }
         /* Top panel: Main + Right3 を「ひとつの統合カード」として見せる */
         .weekly-top-panel {
