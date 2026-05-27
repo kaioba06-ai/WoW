@@ -191,51 +191,5 @@
     <div id="hashtagContainer" class="fixed inset-0 pointer-events-none z-[9910]"></div>
     <div id="giantEmoji" class="big-emoji-actor opacity-0 pointer-events-none"></div>
 
-<script src="js/FountainComponent.js"></script>
-<script src="js/community.js"></script>
-<script type="module">
-    import { CommunityView } from './js/components/CommunityView.js';
-
-    // Vueの初期化。discover.html が読み込まれた後に実行される。
-    function setupVueCommunity() {
-        if (window.communityApp) return;
-
-        const app = Vue.createApp({
-            components: {
-                CommunityView
-            },
-            data() {
-                return {
-                    currentTab: 'trending'
-                }
-            },
-            template: `
-                <KeepAlive>
-                    <component :is="'CommunityView'" :key="currentTab" :type="currentTab" />
-                </KeepAlive>
-            `
-        });
-        
-        window.communityApp = app;
-        const vm = app.mount('#community-app');
-        
-        // global function to change tab from outside vue
-        window.switchCommunityTabVue = function(tab) {
-            vm.currentTab = tab;
-            // update vanilla UI active states
-            const ACTIVE   = 'flex-1 py-3 border-b-2 border-black dark:border-white text-black dark:text-white font-black text-[10px] tracking-[0.18em] uppercase text-center transition-all';
-            const INACTIVE = 'flex-1 py-3 border-b border-black/10 dark:border-white/10 text-black/30 dark:text-white/30 font-bold text-[10px] tracking-[0.18em] uppercase text-center hover:text-black/60 dark:hover:text-white/60 transition-all';
-
-            document.getElementById('tab-btn-discover').className = tab === 'discover' ? ACTIVE : INACTIVE;
-            document.getElementById('tab-btn-trending').className = tab === 'trending' ? ACTIVE : INACTIVE;
-            document.getElementById('tab-btn-qa').className      = tab === 'qa' ? ACTIVE : INACTIVE;
-        };
-
-        initCommunity();
-    }
-    
-    // Call on original structure load
-    document.addEventListener('DOMContentLoaded', setupVueCommunity);
-    // Execute immediately in case DOMContentLoaded has already fired in SPA flow
-    setupVueCommunity();
-</script>
+<!-- 注意: ここに <script> を書いても loadSections() の innerHTML 注入では実行されない。
+     community.js / FountainComponent.js / Vue 初期化は index.html 側でロード済み。 -->

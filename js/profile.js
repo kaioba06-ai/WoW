@@ -810,6 +810,12 @@ window.addEventListener('sectionsLoaded', () => {
     renderMyPosts();
     updateSignatureCount();
     initFollowState();
+
+    const bioInput = document.getElementById('profile-edit-bio');
+    if (bioInput) bioInput.addEventListener('input', () => {
+        const c = document.getElementById('profile-bio-count');
+        if (c) c.textContent = bioInput.value.length;
+    });
 });
 
 function applyProfileDisplay(data) {
@@ -869,14 +875,7 @@ function applyProfileDisplay(data) {
     }
 }
 
-// 文字数カウント
-window.addEventListener('sectionsLoaded', () => {
-    const bioInput = document.getElementById('profile-edit-bio');
-    if(bioInput) bioInput.addEventListener('input', () => {
-        document.getElementById('profile-bio-count').textContent = bioInput.value.length;
-    });
-
-});/**
+/**
  * プロフィールのタグを削除する
  */
 function removeProfileTag(btn) {

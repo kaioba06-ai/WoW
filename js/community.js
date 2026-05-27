@@ -355,16 +355,20 @@ function getSelectedTags(formId) {
     return Array.from(document.querySelectorAll(`#${formId} .tag-btn.selected-tag`)).map(b => b.textContent);
 }
 
-// 文字数カウント（モーダルがDOM済みの場合のみ登録）
-const _qaTextEl    = document.getElementById('qa-text');
-const _trendTextEl = document.getElementById('trend-text');
-if (_qaTextEl) _qaTextEl.addEventListener('input', function() {
-    document.getElementById('qa-char').textContent = `${this.value.length} / 200`;
-    if(this.value.length > 200) this.value = this.value.slice(0, 200);
-});
-if (_trendTextEl) _trendTextEl.addEventListener('input', function() {
-    document.getElementById('trend-char').textContent = `${this.value.length} / 150`;
-    if(this.value.length > 150) this.value = this.value.slice(0, 150);
+// 文字数カウント（modals.html は loadSections で後から注入されるため sectionsLoaded 後に登録）
+window.addEventListener('sectionsLoaded', () => {
+    const qaTextEl    = document.getElementById('qa-text');
+    const trendTextEl = document.getElementById('trend-text');
+    if (qaTextEl) qaTextEl.addEventListener('input', function() {
+        const c = document.getElementById('qa-char');
+        if (c) c.textContent = `${this.value.length} / 200`;
+        if(this.value.length > 200) this.value = this.value.slice(0, 200);
+    });
+    if (trendTextEl) trendTextEl.addEventListener('input', function() {
+        const c = document.getElementById('trend-char');
+        if (c) c.textContent = `${this.value.length} / 150`;
+        if(this.value.length > 150) this.value = this.value.slice(0, 150);
+    });
 });
 
 // 写真プレビュー
@@ -2043,7 +2047,8 @@ function initCommunitySearch() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', initCommunitySearch);
+// DOMContentLoaded はセクション注入より先に発火するため sectionsLoaded を使う
+window.addEventListener('sectionsLoaded', initCommunitySearch);
 
 // ===== 初期化エントリポイント =====
 function initCommunity() {
