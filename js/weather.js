@@ -478,69 +478,7 @@ function getCustomDynamicWeather(data) {
     };
 }
 
-function updateCurrentWeather(data) {
-    const current = data.current;
-    const temp = Math.round(current.temperature_2m);
-    const apparentTemp = Math.round(current.apparent_temperature);
-    
-    // 向こう24時間の天気を解析して文字列を作る
-    const weatherInfo = getCustomDynamicWeather(data);
-
-    const maxApparent = Math.round(data.daily.apparent_temperature_max[1] || data.daily.apparent_temperature_max[0]);
-    const minApparent = Math.round(data.daily.apparent_temperature_min[1] || data.daily.apparent_temperature_min[0]);
-
-    const apparentMaxEl = document.getElementById('apparent-max-temp');
-    if (apparentMaxEl) apparentMaxEl.textContent = `${maxApparent}°`;
-    const apparentMinEl = document.getElementById('apparent-min-temp');
-    if (apparentMinEl) apparentMinEl.textContent = `${minApparent}°`;
-    const emojiEl = document.getElementById('weather-emoji');
-    if (emojiEl) emojiEl.textContent = weatherInfo.emoji;
-    
-    const descEl = document.getElementById('weather-desc');
-    if (descEl) descEl.textContent = weatherInfo.desc;
-
-    const nowHour = new Date().getHours();
-    const hourlyProb = data.hourly.precipitation_probability || [];
-    const todayIndex = data.hourly.time.findIndex(t => new Date(t).getDate() === new Date().getDate() && new Date(t).getHours() === nowHour);
-    if (todayIndex >= 0) {
-        const upcoming = hourlyProb.slice(todayIndex, todayIndex + 6);
-        const maxProb = Math.max(...upcoming);
-        if (maxProb >= 40) {
-            const umbrella = document.getElementById('umbrella-icon');
-            if (umbrella) {
-                umbrella.style.display = '';
-                umbrella.title = `降水確率 ${maxProb}%`;
-            }
-        }
-    }
-
-    const dailyMax = data.daily.temperature_2m_max;
-    if (dailyMax.length >= 2) {
-        const yesterdayMax = Math.round(dailyMax[0]);
-        const todayMax = Math.round(dailyMax[1]);
-        const diff = todayMax - yesterdayMax;
-        const badge = document.getElementById('temp-diff-badge');
-        const diffText = document.getElementById('temp-diff-text');
-
-        if (badge) {
-            if (diff > 0) {
-                badge.style.display = 'flex';
-                badge.className = 'flex items-center gap-1.5 text-[10px] font-bold bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 px-2 py-0.5 rounded border border-red-500/20 w-max';
-                const iconEl = badge.querySelector('.material-symbols-outlined');
-                if (iconEl) iconEl.textContent = 'trending_up';
-                if (diffText) diffText.textContent = `昨日より +${diff}°C`;
-            } else if (diff < 0) {
-                badge.style.display = 'flex';
-                badge.className = 'flex items-center gap-1.5 text-[10px] font-bold bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-500/20 w-max';
-                const iconEl2 = badge.querySelector('.material-symbols-outlined');
-                if (iconEl2) iconEl2.textContent = 'trending_down';
-                if (diffText) diffText.textContent = `昨日より ${diff}°C`;
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-    }
-}
+// updateCurrentWeather は DOM 描画のみのため js/headerView.js へ分離。
 
 // OUTFIT_CATALOG is now loaded from js/outfits.js
 
@@ -807,19 +745,6 @@ window._PART_DISPLAY_ORDER = _PART_DISPLAY_ORDER;
 
 // openOutfitDetail / closeOutfitDetail / openCurrentOutfitDetail は
 // 純粋な DOM 操作のため js/outfitDetail.js へ分離。
-
-// ヘルパー関数: Otherバッジの作成
-function createOtherBadgeElement(count) {
-    const div = document.createElement('div');
-    div.className = 'flex flex-col items-center gap-1.5 group cursor-pointer flex-shrink-0';
-    div.innerHTML = `
-        <div class="w-14 h-14 rounded-2xl bg-primary/10 dark:bg-blue-500/10 border border-dashed border-primary/30 dark:border-blue-500/30 flex items-center justify-center overflow-hidden hover:bg-primary/20 transition-colors">
-            <span class="text-[10px] font-black text-primary dark:text-blue-400">+${count}</span>
-        </div>
-        <span class="text-[8px] font-bold opacity-40 uppercase tracking-widest">Other</span>
-    `;
-    return div;
-}
 
 function updateHourlyTimeline(data) {
     const now = new Date();
