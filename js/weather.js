@@ -649,8 +649,7 @@ async function fetchAndApplySceneImages() {
     }
 }
 
-/**
- * フェーズ4: シート U/V/B列(outfit_name / one_point / feels_temp) を
+// applyOutfitMeta / applySceneImages は js/homeView.js へ分離。
 
 async function syncWeatherToCloud(data, opts) {
     opts = opts || {};
