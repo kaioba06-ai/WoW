@@ -52,9 +52,9 @@
     height: 100%;
 }
 
-/* LEFT: Main card — 82% width, full height */
+/* LEFT: Main card — 60% width, full height */
 .home-main-card {
-    flex: 0 0 70%;
+    flex: 0 0 60%;
     min-height: 0;
     position: relative;
     overflow: hidden;
