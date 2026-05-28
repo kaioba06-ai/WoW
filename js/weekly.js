@@ -19,6 +19,11 @@ function _wkComputeDayLabels() {
 }
 
 const SLOT_LABELS = ['朝', '昼', '夜'];
+const SLOT_HOUR_LABEL = { '朝': '7時', '昼': '13時', '夜': '21時' };
+function _wkSlotTimeLabel(day, slot) {
+    // 曜日はカード外側の枠で表示しているため時刻のみ返す
+    return SLOT_HOUR_LABEL[slot.slot_label] || slot.slot_label;
+}
 
 /**
  * APIから取得した weekly_scenes データを内部状態に格納＋描画
@@ -74,13 +79,15 @@ function renderWeeklyMain() {
         }
     }
     const labelEl = document.getElementById('weekly-main-day-slot');
-    if (labelEl) labelEl.textContent = `${day.day_label}曜${slot.slot_label}`;
+    if (labelEl) labelEl.textContent = _wkSlotTimeLabel(day, slot);
+    const dayChipEl = document.getElementById('weekly-main-day-chip');
+    if (dayChipEl) dayChipEl.textContent = day.day_label || '--';
     const tempEl = document.getElementById('weekly-main-temp');
     if (tempEl) tempEl.textContent = (slot.feels_temp != null && slot.feels_temp !== '') ? `${slot.feels_temp}°` : '--°';
     const nameEl = document.getElementById('weekly-main-name');
     if (nameEl) nameEl.textContent = slot.outfit_name || '生成待ち';
     const tipEl = document.getElementById('weekly-main-tip');
-    if (tipEl) tipEl.textContent = slot.one_point || `${day.day_label}曜${slot.slot_label}のコーデをここに表示`;
+    if (tipEl) tipEl.textContent = slot.one_point || `${_wkSlotTimeLabel(day, slot)}のコーデをここに表示`;
 }
 
 function renderWeeklyRight() {
@@ -96,7 +103,7 @@ function renderWeeklyRight() {
             img.src = slot.scene_image;
         }
         const labelEl = card.querySelector('.weekly-slot-label');
-        if (labelEl) labelEl.textContent = `${day.day_label}曜${slot.slot_label}`;
+        if (labelEl) labelEl.textContent = _wkSlotTimeLabel(day, slot);
         const tempEl = card.querySelector('.weekly-slot-temp');
         if (tempEl) tempEl.textContent = (slot.feels_temp != null && slot.feels_temp !== '') ? `${slot.feels_temp}°` : '--°';
 
@@ -316,11 +323,72 @@ async function generateWeeklyAll() {
             btn.disabled = false;
             btn.classList.remove('opacity-60', 'pointer-events-none');
         }
-        if (label) label.textContent = '週間生成';
+        if (label) label.textContent = '週間プランを生成';
     }, 3000);
 }
 
-// グローバル公開
+/**
+ * メインカードタップ → Today と同じ共有モーダル (outfit-detail-*) を開く
+ */
+function openWeeklyOutfitDetail() {
+    const day = _wkDays[_wkSelectedDay];
+    if (!day) return;
+    const slot = day.slots[_wkSelectedSlot];
+    if (!slot) return;
+
+    const overlay = document.getElementById('outfit-detail-overlay');
+    const modal = document.getElementById('outfit-detail-modal');
+    const scrollContainer = document.getElementById('outfit-detail-scroll-container');
+    if (!overlay || !modal) return;
+
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+    // Hero画像
+    const heroEl = document.getElementById('detail-hero-img');
+    const mainImg = document.getElementById('weekly-main-img');
+    const heroUrl = (slot.scene_image && slot.scene_image.startsWith('http'))
+        ? slot.scene_image
+        : (mainImg ? mainImg.src : null);
+    if (heroEl && heroUrl) {
+        heroEl.src = heroUrl;
+        heroEl.onerror = () => {
+            heroEl.src = 'https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800';
+            heroEl.onerror = null;
+        };
+    }
+
+    // タイトル / 天気行
+    set('detail-title', slot.outfit_name || '生成待ち');
+    set('detail-weather-temp', (slot.feels_temp != null && slot.feels_temp !== '') ? `${slot.feels_temp}°` : '--°');
+
+    const wInfo = (typeof getWeatherInfo === 'function' && slot.weather_code != null)
+        ? getWeatherInfo(slot.weather_code)
+        : { emoji: '🌤️', desc: slot.weather || '' };
+    set('detail-weather-emoji', wInfo.emoji || '🌤️');
+    set('detail-weather-desc', wInfo.desc || slot.weather || '');
+    set('detail-time-label', _wkSlotTimeLabel(day, slot));
+    set('detail-weather-precip', '0%');
+
+    // Stylist's Note
+    set('detail-desc', slot.one_point || '--');
+
+    // Parts セクション（weekly にはデータなしなので非表示）
+    const partsList = document.getElementById('detail-parts-list');
+    const partsSection = document.getElementById('detail-outfit-section');
+    if (partsList) partsList.innerHTML = '';
+    if (partsSection) partsSection.style.display = 'none';
+
+    // 表示アニメーション
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        modal.style.transform = 'translateX(-50%) translateY(0)';
+        if (scrollContainer) scrollContainer.scrollTop = 0;
+    });
+}
+
+window.openWeeklyOutfitDetail = openWeeklyOutfitDetail;
 window.selectWeeklyDay = selectWeeklyDay;
 window.selectWeeklySlot = selectWeeklySlot;
 window.loadWeekly = loadWeekly;

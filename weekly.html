@@ -1,23 +1,23 @@
     <section id="page-weekly" class="page-section hidden-section relative px-4 weekly-viewport">
 
-        <!-- ===== Generate Button (floating, top-right) ===== -->
-        <button id="weekly-generate-btn" onclick="generateWeeklyAll()"
-            class="absolute top-2 right-4 z-30 flex items-center gap-1.5 px-3 py-2 rounded-full
-                   bg-primary/90 dark:bg-blue-500/90 text-white text-[11px] font-black
-                   shadow-lg backdrop-blur-md hover:scale-105 active:scale-95 transition-all">
-            <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
-            <span id="weekly-generate-btn-label">週間生成</span>
-        </button>
-
         <!-- ===== Top: Unified Main + Right3 panel ===== -->
         <div class="weekly-top-panel">
             <!-- Main Card (Left, large) -->
-            <div id="weekly-main-card" class="weekly-main-card group relative overflow-hidden skeleton">
+            <div id="weekly-main-card" class="weekly-main-card group relative overflow-hidden skeleton cursor-pointer" onclick="openWeeklyOutfitDetail()">
                 <img id="weekly-main-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                     class="w-full h-full object-cover opacity-0"
                     onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton')"
                     onerror="this.src='https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800'; this.onerror=null;"
                     alt="Main Outfit"/>
+                <!-- 曜日チップ (左上) -->
+                <div class="absolute top-2 left-2 z-20">
+                    <span id="weekly-main-day-chip"
+                        class="inline-flex items-center justify-center w-9 h-9 rounded-full
+                               bg-white/70 dark:bg-black/55 backdrop-blur-md
+                               border border-white/60 dark:border-white/10 shadow-md
+                               text-[13px] font-black tracking-tight
+                               text-on-surface dark:text-white">--</span>
+                </div>
                 <div class="absolute bottom-3 left-3 right-3 z-20">
                     <div class="flex items-center gap-2.5 bg-white/60 dark:bg-black/55 backdrop-blur-xl px-3 py-2.5 rounded-2xl border border-white/60 dark:border-white/10 shadow-lg">
                         <div class="flex flex-col shrink-0">
@@ -66,10 +66,27 @@
             </div>
         </div>
 
+        <!-- ===== Generate Banner (上の3スロット帯と下5枚の間) ===== -->
+        <button id="weekly-generate-btn" onclick="generateWeeklyAll()"
+            class="weekly-generate-banner group flex items-center justify-center gap-2 w-full
+                   py-2.5 rounded-2xl
+                   bg-gradient-to-r from-primary/15 via-primary/10 to-primary/15
+                   dark:from-blue-500/15 dark:via-blue-500/10 dark:to-blue-500/15
+                   border border-primary/25 dark:border-blue-500/30
+                   text-primary dark:text-blue-300
+                   hover:from-primary/25 hover:to-primary/25
+                   dark:hover:from-blue-500/25 dark:hover:to-blue-500/25
+                   active:scale-[0.98] transition-all">
+            <span class="material-symbols-outlined text-[18px] group-hover:rotate-12 transition-transform">auto_awesome</span>
+            <span id="weekly-generate-btn-label" class="text-[12px] font-black tracking-wide">週間プランを生成</span>
+            <span class="text-[9px] font-bold opacity-50 tracking-wider">· 約3分</span>
+        </button>
+
         <!-- ===== Bottom Row: 5 day cards (image + temp + day label) ===== -->
         <div id="weekly-bottom-row" class="weekly-bottom-row">
             <!-- 動的生成 -->
         </div>
+
     </section>
 
     <style>
@@ -89,7 +106,7 @@
         .weekly-top-panel {
             flex: 6;
             display: grid;
-            grid-template-columns: 2fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
             padding: 10px;
             border-radius: 32px;
@@ -129,6 +146,7 @@
         .dark .weekly-slot-card.is-active {
             box-shadow: 0 0 0 2px #60a5fa, 0 4px 12px rgba(96, 165, 250, 0.3);
         }
+
 
         /* Bottom row: 5 day cards (画像+気温+曜日付き) */
         .weekly-bottom-row {
