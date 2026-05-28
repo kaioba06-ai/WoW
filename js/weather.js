@@ -612,112 +612,15 @@ function getBestOutfit(apparentTemp, seed, weatherCode, hour) {
     };
 }
 
-let hourlySuggestions = [];
-let currentSelectedIndex = 0;
+// 状態は var で宣言してクラシックスクリプト間で共有 (homeView.js / outfitDetail.js が参照)
+var hourlySuggestions = [];
+var currentSelectedIndex = 0;
 
-function selectSuggestion(index) {
-    currentSelectedIndex = index;
-    const data = hourlySuggestions[index];
-    if (!data) return;
+// selectSuggestion / createHeaderItemElement / updateHourlyTimeline /
+// applyOutfitMeta / applySceneImages / __setRefreshBtnBusy は
+// 全て DOM 描画のため js/homeView.js へ分離。
+// (旧 createHeaderItemElement は未使用だったため削除)
 
-    // メインカードのDOMを更新
-    const imgEl = document.getElementById('suggest-img-0');
-    const titleEl = document.getElementById('suggest-title-0');
-    const descEl = document.getElementById('suggest-desc-0');
-    const leftBadge = document.getElementById('suggest-badge-left-0');
-    const rightBadge = document.getElementById('suggest-badge-right-0');
-
-    // フェーズ4: シート由来のメタ(outfit_name/one_point/feels_temp)をキャッシュから取得
-    const sheetMeta = (function() {
-        try {
-            const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
-            const userId = profile.handle || 'unknown';
-            if (userId === 'unknown') return null;
-            const cached = JSON.parse(localStorage.getItem('kion_scene_images_' + userId) || 'null');
-            if (!cached) return null;
-            return {
-                sceneUrl:    Array.isArray(cached.scenes)       ? cached.scenes[index]       : null,
-                outfitName:  Array.isArray(cached.outfit_names) ? cached.outfit_names[index] : null,
-                onePoint:    Array.isArray(cached.one_points)   ? cached.one_points[index]   : null,
-                feelsTemp:   Array.isArray(cached.feels_temps)  ? cached.feels_temps[index]  : null
-            };
-        } catch (_) { return null; }
-    })();
-
-    const aiUrl = sheetMeta && sheetMeta.sceneUrl && typeof sheetMeta.sceneUrl === 'string' && sheetMeta.sceneUrl.startsWith('http')
-        ? sheetMeta.sceneUrl : null;
-
-    if (imgEl) {
-        imgEl.src = aiUrl || data.meta.img;
-        imgEl.onerror = () => {
-            imgEl.src = "https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800";
-            imgEl.onerror = null;
-        };
-    }
-    // タイトル: シート U列 (outfit_name) を優先、無ければ静的カタログのtitle
-    if (titleEl) titleEl.textContent = (sheetMeta && sheetMeta.outfitName) || data.meta.title;
-    // 説明: シート V列 (one_point) を優先、無ければ静的カタログのdesc
-    if (descEl)  descEl.textContent  = (sheetMeta && sheetMeta.onePoint)   || data.meta.desc;
-
-    // 統合インフォバーを更新
-    const emojiEl    = document.getElementById('suggest-weather-emoji');
-    const timeEl     = document.getElementById('suggest-time-label');
-    const apparentEl = document.getElementById('suggest-apparent-temp');
-
-    if (emojiEl)    emojiEl.textContent    = data.weather.emoji;
-    if (timeEl)     timeEl.textContent     = data.dateString;
-    // 気温: シート B列 (feels_temp) を優先、無ければ気象API由来
-    if (apparentEl) {
-        const t = (sheetMeta && sheetMeta.feelsTemp !== null && sheetMeta.feelsTemp !== undefined && sheetMeta.feelsTemp !== '')
-            ? sheetMeta.feelsTemp : data.apparentTemp;
-        apparentEl.textContent = `${t}°`;
-    }    // 夜間・昼間に応じてメインカードと画面全体の背景を切り替え
-    // 背景の動的な色変更を削除（ニュートラルなUIを維持するため）
-    const mainCard = document.getElementById('grid-card-main');
-    if (mainCard) {
-        if (data.meta.isNight) {
-            mainCard.classList.add('night-mode-card');
-        } else {
-            mainCard.classList.remove('night-mode-card');
-        }
-    }
-
-    // 下段カードのハイライト状態を更新
-    for (let i = 0; i < 4; i++) {
-        const card = document.getElementById(`grid-card-${i}`);
-        if (card) {
-            if (i === index) {
-                card.classList.add('ring-2', 'ring-primary', 'dark:ring-blue-400', 'bg-white/50', 'dark:bg-black/40');
-                card.classList.remove('opacity-60');
-            } else {
-                card.classList.remove('ring-2', 'ring-primary', 'dark:ring-blue-400', 'bg-white/50', 'dark:bg-black/40');
-                card.classList.add('opacity-60');
-            }
-        }
-    }
-    
-    // メインカード自体のハイライト設定 (NOWの時は枠線を出す)
-    if (mainCard) {
-        if (index === 0) {
-            mainCard.classList.add('ring-2', 'ring-primary', 'dark:ring-blue-400');
-        } else {
-            mainCard.classList.remove('ring-2', 'ring-primary', 'dark:ring-blue-400');
-        }
-    }
-}
-
-// ヘルパー関数: アイテム要素の作成
-function createHeaderItemElement(item) {
-    const div = document.createElement('div');
-    div.className = 'flex flex-col items-center gap-1.5 group cursor-pointer flex-shrink-0';
-    div.innerHTML = `
-        <div class="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 shadow-md border border-white/20 dark:border-white/10 overflow-hidden group-hover:scale-105 transition-transform">
-             <img src="${item.img}" class="w-full h-full object-cover" />
-        </div>
-        <span class="text-[8px] font-bold opacity-40 uppercase tracking-widest">${item.label}</span>
-    `;
-    return div;
-}
 
 // ハブリッド・ボトムシート（詳細表示）の制御
 // 部位英語キー→日本語ラベル＋絵文字（詳細ビュー表示用）
@@ -746,119 +649,6 @@ window._PART_DISPLAY_ORDER = _PART_DISPLAY_ORDER;
 // openOutfitDetail / closeOutfitDetail / openCurrentOutfitDetail は
 // 純粋な DOM 操作のため js/outfitDetail.js へ分離。
 
-function updateHourlyTimeline(data) {
-    const now = new Date();
-    const nowHour = now.getHours();
-    const times = data.hourly.time;
-    const temps = data.hourly.temperature_2m;
-    const apparentTemps = data.hourly.apparent_temperature || [];
-    const codes = data.hourly.weather_code;
-
-    const startIndex = times.findIndex(t => {
-        const d = new Date(t);
-        // 日付の一致をより確実に判定（年・月・日）
-        const isSameDay = d.getFullYear() === now.getFullYear() &&
-                          d.getMonth() === now.getMonth() &&
-                          d.getDate() === now.getDate();
-        return isSameDay && d.getHours() >= nowHour;
-    });
-    if (startIndex < 0) {
-        console.warn(`[Weather] Could not find forecast for ${now.toLocaleDateString()} ${nowHour}:00. Fallback to index 0.`);
-    }
-    const safeStartIndex = startIndex < 0 ? 0 : startIndex;
-
-    // targetOffsets = [0, 3, 4, 12] に基づいて下段カードを更新
-    const targetOffsets = [0, 3, 4, 12];
-    hourlySuggestions = []; 
-
-    targetOffsets.forEach((offset, i) => {
-        const idx = safeStartIndex + offset;
-        if (idx >= times.length) return;
-
-        const temp = Math.round(temps[idx]);
-        const apparentTemp = Math.round(apparentTemps[idx] || temp);
-        const weatherInfo = getWeatherInfo(codes[idx]);
-        const d = new Date(times[idx]);
-        const month = d.getMonth() + 1;
-        const dDate = d.getDate();
-        const hour = d.getHours();
-        const hh = String(hour).padStart(2, '0');
-        
-        const isNowLocal = offset === 0;
-        const dateString = isNowLocal ? 'NOW' : `${hh}:00`;
-        const contextLabel = isNowLocal ? 'NOW' : `${hh}:00`;
-
-        // 気温と天候と時間帯に基づいた最適なコーディネートを取得
-        const bestOutfit = getBestOutfit(apparentTemp, i, codes[idx], hour);
-
-        hourlySuggestions.push({
-            temp,
-            apparentTemp,
-            weather: weatherInfo,
-            dateString,
-            contextLabel,
-            hour,
-            meta: bestOutfit
-        });
-
-        const leftEl = document.getElementById(`grid-badge-left-${i}`);
-        const rightEl = document.getElementById(`grid-badge-right-${i}`);
-        const iconEl = document.getElementById(`grid-badge-icon-${i}`);
-        const imgEl = document.getElementById(`grid-img-${i}`);
-        
-        if (imgEl) {
-            // フェーズ4修正: キャッシュにAIシーン画像があれば優先、なければ静的カタログ
-            let imgSrc = bestOutfit.img;
-            try {
-                const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
-                const userId = profile.handle || 'unknown';
-                if (userId !== 'unknown') {
-                    const cached = JSON.parse(localStorage.getItem('kion_scene_images_' + userId) || 'null');
-                    const aiUrl = cached && Array.isArray(cached.scenes) ? cached.scenes[i] : null;
-                    if (aiUrl && typeof aiUrl === 'string' && aiUrl.startsWith('http')) {
-                        imgSrc = aiUrl;
-                    }
-                }
-            } catch (_) { /* fall through to static */ }
-            imgEl.src = imgSrc;
-            imgEl.onerror = () => {
-                imgEl.src = "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&q=80&w=400";
-                imgEl.onerror = null;
-            };
-            imgEl.classList.remove('opacity-0');
-            if (imgEl.parentElement) imgEl.parentElement.classList.remove('skeleton');
-        }
-        
-        if (leftEl && rightEl) {
-            const badgeOverlay = leftEl.parentElement;
-            if (badgeOverlay) {
-                badgeOverlay.classList.remove('hidden');
-            }
-            leftEl.classList.remove('hidden');
-            rightEl.classList.remove('hidden');
-            if (iconEl) iconEl.classList.remove('hidden');
-
-            // 時間ラベルを表示
-            const timeSpan = leftEl.querySelector('span');
-            if (timeSpan) timeSpan.textContent = dateString;
-
-            // 気温バッジを更新
-            const tempSpan = rightEl.querySelector('span');
-            if (tempSpan) tempSpan.textContent = `${apparentTemp}°`;
-
-            // 天気絵文字を更新
-            if (iconEl) iconEl.textContent = weatherInfo.emoji;
-
-            // オーバーレイを表示
-            const gridOverlay = document.getElementById(`grid-overlay-${i}`);
-            if (gridOverlay) gridOverlay.classList.remove('opacity-0');
-        }
-    });
-
-    if (hourlySuggestions.length > 0) {
-        selectSuggestion(0);
-    }
-}
 
 // updateWeeklyForecast / expandFlexCard / refreshWeeklyData は
 // 新レイアウト(Home スタイル Main+Sub)対応のため js/weekly.js に移管済み。
@@ -1010,69 +800,6 @@ async function fetchAndApplySceneImages() {
 
 /**
  * フェーズ4: シート U/V/B列(outfit_name / one_point / feels_temp) を
- * ルックバナーへ反映
- *   data = { outfit_names, one_points, feels_temps }
- */
-function applyOutfitMeta(data) {
-    if (!data) return;
-    const names = Array.isArray(data.outfit_names) ? data.outfit_names : [];
-    const points = Array.isArray(data.one_points) ? data.one_points : [];
-    const temps = Array.isArray(data.feels_temps) ? data.feels_temps : [];
-
-    // hourlySuggestions が初期化済みなら meta を上書き
-    if (Array.isArray(hourlySuggestions)) {
-        for (let i = 0; i < Math.min(4, hourlySuggestions.length); i++) {
-            const s = hourlySuggestions[i];
-            if (!s || !s.meta) continue;
-            if (names[i])  s.meta.title = names[i];
-            if (points[i]) s.meta.desc  = points[i];
-            if (temps[i] !== null && temps[i] !== undefined && temps[i] !== '') {
-                s.apparentTemp = temps[i];
-            }
-        }
-    }
-
-    // 現在選択中スロットの表示を即更新
-    const idx = (typeof currentSelectedIndex === 'number') ? currentSelectedIndex : 0;
-    if (names[idx]) {
-        const el = document.getElementById('suggest-title-0');
-        if (el) el.textContent = names[idx];
-    }
-    if (points[idx]) {
-        const el = document.getElementById('suggest-desc-0');
-        if (el) el.textContent = points[idx];
-    }
-    if (temps[idx] !== null && temps[idx] !== undefined && temps[idx] !== '') {
-        const el = document.getElementById('suggest-apparent-temp');
-        if (el) el.textContent = `${temps[idx]}°`;
-    }
-}
-
-function applySceneImages(scenes) {
-    if (!Array.isArray(scenes)) return;
-    const setImg = (el, url) => {
-        if (!el) return;
-        el.onerror = () => {
-            console.warn('[Weather] AI scene image load failed:', url);
-            el.onerror = null;
-            // フォールバックは既存onerror or 何もしない（既存表示維持）
-        };
-        el.src = url;
-        el.classList.remove('opacity-0');
-        if (el.parentElement) el.parentElement.classList.remove('skeleton');
-    };
-    for (let i = 0; i < 4; i++) {
-        const url = scenes[i];
-        if (!url || typeof url !== 'string' || !url.startsWith('http')) continue;
-        setImg(document.getElementById(`grid-img-${i}`), url);
-    }
-    // メイン画像は現在選択中のスロットを反映
-    const idx = (typeof currentSelectedIndex === 'number') ? currentSelectedIndex : 0;
-    const mainUrl = scenes[idx];
-    if (mainUrl && typeof mainUrl === 'string' && mainUrl.startsWith('http')) {
-        setImg(document.getElementById('suggest-img-0'), mainUrl);
-    }
-}
 
 async function syncWeatherToCloud(data, opts) {
     opts = opts || {};
@@ -1117,29 +844,6 @@ async function syncWeatherToCloud(data, opts) {
         if (regenerateOutfits) {
             startSceneImagePolling();
         }
-    }
-}
-
-/**
- * 手動コーデ再生成（「コーデ更新」ボタンから呼ばれる）
- * - 強制的にGASに regenerate_outfits=true を送信
- * - クールダウン無視
- * - 完了までポーリング
- */
-function __setRefreshBtnBusy(busy) {
-    const btn = document.getElementById('refresh-outfits-btn');
-    if (!btn) return;
-    if (busy) {
-        btn.dataset.busy = 'true';
-        btn.classList.add('opacity-50', 'pointer-events-none');
-        // アイコンをくるくる回す
-        const icon = btn.querySelector('.material-symbols-outlined');
-        if (icon) icon.classList.add('animate-spin');
-    } else {
-        btn.dataset.busy = 'false';
-        btn.classList.remove('opacity-50', 'pointer-events-none');
-        const icon = btn.querySelector('.material-symbols-outlined');
-        if (icon) icon.classList.remove('animate-spin');
     }
 }
 
