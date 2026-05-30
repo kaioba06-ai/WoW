@@ -222,6 +222,58 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (params.action === 'weekly_scenes') {
+      var wsUserId = params.user_id;
+      if (!wsUserId) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'user_id required' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var wsResult = getWeeklyScenes(wsUserId);
+      return ContentService.createTextOutput(JSON.stringify(wsResult))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Weekly テスト用: 単日のみ (day_index 指定)
+    if (params.action === 'test_weekly_day') {
+      var twdUserId = params.user_id || 'alessandro_riva';
+      var twdIdx = (params.day_index || 0) | 0;
+      var twdLabels = ['月','火','水','木','金','土'];
+      var twdDay = {
+        day_label: twdLabels[twdIdx % twdLabels.length],
+        date: '2026-05-' + (25 + twdIdx),
+        slots: [
+          { slot_label:'朝', time:'07:00', temp: 14 + twdIdx, lv: 5, weather:'晴れ' },
+          { slot_label:'昼', time:'13:00', temp: 22 + twdIdx, lv: 6, weather:'晴れ' },
+          { slot_label:'夜', time:'21:00', temp: 16 + twdIdx, lv: 5, weather:'晴れ' }
+        ]
+      };
+      var twdResult = syncWeeklyDay({ user_id: twdUserId, day_index: twdIdx, day: twdDay });
+      return ContentService.createTextOutput(JSON.stringify({ success: true, result: twdResult }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Weekly テスト用: ダミー予報で全パイプライン実行
+    if (params.action === 'test_weekly') {
+      var twUserId = params.user_id || 'alessandro_riva';
+      // 6日分のダミー予報 (朝7/昼13/夜21)
+      var dayLabels = ['月','火','水','木','金','土'];
+      var dummyDays = [];
+      for (var dd = 0; dd < 6; dd++) {
+        dummyDays.push({
+          day_label: dayLabels[dd],
+          date: '2026-05-' + (25 + dd),
+          slots: [
+            { slot_label:'朝', time:'07:00', temp: 14 + dd, lv: 5, weather:'晴れ' },
+            { slot_label:'昼', time:'13:00', temp: 22 + dd, lv: 6, weather:'晴れ' },
+            { slot_label:'夜', time:'21:00', temp: 16 + dd, lv: 5, weather:'晴れ' }
+          ]
+        });
+      }
+      var twResult = syncWeeklyData({ user_id: twUserId, days: dummyDays });
+      return ContentService.createTextOutput(JSON.stringify({ success: true, result: twResult }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // フェーズ5 品質評価用: プロフィール上書き＋カスタム予報で全パイプライン実行
     // 用途: alessandro_riva をテストアカウントとして使い、様々な属性・条件を試す
     if (params.action === 'test_pipeline') {
@@ -598,6 +650,10 @@ function doPost(e) {
       result = analyzeFacePhoto(params.data);
     } else if (params.type === 'weather' || params.type === 'weather_v2') {
       result = syncWeatherData(params.data);
+    } else if (params.type === 'weekly') {
+      result = syncWeeklyData(params.data);
+    } else if (params.type === 'weekly_day') {
+      result = syncWeeklyDay(params.data);
     } else {
       result = syncProfileData(params.data);
     }
@@ -1146,6 +1202,330 @@ function syncWeatherData(data) {
   }
 }
 
+// ============================================================
+// Weekly Plan: 明日から6日 × 3時間帯(朝7/昼13/夜21) のコーデ生成
+// シート行19-37 に格納 (Today=行8-17 とは分離)
+// ============================================================
+var WEEKLY_HEADER_ROW = 19;
+var WEEKLY_DATA_START_ROW = 20;
+var WEEKLY_DAY_COUNT = 6;
+var WEEKLY_SLOTS_PER_DAY = 3;
+
+/**
+ * Weekly 1日分のみ更新 (6分タイムアウト対策のため日単位に分割)
+ * @param {Object} data
+ *   data.user_id
+ *   data.day_index: 0〜5 (どの日か)
+ *   data.day: { day_label, date, slots: [...3] }
+ */
+function syncWeeklyDay(data) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) {
+    return { success: false, error: 'Another weekly sync in progress' };
+  }
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = data.user_id || 'UnknownUser';
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return { success: false, error: 'sheet not found' };
+    var dayIdx = data.day_index | 0;
+    var day = data.day;
+    if (!day || !day.slots || day.slots.length < WEEKLY_SLOTS_PER_DAY) {
+      return { success: false, error: 'invalid day data' };
+    }
+
+    // 行19ヘッダーは初回のみ書き込み（既に正しい値なら冪等）
+    var a19 = sheet.getRange(WEEKLY_HEADER_ROW, 1).getValue();
+    if (a19 !== 'day_label') {
+      var header = [
+        'day_label','slot_label','time','feels_temp','lv','weather',
+        'head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory',
+        'outfit_name','one_point','location','pose','scene_image'
+      ];
+      sheet.getRange(WEEKLY_HEADER_ROW, 1, 1, header.length).setValues([header]);
+      sheet.getRange(WEEKLY_HEADER_ROW, 1, 1, header.length)
+           .setFontWeight('bold').setBackground('#e6f0ff').setHorizontalAlignment('center');
+    }
+
+    // プロフィール + ベースアバター取得
+    var profileRow = sheet.getRange(2, 1, 1, 26).getValues()[0];
+    var profile = {
+      gender: profileRow[1], age: profileRow[2],
+      body_type: profileRow[5], skeletal_type: profileRow[6]
+    };
+    var baseFormulaCell = sheet.getRange(5, 2);
+    var baseFormula = baseFormulaCell.getFormula();
+    var baseUrl = '';
+    if (baseFormula) {
+      var bm = baseFormula.match(/=IMAGE\("([^"]+)"\)/i);
+      if (bm) baseUrl = bm[1];
+    }
+    if (!baseUrl) {
+      var rawVal = baseFormulaCell.getValue();
+      if (typeof rawVal === 'string' && rawVal.indexOf('http') === 0) baseUrl = rawVal;
+    }
+    var baseBlob = null;
+    if (baseUrl && baseUrl.indexOf('http') === 0) {
+      try { baseBlob = fetchDriveImageAsBlob(baseUrl); } catch (_) {}
+    }
+
+    var partKeys = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
+    var apiSlots = day.slots.map(function(s){
+      return { time:s.time, temp:s.temp, weather:s.weather, lv:s.lv };
+    });
+
+    var outfits = generateOutfitsForForecast(apiSlots, profile);
+    var scenes;
+    try { scenes = generateScenesForOutfits(outfits, apiSlots, profile); }
+    catch (_) { scenes = apiSlots.map(function(){ return {location:'', pose:''}; }); }
+
+    var startRow = WEEKLY_DATA_START_ROW + dayIdx * WEEKLY_SLOTS_PER_DAY;
+    for (var s = 0; s < WEEKLY_SLOTS_PER_DAY; s++) {
+      var row = startRow + s;
+      var slot = day.slots[s];
+      var outfit = outfits[s] || {};
+      var scene = scenes[s] || { location:'', pose:'' };
+      sheet.getRange(row, 1, 1, 6).setValues([[
+        day.day_label || '', slot.slot_label || '', slot.time || '',
+        slot.temp != null ? slot.temp : '',
+        slot.lv != null ? slot.lv : '',
+        slot.weather || ''
+      ]]);
+      sheet.getRange(row, 7, 1, 14).setValues([partKeys.map(function(k){ return outfit[k] || ''; })]);
+      sheet.getRange(row, 21).setValue(outfit.outfit_name || '');
+      sheet.getRange(row, 22).setValue(outfit.one_point || '');
+      sheet.getRange(row, 23).setValue(scene.location || '');
+      sheet.getRange(row, 24).setValue(scene.pose || '');
+
+      var prevSceneCell = sheet.getRange(row, 25);
+      var prevSceneFormula = prevSceneCell.getFormula();
+      var prevSceneId = extractIdFromCell_(prevSceneCell);
+      if (!baseBlob) { prevSceneCell.setValue('ベースアバターなし'); continue; }
+      prevSceneCell.setValue('生成中...');
+      SpreadsheetApp.flush();
+      try {
+        var sceneUrl = generateSceneImage(baseBlob, scene, profile, slot, sheetName, dayIdx * WEEKLY_SLOTS_PER_DAY + s + 100, outfit);
+        prevSceneCell.setFormula('=IMAGE("' + sceneUrl + '")');
+        if (prevSceneId) archiveImageById_(prevSceneId);
+      } catch (ie) {
+        if (prevSceneFormula && prevSceneFormula.indexOf('=IMAGE(') === 0) {
+          prevSceneCell.setFormula(prevSceneFormula);
+        } else {
+          prevSceneCell.setValue((ie.toString().indexOf('SAFETY') !== -1) ? 'セーフティ' : '画像失敗');
+        }
+        logDebug('Weekly day scene FAILED', day.day_label + ' slot' + s + ': ' + ie.toString());
+      }
+    }
+
+    sheet.setColumnWidth(25, 200);
+    for (var rh = startRow; rh < startRow + WEEKLY_SLOTS_PER_DAY; rh++) sheet.setRowHeight(rh, 200);
+
+    return { success: true, day_index: dayIdx, day_label: day.day_label };
+  } catch (e) {
+    logDebug('syncWeeklyDay ERROR', e.toString());
+    return { success: false, error: e.toString() };
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+/**
+ * Weekly 全更新（内部実装: syncWeeklyDay を6回呼ぶ）
+ * ※ Apps Script の6分タイムアウトを超えるため、本番はフロントから syncWeeklyDay を6回個別呼出推奨
+ */
+function syncWeeklyData(data) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) {
+    return { success: false, error: 'Another weekly sync in progress' };
+  }
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = data.user_id || 'UnknownUser';
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return { success: false, error: 'sheet not found' };
+
+    // 行19: ヘッダー書き込み
+    var header = [
+      'day_label','slot_label','time','feels_temp','lv','weather',
+      'head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory',
+      'outfit_name','one_point','location','pose','scene_image'
+    ];
+    sheet.getRange(WEEKLY_HEADER_ROW, 1, 1, header.length).setValues([header]);
+    sheet.getRange(WEEKLY_HEADER_ROW, 1, 1, header.length)
+         .setFontWeight('bold').setBackground('#e6f0ff').setHorizontalAlignment('center');
+
+    // プロフィール読み込み
+    var profileRow = sheet.getRange(2, 1, 1, 26).getValues()[0];
+    var profile = {
+      gender: profileRow[1], age: profileRow[2],
+      body_type: profileRow[5], skeletal_type: profileRow[6]
+    };
+
+    // ベースアバター取得
+    var baseFormulaCell = sheet.getRange(5, 2);
+    var baseFormula = baseFormulaCell.getFormula();
+    var baseUrl = '';
+    if (baseFormula) {
+      var bm = baseFormula.match(/=IMAGE\("([^"]+)"\)/i);
+      if (bm) baseUrl = bm[1];
+    }
+    if (!baseUrl) {
+      var rawVal = baseFormulaCell.getValue();
+      if (typeof rawVal === 'string' && rawVal.indexOf('http') === 0) baseUrl = rawVal;
+    }
+    var baseBlob = null;
+    if (baseUrl && baseUrl.indexOf('http') === 0) {
+      try { baseBlob = fetchDriveImageAsBlob(baseUrl); }
+      catch (be) { logDebug('Weekly: base avatar fetch FAILED', be.toString()); }
+    }
+
+    var partKeys = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
+
+    var days = data.days || [];
+    for (var d = 0; d < Math.min(days.length, WEEKLY_DAY_COUNT); d++) {
+      var day = days[d];
+      var slots = day.slots || [];
+      if (slots.length < WEEKLY_SLOTS_PER_DAY) {
+        logDebug('Weekly: day skipped (insufficient slots)', day.day_label);
+        continue;
+      }
+      // generateOutfitsForForecast 用のスロット形式に整形
+      var apiSlots = slots.map(function(s) {
+        return { time: s.time, temp: s.temp, weather: s.weather, lv: s.lv };
+      });
+
+      // 1) コーデJSON一括生成 (3案)
+      var outfits;
+      try {
+        outfits = generateOutfitsForForecast(apiSlots, profile);
+        logDebug('Weekly outfits ok', day.day_label + ' - ' + (outfits[0] && outfits[0].outfit_name));
+      } catch (oe) {
+        logDebug('Weekly outfit gen FAILED', day.day_label + ': ' + oe.toString());
+        continue;
+      }
+
+      // 2) ロケ・ポーズ一括生成 (3案)
+      var scenes;
+      try {
+        scenes = generateScenesForOutfits(outfits, apiSlots, profile);
+      } catch (se) {
+        logDebug('Weekly scenes gen FAILED', day.day_label + ': ' + se.toString());
+        scenes = apiSlots.map(function(){ return {location:'', pose:''}; });
+      }
+
+      // 3) 行ごとに書き込み + シーン画像生成
+      var startRow = WEEKLY_DATA_START_ROW + d * WEEKLY_SLOTS_PER_DAY;
+      for (var s = 0; s < WEEKLY_SLOTS_PER_DAY; s++) {
+        var row = startRow + s;
+        var slot = slots[s];
+        var outfit = outfits[s] || {};
+        var scene = scenes[s] || { location:'', pose:'' };
+
+        // A-F: メタ
+        sheet.getRange(row, 1, 1, 6).setValues([[
+          day.day_label || '', slot.slot_label || '', slot.time || '',
+          slot.temp != null ? slot.temp : '',
+          slot.lv != null ? slot.lv : '',
+          slot.weather || ''
+        ]]);
+        // G-T: 14部位
+        var partsRow = partKeys.map(function(k){ return outfit[k] || ''; });
+        sheet.getRange(row, 7, 1, 14).setValues([partsRow]);
+        // U-V: 名前+ワンポイント
+        sheet.getRange(row, 21).setValue(outfit.outfit_name || '');
+        sheet.getRange(row, 22).setValue(outfit.one_point || '');
+        // W-X: location/pose
+        sheet.getRange(row, 23).setValue(scene.location || '');
+        sheet.getRange(row, 24).setValue(scene.pose || '');
+
+        // Y: シーン画像 (失敗時は前画像残置・C案)
+        var prevSceneCell = sheet.getRange(row, 25);
+        var prevSceneFormula = prevSceneCell.getFormula();
+        var prevSceneId = extractIdFromCell_(prevSceneCell);
+        if (!baseBlob) {
+          prevSceneCell.setValue('ベースアバターなし');
+          continue;
+        }
+        prevSceneCell.setValue('シーン画像生成中...');
+        SpreadsheetApp.flush();
+        try {
+          var sceneUrl = generateSceneImage(baseBlob, scene, profile, slot, sheetName, d * WEEKLY_SLOTS_PER_DAY + s + 100, outfit);
+          prevSceneCell.setFormula('=IMAGE("' + sceneUrl + '")');
+          if (prevSceneId) archiveImageById_(prevSceneId);
+        } catch (ie) {
+          if (prevSceneFormula && prevSceneFormula.indexOf('=IMAGE(') === 0) {
+            prevSceneCell.setFormula(prevSceneFormula);
+          } else {
+            prevSceneCell.setValue((ie.toString().indexOf('SAFETY') !== -1) ? 'セーフティでブロック' : 'シーン画像失敗');
+          }
+          logDebug('Weekly scene image FAILED', day.day_label + ' ' + slot.slot_label + ': ' + ie.toString());
+        }
+      }
+    }
+
+    // 行高・列幅の調整
+    sheet.setColumnWidth(25, 200);
+    for (var rh = WEEKLY_DATA_START_ROW; rh < WEEKLY_DATA_START_ROW + WEEKLY_DAY_COUNT * WEEKLY_SLOTS_PER_DAY; rh++) {
+      sheet.setRowHeight(rh, 200);
+    }
+
+    return { success: true };
+  } catch (e) {
+    logDebug('syncWeeklyData ERROR', e.toString());
+    return { success: false, error: e.toString() };
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+/**
+ * Weekly データ取得 (フロント表示用)
+ * 行20-37 から day_label/slot_label/scene_image_url 等を返す
+ */
+function getWeeklyScenes(userId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(userId);
+  if (!sheet) return { success: false, error: 'sheet not found' };
+  var rows = sheet.getRange(WEEKLY_DATA_START_ROW, 1, WEEKLY_DAY_COUNT * WEEKLY_SLOTS_PER_DAY, 25).getValues();
+  var partKeys = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
+  // Y列のフォーミュラから URL を抽出
+  var days = [];
+  for (var d = 0; d < WEEKLY_DAY_COUNT; d++) {
+    var slots = [];
+    for (var s = 0; s < WEEKLY_SLOTS_PER_DAY; s++) {
+      var rowIdx = d * WEEKLY_SLOTS_PER_DAY + s;
+      var r = rows[rowIdx];
+      // Y列のformula
+      var formulaCell = sheet.getRange(WEEKLY_DATA_START_ROW + rowIdx, 25);
+      var formula = formulaCell.getFormula();
+      var m = formula.match(/=IMAGE\("([^"]+)"\)/);
+      var imgUrl = null;
+      if (m) {
+        var idM = m[1].match(/[?&]id=([a-zA-Z0-9_-]+)/) || m[1].match(/\/d\/([a-zA-Z0-9_-]+)/);
+        imgUrl = idM ? ('https://drive.google.com/thumbnail?id=' + idM[1] + '&sz=w2000') : m[1];
+      }
+      var parts = {};
+      for (var pi = 0; pi < partKeys.length; pi++) {
+        var v = r[6 + pi];
+        if (v != null && String(v).trim() !== '' && v !== '-') parts[partKeys[pi]] = v;
+      }
+      slots.push({
+        day_label: r[0], slot_label: r[1], time: r[2],
+        feels_temp: r[3], lv: r[4], weather: r[5],
+        parts: parts,
+        outfit_name: r[20], one_point: r[21],
+        location: r[22], pose: r[23],
+        scene_image: imgUrl
+      });
+    }
+    days.push({
+      day_label: slots[0] ? slots[0].day_label : '',
+      slots: slots
+    });
+  }
+  return { success: true, days: days };
+}
+
 /**
  * 初期設定用：実行するとAPIキーを自動的にスクリプトプロパティに保存します
  * GASエディタ上でこの関数を選択して「実行」してください
@@ -1533,6 +1913,33 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
     '時間帯1→outfits[0], 時間帯2→outfits[1], 時間帯3→outfits[2], 時間帯4→outfits[3]。'
   ].join('\n');
 
+  // ★ 可変スロット対応: プロンプト内の固定数値 (4案/全6ペア等) を slots.length に合わせて置換
+  //   Today=4スロット時はそのまま、Weekly=3スロット時は3案/全3ペアに自動変換
+  (function rewriteSlotNumbers() {
+    var N = slots.length;
+    if (N === 4) return;  // デフォルトのままで OK
+    var pairCount = N * (N - 1) / 2;
+    // ペア列挙文字列を生成 (例 N=3: "ペア(1,2) ペア(1,3) ペア(2,3)")
+    var pairListSp = [], pairListDash = [];
+    for (var a = 1; a <= N; a++) {
+      for (var b = a + 1; b <= N; b++) {
+        pairListSp.push('ペア(' + a + ',' + b + ')');
+        pairListDash.push(a + '-' + b);
+      }
+    }
+    var outfitsRefs = [];
+    for (var i = 0; i < N; i++) outfitsRefs.push('時間帯' + (i+1) + '→outfits[' + i + ']');
+    promptText = promptText
+      .replace(/4案/g,   N + '案')
+      .replace(/4スロット/g, N + 'スロット')
+      // 具体パターン (長い方) を先に置換。先に汎用 /全6ペア/ を潰すと、
+      // 後段の "全6ペア(1-2, …)" がマッチせず古い表記が残るため順序が重要。
+      .replace(/全6ペア\(1-2, 1-3, 1-4, 2-3, 2-4, 3-4\)/g, '全' + pairCount + 'ペア(' + pairListDash.join(', ') + ')')
+      .replace(/ペア\(1,2\) ペア\(1,3\) ペア\(1,4\) ペア\(2,3\) ペア\(2,4\) ペア\(3,4\)/g, pairListSp.join(' '))
+      .replace(/全6ペア/g, '全' + pairCount + 'ペア')
+      .replace(/時間帯1→outfits\[0\], 時間帯2→outfits\[1\], 時間帯3→outfits\[2\], 時間帯4→outfits\[3\]/g, outfitsRefs.join(', '));
+  })();
+
   // リトライ時: 前回の批評内容を末尾に付加
   if (prevCritique) {
     var critiqueBlock = [
@@ -1544,7 +1951,7 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
       '改善方針:',
       prevCritique.directive || '(指示なし)',
       '',
-      '今回はこれらをすべて修正した上で、上記すべてのルールを満たす4案を再提案してください。'
+      '今回はこれらをすべて修正した上で、上記すべてのルールを満たす' + slots.length + '案を再提案してください。'
     ].join('\n');
     promptText += '\n' + critiqueBlock;
   }
