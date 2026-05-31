@@ -263,8 +263,20 @@
                                     <span>寒がり</span><span>暑がり</span>
                                 </div>
                             </div>
+
+                            <!-- 手動微調整 -->
+                            <div class="space-y-1 pt-2">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-[9px] font-bold dark:text-white">体感の微調整</span>
+                                    <span id="manual-adj-label" class="bg-black/5 dark:bg-white/10 text-on-surface dark:text-white px-2.5 py-0.5 rounded text-[8px] font-bold">±0</span>
+                                </div>
+                                <input id="settings-manual-adjustment" class="w-full h-1 bg-black/10 dark:bg-slate-700 rounded-full appearance-none cursor-pointer accent-primary dark:accent-blue-400" max="20" min="-20" step="5" type="range" value="0" onchange="saveProfileEdit()" oninput="const v=parseInt(this.value); document.getElementById('manual-adj-label').innerText = (v>0?'+':'')+v"/>
+                                <div class="flex justify-between text-[7px] font-bold text-on-surface-variant dark:text-white/40 px-1 pt-1 opacity-70">
+                                    <span>← 寒く感じる</span><span>暑く感じる →</span>
+                                </div>
+                            </div>
                         </div>
-                        
+
 
                     </div>
                 </section>

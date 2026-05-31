@@ -322,10 +322,14 @@ function saveCloset() {
         const lite = closetItems.map(i => ({...i, img: i.img ? '[photo]' : ''}));
         localStorage.setItem(CLOSET_KEY, JSON.stringify(lite));
     }
-    
-    // クラウド自動同期を実行
     if (typeof sendToCloud === 'function') {
         sendToCloud(true);
+    }
+    // スペクトルは常時表示なので常に再描画、詳細が開いていれば全体を更新
+    renderColorSpectrum();
+    const analysisContent = document.getElementById('color-analysis-content');
+    if (analysisContent && !analysisContent.classList.contains('hidden')) {
+        renderColorAnalysis();
     }
 }
 
@@ -394,14 +398,272 @@ function renderClosetGrid(filter) {
     document.getElementById('closet-count').textContent = `${closetItems.length} アイテム`;
 }
 
-function filterCloset(cat, el) {
-    if(navigator.vibrate) navigator.vibrate([8]);
-    document.querySelectorAll('.closet-filter-btn').forEach(b => b.classList.remove('active-filter'));
-    el.classList.add('active-filter');
-    renderClosetGrid(cat);
+function filterCloset(cat) {
+    if (navigator.vibrate) navigator.vibrate([8]);
+    applyGenreFilter(cat);
 }
 
 // 初期レンダリング
 window.addEventListener('sectionsLoaded', () => {
     renderClosetGrid();
+    renderColorSpectrum();
 });
+
+// ===== クローゼット色分析 =====
+
+const COLOR_META = {
+    'ブラック': { hex: '#1A1A1A', warmth: 50, saturation:  0, group: 'neutral' },
+    'ホワイト': { hex: '#F5F5F5', warmth: 50, saturation:  0, group: 'neutral' },
+    'グレー':   { hex: '#707070', warmth: 50, saturation:  5, group: 'neutral' },
+    'ベージュ': { hex: '#E8D5B7', warmth: 65, saturation: 20, group: 'neutral' },
+    'ブラウン': { hex: '#92400E', warmth: 70, saturation: 55, group: 'neutral' },
+    'ネイビー': { hex: '#1E3A8A', warmth: 20, saturation: 70, group: 'cool'    },
+    'ブルー':   { hex: '#0EA5E9', warmth: 25, saturation: 85, group: 'cool'    },
+    'グリーン': { hex: '#16A34A', warmth: 35, saturation: 75, group: 'cool'    },
+    'パープル': { hex: '#7C3AED', warmth: 30, saturation: 80, group: 'cool'    },
+    'レッド':   { hex: '#DC2626', warmth: 85, saturation: 90, group: 'warm'    },
+    'ピンク':   { hex: '#FDA4AF', warmth: 75, saturation: 50, group: 'warm'    },
+    'イエロー': { hex: '#F59E0B', warmth: 90, saturation: 85, group: 'warm'    },
+    'オレンジ': { hex: '#EA580C', warmth: 85, saturation: 90, group: 'warm'    },
+    'カーキ':   { hex: '#7A7A3F', warmth: 60, saturation: 40, group: 'warm'    },
+    'オリーブ': { hex: '#6B8040', warmth: 55, saturation: 35, group: 'warm'    },
+};
+
+const NEUTRAL_IDS = ['ブラック', 'ホワイト', 'グレー', 'ベージュ', 'ブラウン'];
+const EARTH_IDS   = ['ベージュ', 'ブラウン', 'カーキ', 'オリーブ'];
+
+const DNA_TYPES = [
+    {
+        label: 'モノトーン\nシフト',
+        desc: '洗練と潔さの使い手。シンプルを極めるスタイル。',
+        test: (r) => sumRatio(r, NEUTRAL_IDS) >= 0.70,
+    },
+    {
+        label: 'アース\nカラー',
+        desc: '自然体ナチュラリスト。大地の色を纏う安定感。',
+        test: (r) => sumRatio(r, EARTH_IDS) >= 0.40,
+    },
+    {
+        label: 'ネイビー\n集中型',
+        desc: 'クラシックコンサバ。品格と信頼感のプロフェッショナル。',
+        test: (r) => (r['ネイビー'] || 0) >= 0.30,
+    },
+    {
+        label: 'カラフル\nミックス',
+        desc: '気分で着こなすフリースタイラー。色が武器。',
+        test: (r) => Object.values(r).filter(v => v >= 0.08).length >= 5,
+    },
+    {
+        label: 'クールトーン派',
+        desc: 'ブルー・グリーン系が中心。クールで都会的な感覚の持ち主。',
+        test: (r) => sumRatio(r, ['ネイビー', 'ブルー', 'グリーン', 'パープル']) >= 0.45,
+    },
+    {
+        label: 'ウォームトーン派',
+        desc: '赤・黄・ピンク系が中心。情熱的で温かみあふれるスタイル。',
+        test: (r) => sumRatio(r, ['レッド', 'ピンク', 'イエロー', 'オレンジ']) >= 0.35,
+    },
+    {
+        label: 'バランス型',
+        desc: 'どんな色とも相性◎。合わせやすいスタイルの達人。',
+        test: () => true,
+    },
+];
+
+function sumRatio(ratios, ids) {
+    return ids.reduce((sum, id) => sum + (ratios[id] || 0), 0);
+}
+
+function calcColorSummary() {
+    if (closetItems.length === 0) return { ratios: {}, sorted: [] };
+    const counts = {};
+    closetItems.forEach(item => {
+        const name = item.colorName || '不明';
+        counts[name] = (counts[name] || 0) + 1;
+    });
+    const total = closetItems.length;
+    const ratios = {};
+    Object.entries(counts).forEach(([name, count]) => { ratios[name] = count / total; });
+    const sorted = Object.entries(ratios)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, ratio]) => ({ name, ratio, hex: (COLOR_META[name] || {}).hex || item_hex_fallback(name) }));
+    return { ratios, sorted };
+}
+
+function item_hex_fallback(name) {
+    const found = closetItems.find(i => i.colorName === name);
+    return found ? found.color : '#888888';
+}
+
+const GENRE_META = {
+    tops:    { label: 'トップス',  icon: 'apparel',          color: '#3B82F6' },
+    bottoms: { label: 'ボトムス',  icon: 'accessibility_new', color: '#8B5CF6' },
+    outer:   { label: 'アウター',  icon: 'dry_cleaning',      color: '#F59E0B' },
+    shoes:   { label: 'シューズ',  icon: 'steps',             color: '#10B981' },
+    bag:     { label: 'バッグ',    icon: 'shopping_bag',      color: '#F43F5E' },
+    other:   { label: 'その他',    icon: 'more_horiz',        color: '#6B7280' },
+};
+
+let currentSpectrumGenre = 'all';
+
+function calcColorSummaryFromItems(items) {
+    if (items.length === 0) return { ratios: {}, sorted: [] };
+    const counts = {};
+    items.forEach(item => {
+        const name = item.colorName || '不明';
+        counts[name] = (counts[name] || 0) + 1;
+    });
+    const total = items.length;
+    const ratios = {};
+    Object.entries(counts).forEach(([name, count]) => { ratios[name] = count / total; });
+    const sorted = Object.entries(ratios)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, ratio]) => ({ name, ratio, hex: (COLOR_META[name] || {}).hex || item_hex_fallback(name) }));
+    return { ratios, sorted };
+}
+
+function applyGenreFilter(genre) {
+    currentSpectrumGenre = genre;
+    currentFilter = genre;
+
+    // カテゴリフィルターボタンの同期
+    document.querySelectorAll('.closet-filter-btn').forEach(b => b.classList.remove('active-filter'));
+    const activeBtn = document.querySelector(`.closet-filter-btn[data-cat="${genre}"]`);
+    if (activeBtn) activeBtn.classList.add('active-filter');
+
+    renderColorSpectrum();
+    renderClosetGrid();
+}
+
+function renderColorSpectrum() {
+    const barEl    = document.getElementById('color-spectrum-bar');
+    const legendEl = document.getElementById('color-spectrum-legend');
+    const countEl  = document.getElementById('spectrum-item-count');
+    if (!barEl) return;
+
+    const filtered = currentSpectrumGenre === 'all'
+        ? closetItems
+        : closetItems.filter(i => i.category === currentSpectrumGenre);
+
+    const { sorted } = calcColorSummaryFromItems(filtered);
+    barEl.innerHTML   = '';
+    legendEl.innerHTML = '';
+    if (countEl) countEl.textContent = filtered.length > 0 ? `${filtered.length}点` : '';
+
+    if (sorted.length === 0) {
+        const msg = currentSpectrumGenre === 'all' ? '服を追加すると表示されます' : 'このジャンルのアイテムがありません';
+        barEl.innerHTML = `<div class="w-full h-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center"><span class="text-[9px] text-gray-400 dark:text-white/30">${msg}</span></div>`;
+        return;
+    }
+    sorted.forEach(({ name, ratio, hex }) => {
+        const seg = document.createElement('div');
+        seg.style.cssText = `width:${(ratio * 100).toFixed(1)}%;background:${hex};transition:width 0.4s ease;`;
+        seg.title = `${name} ${Math.round(ratio * 100)}%`;
+        barEl.appendChild(seg);
+        if (ratio >= 0.05) {
+            const dot = document.createElement('span');
+            dot.className = 'flex items-center gap-1 text-[8px] font-bold text-on-surface dark:text-white/70';
+            dot.innerHTML = `<span class="inline-block w-2 h-2 rounded-full flex-shrink-0 border border-black/10" style="background:${hex}"></span>${name}&nbsp;${Math.round(ratio * 100)}%`;
+            legendEl.appendChild(dot);
+        }
+    });
+}
+
+function renderColorAnalysis() {
+    renderColorSpectrum();
+
+    const dnaTypeEl = document.getElementById('closet-dna-type');
+    const dnaDscEl  = document.getElementById('closet-dna-desc');
+    const mapEl     = document.getElementById('warmth-map');
+
+    const { ratios } = calcColorSummaryFromItems(closetItems);
+
+    // ── カラーDNA ──
+    if (dnaTypeEl && dnaDscEl) {
+        const type = DNA_TYPES.find(t => t.test(ratios)) || DNA_TYPES[DNA_TYPES.length - 1];
+        dnaTypeEl.textContent = type.label;
+        dnaDscEl.textContent  = type.desc;
+    }
+
+    // ── 寒暖マップ（SVG散布図）──
+    if (mapEl) {
+        let svg = `
+            <rect width="100" height="100" rx="4" fill="currentColor" fill-opacity="0.03"/>
+            <line x1="50" y1="0" x2="50" y2="100" stroke="currentColor" stroke-opacity="0.08" stroke-width="0.8"/>
+            <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" stroke-opacity="0.08" stroke-width="0.8"/>
+            <text x="2" y="7" font-size="4.5" fill="currentColor" fill-opacity="0.35">高彩度</text>
+            <text x="2" y="98" font-size="4.5" fill="currentColor" fill-opacity="0.35">低彩度</text>`;
+        closetItems.forEach(item => {
+            const meta = COLOR_META[item.colorName];
+            if (!meta) return;
+            const hex = item.color || meta.hex;
+            svg += `<circle cx="${meta.warmth}" cy="${100 - meta.saturation}" r="4.5" fill="${hex}" fill-opacity="0.85" stroke="white" stroke-width="1"/>`;
+        });
+        mapEl.innerHTML = svg;
+    }
+
+    // ── ジャンル分布 ──
+    renderGenreDistribution();
+}
+
+function renderGenreDistribution() {
+    const specBar = document.getElementById('genre-spectrum-bar');
+    const listEl  = document.getElementById('genre-bar-list');
+    if (!specBar || !listEl) return;
+
+    const total = closetItems.length;
+    if (total === 0) {
+        specBar.innerHTML = '<div class="w-full h-full bg-gray-100 dark:bg-slate-700 rounded-lg"></div>';
+        listEl.innerHTML  = '';
+        return;
+    }
+
+    // カテゴリ別カウント（定義順で並べる）
+    const counts = {};
+    Object.keys(GENRE_META).forEach(k => { counts[k] = 0; });
+    closetItems.forEach(item => {
+        const key = item.category in GENRE_META ? item.category : 'other';
+        counts[key]++;
+    });
+
+    // ── ジャンルスペクトルバー ──
+    specBar.innerHTML = '';
+    Object.entries(counts).forEach(([key, count]) => {
+        if (count === 0) return;
+        const seg = document.createElement('div');
+        seg.style.cssText = `width:${(count / total * 100).toFixed(1)}%;background:${GENRE_META[key].color};transition:width 0.4s ease;`;
+        seg.title = `${GENRE_META[key].label} ${count}点`;
+        specBar.appendChild(seg);
+    });
+
+    // ── カテゴリ別横棒リスト ──
+    const maxCount = Math.max(...Object.values(counts), 1);
+    listEl.innerHTML = '';
+    Object.entries(counts).forEach(([key, count]) => {
+        if (count === 0) return;
+        const meta = GENRE_META[key];
+        const pct  = Math.round(count / total * 100);
+        const barW = (count / maxCount * 100).toFixed(1);
+
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2';
+        row.innerHTML = `
+            <span class="material-symbols-outlined text-[14px] flex-shrink-0" style="color:${meta.color}">${meta.icon}</span>
+            <span class="text-[9px] font-bold dark:text-white w-14 flex-shrink-0">${meta.label}</span>
+            <div class="flex-1 h-2 bg-black/5 dark:bg-white/10 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-500" style="width:${barW}%;background:${meta.color}"></div>
+            </div>
+            <span class="text-[8px] font-bold text-on-surface-variant dark:text-white/50 w-10 text-right flex-shrink-0">${count}点 ${pct}%</span>`;
+        listEl.appendChild(row);
+    });
+}
+
+function toggleColorAnalysis() {
+    const content = document.getElementById('color-analysis-content');
+    const icon    = document.getElementById('color-analysis-toggle-icon');
+    if (!content) return;
+    const opening = content.classList.contains('hidden');
+    content.classList.toggle('hidden', !opening);
+    icon.textContent = opening ? 'expand_less' : 'expand_more';
+    if (opening) renderColorAnalysis();
+}

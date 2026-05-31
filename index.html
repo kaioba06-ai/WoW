@@ -11,6 +11,7 @@
     <script src="js/constants.js?v=1"></script>
     <script src="js/utils.js?v=1"></script>
     <link rel="stylesheet" href="styles.css"/>
+    <script src="js/ReactionBase.js?v=1" defer></script>
     <!-- Vue.js -->
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
     <!-- Supabase SDK -->
@@ -21,6 +22,13 @@
     <script src="js/weather.js?v=6" defer></script>
     <script src="js/home.js?v=5" defer></script>
     <script src="js/closet.js?v=5" defer></script>
+    <script src="js/components/UserPosts.js" defer></script>
+    <script src="js/components/ClosetModule.js" defer></script>
+    <script src="js/components/ClosetComponent.js" defer></script>
+    <script src="js/components/DiscoveryModule.js" defer></script>
+    <script src="js/components/PostcardComponent.js" defer></script>
+    <script src="js/components/TrendModule.js" defer></script>
+    <script src="js/components/AppController.js" defer></script>
     <script src="js/community.js?v=5" defer></script>
     <script src="js/profile.js?v=5" defer></script>
     <script src="js/scene.js?v=5" defer></script>
@@ -192,8 +200,8 @@
 
             window.switchCommunityTabVue = function(tab) {
                 vm.currentTab = tab;
-                const ACTIVE   = 'flex-1 py-3 border-b-2 border-black dark:border-white text-black dark:text-white font-black text-[10px] tracking-[0.18em] uppercase text-center transition-all';
-                const INACTIVE = 'flex-1 py-3 border-b border-black/10 dark:border-white/10 text-black/30 dark:text-white/30 font-bold text-[10px] tracking-[0.18em] uppercase text-center hover:text-black/60 dark:hover:text-white/60 transition-all';
+                const ACTIVE   = 'flex-1 py-3 rounded-full bg-gradient-to-r from-primary to-blue-500 text-white font-black text-[11px] tracking-widest uppercase text-center transition-all duration-300 shadow-md shadow-primary/30 active:scale-95 bg-pan';
+                const INACTIVE = 'flex-1 py-3 rounded-full text-black/50 dark:text-white/50 font-bold text-[11px] tracking-widest uppercase text-center transition-all duration-300 hover:bg-black/5 dark:hover:bg-white/5 active:scale-95';
                 const tabDiscover = document.getElementById('tab-btn-discover');
                 const tabTrending = document.getElementById('tab-btn-trending');
                 const tabQa       = document.getElementById('tab-btn-qa');

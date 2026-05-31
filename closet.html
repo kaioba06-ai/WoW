@@ -10,22 +10,70 @@
             </button>
         </div>
 
+        <!-- ===== クローゼット分析 ===== -->
+        <div id="color-analysis-section" class="space-y-2">
+
+            <!-- 常時表示: カラースペクトル -->
+            <div class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl border border-white/50 dark:border-white/10 shadow-sm px-4 py-3 space-y-2">
+                <div class="flex items-center justify-between">
+                    <p class="text-[9px] font-bold text-on-surface-variant dark:text-white/50 uppercase tracking-widest">カラースペクトル</p>
+                    <span id="spectrum-item-count" class="text-[8px] font-bold text-on-surface-variant dark:text-white/40"></span>
+                </div>
+                <div id="color-spectrum-bar" class="w-full h-7 rounded-xl overflow-hidden flex"></div>
+                <div id="color-spectrum-legend" class="flex flex-wrap gap-x-3 gap-y-1"></div>
+            </div>
+
+            <!-- アコーディオン: 詳細分析 -->
+            <button onclick="toggleColorAnalysis()" class="w-full flex items-center justify-between px-4 py-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl border border-white/50 dark:border-white/10 shadow-sm active:scale-[0.99] transition-transform">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary dark:text-blue-400 text-[18px]">analytics</span>
+                    <span class="font-bold text-[12px] dark:text-white">詳細分析</span>
+                </div>
+                <span id="color-analysis-toggle-icon" class="material-symbols-outlined text-on-surface-variant dark:text-white/50 text-[18px]">expand_more</span>
+            </button>
+
+            <div id="color-analysis-content" class="hidden space-y-3">
+                <!-- カラーDNA + 寒暖マップ -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl border border-white/50 dark:border-white/10 shadow-sm p-4 flex flex-col gap-2">
+                        <p class="text-[9px] font-bold text-on-surface-variant dark:text-white/50 uppercase tracking-widest">カラー DNA</p>
+                        <div id="closet-dna-type" class="font-headline font-extrabold text-sm dark:text-white leading-tight whitespace-pre-line"></div>
+                        <p id="closet-dna-desc" class="text-[9px] text-on-surface-variant dark:text-white/60 leading-relaxed"></p>
+                    </div>
+                    <div class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl border border-white/50 dark:border-white/10 shadow-sm p-4">
+                        <p class="text-[9px] font-bold text-on-surface-variant dark:text-white/50 uppercase tracking-widest mb-1">寒暖 マップ</p>
+                        <svg id="warmth-map" width="100%" viewBox="0 0 100 100" class="overflow-visible"></svg>
+                        <div class="flex justify-between text-[7px] text-on-surface-variant dark:text-white/40 font-bold mt-1">
+                            <span>COOL</span><span>WARM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ジャンル分布 -->
+                <div class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl border border-white/50 dark:border-white/10 shadow-sm p-4 space-y-3">
+                    <p class="text-[9px] font-bold text-on-surface-variant dark:text-white/50 uppercase tracking-widest">ジャンル分布</p>
+                    <div id="genre-spectrum-bar" class="w-full h-4 rounded-lg overflow-hidden flex"></div>
+                    <div id="genre-bar-list" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- カテゴリフィルター -->
         <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            <button onclick="filterCloset('all', this)" class="closet-filter-btn flex-shrink-0 bg-primary dark:bg-blue-500 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-sm transition-all active:scale-95">すべて</button>
-            <button onclick="filterCloset('tops', this)" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
+            <button onclick="filterCloset('all')" data-cat="all" class="closet-filter-btn flex-shrink-0 bg-primary dark:bg-blue-500 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-sm transition-all active:scale-95">すべて</button>
+            <button onclick="filterCloset('tops')" data-cat="tops" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
                 <span class="material-symbols-outlined text-[11px] align-middle">apparel</span> トップス
             </button>
-            <button onclick="filterCloset('bottoms', this)" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
+            <button onclick="filterCloset('bottoms')" data-cat="bottoms" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
                 <span class="material-symbols-outlined text-[11px] align-middle">accessibility_new</span> ボトムス
             </button>
-            <button onclick="filterCloset('outer', this)" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
+            <button onclick="filterCloset('outer')" data-cat="outer" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
                 <span class="material-symbols-outlined text-[11px] align-middle">dry_cleaning</span> アウター
             </button>
-            <button onclick="filterCloset('shoes', this)" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
+            <button onclick="filterCloset('shoes')" data-cat="shoes" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">
                 <span class="material-symbols-outlined text-[11px] align-middle">steps</span> シューズ
             </button>
-            <button onclick="filterCloset('other', this)" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">その他</button>
+            <button onclick="filterCloset('other')" data-cat="other" class="closet-filter-btn flex-shrink-0 bg-white/70 dark:bg-slate-800/70 border border-white/50 dark:border-white/10 text-on-surface-variant dark:text-white/70 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all active:scale-95">その他</button>
         </div>
 
         <!-- アイテムグリッド -->

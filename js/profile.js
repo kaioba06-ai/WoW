@@ -73,6 +73,15 @@ function initProfileEditFields() {
             if (rainLabel) rainLabel.innerText = p.rain_sensitivity;
         }
     }
+    const manualInput = document.getElementById('settings-manual-adjustment');
+    if (manualInput && p.manual_adjustment !== undefined) {
+        manualInput.value = p.manual_adjustment;
+        const manualLabel = document.getElementById('manual-adj-label');
+        if (manualLabel) {
+            const v = parseInt(p.manual_adjustment, 10);
+            manualLabel.innerText = (v > 0 ? '+' : '') + v;
+        }
+    }
 
     // 単一選択ボタン群の復元
     const setGroupActive = (group, value) => {
@@ -400,6 +409,7 @@ function saveProfileEdit(e) {
             gender: 'mens',
             gender_label: 'メンズ',
             temp_sensitivity: document.getElementById('temp-label')?.innerText?.trim() || '普通',
+            manual_adjustment: parseInt(document.getElementById('settings-manual-adjustment')?.value ?? 0, 10),
             rain_sensitivity: '普通',
             fit_upper: 'regular',
             fit_upper_label: 'レギュラー',

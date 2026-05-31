@@ -87,6 +87,40 @@ function isRainy(code) {
     return [51,53,55,61,63,65,66,67,80,81,82,95,96,99].includes(code);
 }
 
+// ===== 服装指数アルゴリズム (0-100) =====
+const TEMP_MIN = -15; // 指数0に対応する体感温度(°C)
+const TEMP_MAX = 35;  // 指数100に対応する体感温度(°C)
+
+const PERSONALITY_OFFSET = {
+    '極度の寒がり': -20,
+    '寒がり':       -10,
+    '普通':           0,
+    '暑がり':        +10,
+    '極度の暑がり': +20,
+};
+
+function calcBaseIndex(apparentTemp, weatherCode) {
+    const rainPenalty = isRainy(weatherCode) ? 2 : 0;
+    const raw = (apparentTemp - rainPenalty - TEMP_MIN) / (TEMP_MAX - TEMP_MIN) * 100;
+    return Math.max(0, Math.min(100, raw));
+}
+
+function calcClothingIndex(apparentTemp, weatherCode) {
+    const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+    const sensitivity = profile.personalize?.temp_sensitivity || '普通';
+    const manualAdj = parseInt(profile.personalize?.manual_adjustment ?? 0, 10);
+    const base = calcBaseIndex(apparentTemp, weatherCode);
+    const withPersonality = base + (PERSONALITY_OFFSET[sensitivity] ?? 0);
+    return Math.round(Math.max(0, Math.min(100, withPersonality + manualAdj)));
+}
+
+function getClothingCategory(index) {
+    if (index >= 84) return 'hot';
+    if (index >= 70) return 'warm';
+    if (index >= 50) return 'mild';
+    return 'cold';
+}
+
 // ===== 地域選択機能 =====
 const PREFECTURES = [
     { name: '北海道', cities: [
@@ -469,18 +503,9 @@ function getBestOutfit(apparentTemp, seed, weatherCode, hour) {
     const profile = getUserProfile();
     const p = profile.personalize;
 
-    // 1. 体感温度のパーソナライズ (Sensitivity adjustment)
-    let adjustedTemp = apparentTemp;
-    if (p.temp_sensitivity === '極度の寒がり') adjustedTemp -= 4;
-    else if (p.temp_sensitivity === '寒がり') adjustedTemp -= 2;
-    else if (p.temp_sensitivity === '暑がり') adjustedTemp += 2;
-    else if (p.temp_sensitivity === '極度の暑がり') adjustedTemp += 4;
-
-    let category = 'mild';
-    if (adjustedTemp <= 10) category = 'cold';
-    else if (adjustedTemp <= 20) category = 'mild';
-    else if (adjustedTemp <= 27) category = 'warm';
-    else category = 'hot';
+    // 1. 服装指数による体感カテゴリ決定（体質補正・手動補正を含む）
+    const clothingIndex = calcClothingIndex(apparentTemp, weatherCode);
+    let category = getClothingCategory(clothingIndex);
 
     // 2. カタログからの選択 (好きな服装＝対象スタイルを優先)
     let stylePreference = p.gender; // "mens", "ladies", "none" (ID based)

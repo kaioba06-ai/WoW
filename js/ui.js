@@ -12,8 +12,16 @@ function switchTab(tabId, el) {
 
 function switchTabReal(tabId, el, isPopState) {
     console.log(`[UI] switchTabReal called: tabId=${tabId}, isPopState=${isPopState}`);
-    if(!isPopState) history.pushState({tab: tabId}, '', '#' + tabId);
     
+    const currentTab = localStorage.getItem('kion_current_tab');
+    // Phase ③ A案：コミュニティタブ二度押しでパレット展開し、画面リセットをブロック
+    if (tabId === 'discover' && currentTab === 'discover' && !isPopState) {
+        if (window.ReactionPalette) window.ReactionPalette.toggle();
+        return;
+    }
+
+    if(!isPopState) history.pushState({tab: tabId}, '', '#' + tabId);
+
     // 最後に開いていたタブを保存
     localStorage.setItem('kion_current_tab', tabId);
 
@@ -110,6 +118,11 @@ document.addEventListener('touchend', e => {
 
     // 横スワイプ (5)
     if(Math.abs(diffX) > 100 && Math.abs(diffY) < 50) {
+        // Phase ③ B案: ポストカード上でのジェスチャー操作（ディグる、左右スワイプ等）と競合しないよう、カード上ではタブ移動をブロック
+        if (e.target.closest('.postcard-container')) {
+            return;
+        }
+
         let active = document.querySelector('.nav-item.active-nav-item');
         if(active) {
             let idx = Array.from(document.querySelectorAll('.nav-item')).indexOf(active);
@@ -291,4 +304,3 @@ window.addEventListener('sectionsLoaded', () => {
         }
     }, 600);
 });
-
