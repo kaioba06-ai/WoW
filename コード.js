@@ -485,6 +485,38 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // デバッグ用: CostLog 集計（モデル別 ok/fail 件数 + 直近明細）
+    if (params.action === 'cost_summary') {
+      var ssC = SpreadsheetApp.getActiveSpreadsheet();
+      var cl = ssC.getSheetByName('CostLog');
+      if (!cl || cl.getLastRow() < 2) {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, total: 0, byModel: {}, recent: [] }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var rowsC = cl.getRange(2, 1, cl.getLastRow() - 1, 4).getValues();
+      var byModel = {};
+      rowsC.forEach(function(r){
+        var m = String(r[1] || ''), st = String(r[3] || '');
+        if (!byModel[m]) byModel[m] = { ok: 0, fail: 0 };
+        if (st === 'ok') byModel[m].ok++; else byModel[m].fail++;
+      });
+      var recent = rowsC.slice(0, 12).map(function(r){
+        return { ts: String(r[0]), model: String(r[1]), action: String(r[2]), status: String(r[3]) };
+      });
+      return ContentService.createTextOutput(JSON.stringify({ success: true, total: rowsC.length, byModel: byModel, recent: recent }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // デバッグ用: ユーザーシート名一覧（システムシート除外）
+    if (params.action === 'list_users') {
+      var ssU = SpreadsheetApp.getActiveSpreadsheet();
+      var users = ssU.getSheets().map(function(s){ return s.getName(); }).filter(function(n){
+        return n !== 'DebugLog' && n !== 'CostLog' && n.indexOf('_backup_') === -1;
+      });
+      return ContentService.createTextOutput(JSON.stringify({ success: true, users: users }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // デバッグ用: 指定ユーザーシートの主要セルをダンプ
     if (params.action === 'debug_dump') {
       var userId = params.user_id;
