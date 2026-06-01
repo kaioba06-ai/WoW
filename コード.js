@@ -507,11 +507,38 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // デバッグ用: キャッシュ余地集計（同一 user+signature の重複＝キャッシュで削れた回数）
+    if (params.action === 'regen_stats') {
+      var ssR = SpreadsheetApp.getActiveSpreadsheet();
+      var rl = ssR.getSheetByName('RegenLog');
+      if (!rl || rl.getLastRow() < 2) {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, total: 0, unique: 0, cacheableRate: 0 }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var rowsR = rl.getRange(2, 1, rl.getLastRow() - 1, 3).getValues();
+      var seen = {};
+      var total = rowsR.length, dup = 0;
+      rowsR.forEach(function(r){
+        var key = String(r[1]) + '##' + String(r[2]);
+        if (seen[key]) dup++; else seen[key] = true;
+      });
+      var unique = total - dup;
+      // dup = 既出条件の再生成 = キャッシュがあれば省けた生成。シーン画像は1生成=4呼び出し。
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        total: total,
+        unique: unique,
+        cacheable_regens: dup,
+        cacheable_rate: total ? Math.round(dup / total * 100) / 100 : 0,
+        saved_scene_calls_if_cached: dup * 4
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // デバッグ用: ユーザーシート名一覧（システムシート除外）
     if (params.action === 'list_users') {
       var ssU = SpreadsheetApp.getActiveSpreadsheet();
       var users = ssU.getSheets().map(function(s){ return s.getName(); }).filter(function(n){
-        return n !== 'DebugLog' && n !== 'CostLog' && n.indexOf('_backup_') === -1;
+        return n !== 'DebugLog' && n !== 'CostLog' && n !== 'RegenLog' && n.indexOf('_backup_') === -1;
       });
       return ContentService.createTextOutput(JSON.stringify({ success: true, users: users }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -873,6 +900,39 @@ function logCost(model, status, action) {
 }
 
 /**
+ * キャッシュ余地の計測メータ（strategy.md「キャッシュは粗利の主レバー」検証用）。
+ * 生成のたび「ユーザー＋気温帯(3°C刻み)＋天気」の条件シグネチャを RegenLog へ記録。
+ * 後で同一シグネチャの重複を数えれば「同条件の再生成回数＝キャッシュで削れた呼び出し」が分かる。
+ * キャッシュ本体はまだ作らない（新鮮さとのトレードオフが設計判断のため）。
+ *
+ * @param {string} userId
+ * @param {Array} slots  [{temp, weather}, ...]（4スロット）
+ */
+function logRegen(userId, slots) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) return;
+    var sheet = ss.getSheetByName('RegenLog');
+    if (!sheet) {
+      sheet = ss.insertSheet('RegenLog');
+      sheet.appendRow(['日時', 'user_id', 'signature']);
+      sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#f3f3f3');
+      sheet.setFrozenRows(1);
+    }
+    // シグネチャ: 各スロットを「気温帯_天気」にし連結。気温帯=floor(temp/3)*3
+    var sig = (slots || []).map(function(s){
+      var t = Number(s.temp);
+      var band = isNaN(t) ? '?' : (Math.floor(t / 3) * 3);
+      return band + '_' + (s.weather || '?');
+    }).join('|');
+    sheet.insertRowBefore(2);
+    sheet.getRange(2, 1, 1, 3).setValues([[new Date(), userId || '', sig]]);
+  } catch (e) {
+    console.error('logRegen failed', e.toString());
+  }
+}
+
+/**
  * プロフィールデータ（体格・採寸・外見）をユーザー別のシートに保存
  */
 function syncProfileData(data) {
@@ -1139,6 +1199,9 @@ function syncWeatherData(data) {
             lv: adjLv
           };
         });
+
+        // キャッシュ余地計測: 条件シグネチャを記録（本体生成は従来通り）
+        logRegen(sheetName, slots);
 
         // ① コーデJSON一括生成（4スロット分・部位+名前+ワンポイント）
         var outfits = generateOutfitsForForecast(slots, profile);
