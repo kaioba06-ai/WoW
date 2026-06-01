@@ -52,6 +52,7 @@ function ImageProviderGoogle_imagen4_(opts, apiKey) {
   var code = resp.getResponseCode();
   var text = resp.getContentText();
   logDebug('ImageProvider:imagen4 resp', 'code=' + code);
+  logCost('imagen-4.0', code === 200 ? 'ok' : 'fail', 'scene_image');
 
   if (code !== 200) {
     throw new Error('Imagen 4 ' + code + ': ' + text.substring(0, 300));
@@ -101,6 +102,7 @@ function ImageProviderGoogle_nanoBanana_(opts, apiKey) {
   var code = resp.getResponseCode();
   var text = resp.getContentText();
   logDebug('ImageProvider:nanoBanana resp', 'code=' + code);
+  logCost('nano-banana', code === 200 ? 'ok' : 'fail', 'scene_image');
 
   if (code !== 200) {
     throw new Error('Nano Banana ' + code + ': ' + text.substring(0, 300));

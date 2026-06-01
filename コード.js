@@ -762,6 +762,7 @@ function analyzeFacePhoto(data) {
     var text = resp.getContentText();
     // 重要: 入力画像のbase64は変数からも明示的に外す（GAS GCで回収される）
     payload = null;
+    logCost('gemini-2.5-flash', code === 200 ? 'ok' : 'fail', 'analyze_face');
     if (code !== 200) {
       logDebug('analyze_face failed', 'code=' + code + ' ' + text.substring(0, 200));
       return { success: false, error: 'Vision API ' + code };
@@ -806,6 +807,36 @@ function logDebug(msg, data) {
     debugSheet.getRange(2, 1, 1, 3).setValues([[new Date(), msg, typeof data === 'object' ? JSON.stringify(data) : data]]);
   } catch (e) {
     console.error('logDebug failed', e.toString());
+  }
+}
+
+/**
+ * API呼び出しのコスト計測メータ。
+ * strategy.md「価格より原価実測が先決」の足場。
+ * モデル別の呼び出し回数・成否を CostLog シートへ構造化記録する。
+ * 後でモデル単価を掛ければ 1生成あたり実原価が算出できる。
+ *
+ * ログ失敗は本処理を止めない（try/catchで握りつぶす）。
+ *
+ * @param {string} model   例: 'gemini-2.5-flash', 'imagen-4.0', 'nano-banana'
+ * @param {string} status  'ok' | 'fail'
+ * @param {string} [action] 例: 'outfit_json', 'scene_image', 'avatar', 'analyze_face'
+ */
+function logCost(model, status, action) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) return;
+    var sheet = ss.getSheetByName('CostLog');
+    if (!sheet) {
+      sheet = ss.insertSheet('CostLog');
+      sheet.appendRow(['日時', 'model', 'action', 'status']);
+      sheet.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#f3f3f3');
+      sheet.setFrozenRows(1);
+    }
+    sheet.insertRowBefore(2);
+    sheet.getRange(2, 1, 1, 4).setValues([[new Date(), model, action || '', status]]);
+  } catch (e) {
+    console.error('logCost failed', e.toString());
   }
 }
 
@@ -2016,6 +2047,7 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
   var code = resp.getResponseCode();
   var text = resp.getContentText();
   logDebug('Outfit API Response', 'Code: ' + code);
+  logCost('gemini-2.5-flash', code === 200 ? 'ok' : 'fail', 'outfit_json');
 
   if (code !== 200) {
     throw new Error("Gemini API error " + code + ": " + text.substring(0, 500));
