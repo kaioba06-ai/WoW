@@ -507,6 +507,42 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 計測: 北極星指標(NSM)＋生成ファネル集計
+    if (params.action === 'nsm_stats') {
+      var ssN = SpreadsheetApp.getActiveSpreadsheet();
+      var el = ssN.getSheetByName('EventLog');
+      if (!el || el.getLastRow() < 2) {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, total: 0 }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var rowsN = el.getRange(2, 1, el.getLastRow() - 1, 5).getValues();
+      var funnel = {};                 // event -> 件数
+      var userDays = {};               // "user|date" -> true（完走したユニークuser-day=NSM素）
+      var dayActive = {};              // date -> {user:true}（日次アクティブ）
+      rowsN.forEach(function(r){
+        var date = String(r[1]), ev = String(r[2]), uid = String(r[3]);
+        funnel[ev] = (funnel[ev] || 0) + 1;
+        if (ev === 'generate_complete') {
+          userDays[uid + '|' + date] = true;
+          if (!dayActive[date]) dayActive[date] = {};
+          dayActive[date][uid] = true;
+        }
+      });
+      var dau = {};
+      Object.keys(dayActive).forEach(function(d){ dau[d] = Object.keys(dayActive[d]).length; });
+      // ファネル転換率（start→complete）
+      var starts = funnel['generate_start'] || 0;
+      var completes = funnel['generate_complete'] || 0;
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        total: rowsN.length,
+        nsm_unique_user_days: Object.keys(userDays).length,   // 北極星の素データ
+        funnel: funnel,
+        start_to_complete_rate: starts ? Math.round(completes / starts * 100) / 100 : 0,
+        dau_by_date: dau
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // デバッグ用: キャッシュ余地集計（同一 user+signature の重複＝キャッシュで削れた回数）
     if (params.action === 'regen_stats') {
       var ssR = SpreadsheetApp.getActiveSpreadsheet();
@@ -538,7 +574,7 @@ function doGet(e) {
     if (params.action === 'list_users') {
       var ssU = SpreadsheetApp.getActiveSpreadsheet();
       var users = ssU.getSheets().map(function(s){ return s.getName(); }).filter(function(n){
-        return n !== 'DebugLog' && n !== 'CostLog' && n !== 'RegenLog' && n.indexOf('_backup_') === -1;
+        return n !== 'DebugLog' && n !== 'CostLog' && n !== 'RegenLog' && n !== 'EventLog' && n.indexOf('_backup_') === -1;
       });
       return ContentService.createTextOutput(JSON.stringify({ success: true, users: users }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -933,6 +969,41 @@ function logRegen(userId, slots) {
 }
 
 /**
+ * 統一イベントメータ（strategy.md 原則8「計測は基礎工事」の実装）。
+ * 北極星指標（週内アクティブ日数＝朝の生成完走）＋ファネル＋サーバー側記録を1本化。
+ * クライアント改ざん不可なサーバー側に記録する。
+ *
+ * 想定 eventType:
+ *   generate_start / generate_complete / generate_fail   … 生成ファネルの核（NSM土台）
+ *   scene_fail                                           … 失敗チケット返金の根拠（第2-5）
+ *   tryon / share / invite_qualified / convert           … 将来のフロント実装時に配線
+ *
+ * @param {string} eventType
+ * @param {string} userId
+ * @param {(string|Object)} [detail]
+ */
+function logEvent(eventType, userId, detail) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) return;
+    var sheet = ss.getSheetByName('EventLog');
+    if (!sheet) {
+      sheet = ss.insertSheet('EventLog');
+      sheet.appendRow(['日時', 'date', 'event', 'user_id', 'detail']);
+      sheet.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3f3f3');
+      sheet.setFrozenRows(1);
+    }
+    var now = new Date();
+    var dateStr = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd');
+    var d = (typeof detail === 'object' && detail !== null) ? JSON.stringify(detail) : (detail || '');
+    sheet.insertRowBefore(2);
+    sheet.getRange(2, 1, 1, 5).setValues([[now, dateStr, eventType || '', userId || '', d]]);
+  } catch (e) {
+    console.error('logEvent failed', e.toString());
+  }
+}
+
+/**
  * プロフィールデータ（体格・採寸・外見）をユーザー別のシートに保存
  */
 function syncProfileData(data) {
@@ -1202,6 +1273,9 @@ function syncWeatherData(data) {
 
         // キャッシュ余地計測: 条件シグネチャを記録（本体生成は従来通り）
         logRegen(sheetName, slots);
+        // ファネル: 生成開始（NSM＝朝の生成完走の分母）
+        logEvent('generate_start', sheetName);
+        var sceneOk = 0, sceneFail = 0;
 
         // ① コーデJSON一括生成（4スロット分・部位+名前+ワンポイント）
         var outfits = generateOutfitsForForecast(slots, profile);
@@ -1293,8 +1367,12 @@ function syncWeatherData(data) {
                 // 成功時のみ旧画像をアーカイブ
                 if (prevSceneId) archiveImageById_(prevSceneId);
                 logDebug('Scene image generated', 'slot ' + (sk+1) + ': ' + sceneUrl);
+                sceneOk++;
               } catch (se) {
                 var smsg = se.toString();
+                sceneFail++;
+                // 失敗チケット返金の根拠を記録（第2-5）。実際の返金はチケット台帳実装後。
+                logEvent('scene_fail', sheetName, { slot: sk + 1, reason: smsg.substring(0, 80) });
                 // 失敗時は前回画像を復元（C案）。前回画像が無ければエラー文言を残す
                 if (prevSceneFormula && prevSceneFormula.indexOf('=IMAGE(') === 0) {
                   prevSceneCell.setFormula(prevSceneFormula);
@@ -1310,8 +1388,11 @@ function syncWeatherData(data) {
         } catch (serr) {
           logDebug('Scene stage FAILED', serr.toString());
         }
+        // ファネル: 生成完走（NSM＝週内アクティブ日数の分子）。シーンの成否内訳も記録。
+        logEvent('generate_complete', sheetName, { scenes_ok: sceneOk, scenes_fail: sceneFail });
       } catch (oerr) {
         logDebug('Outfit generation FAILED', oerr.toString());
+        logEvent('generate_fail', sheetName, ('outfit: ' + oerr.toString()).substring(0, 80));
         // 失敗時は "-" で埋める（既存予報は壊さない）
         var dash = [];
         for (var j = 0; j < 4; j++) dash.push(['-','-','-','-','-','-','-','-','-','-','-','-','-','-']);
