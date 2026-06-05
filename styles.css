@@ -78,6 +78,161 @@
     min-height: 0;
 }
 
+.home-decision-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255,255,255,0.62);
+    background: rgba(255,255,255,0.72);
+    color: #173355;
+    box-shadow: 0 14px 32px rgba(23, 51, 85, 0.16);
+    backdrop-filter: blur(18px);
+}
+
+html.dark .home-decision-bar {
+    border-color: rgba(255,255,255,0.1);
+    background: rgba(15, 23, 42, 0.72);
+    color: #f8f8ff;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.36);
+}
+
+.home-weather-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex: 0 0 auto;
+    min-width: 4.3rem;
+    padding: 0.45rem 0.55rem;
+    border-radius: 0.8rem;
+    background: rgba(0, 96, 173, 0.1);
+    color: #0060ad;
+}
+
+html.dark .home-weather-pill {
+    background: rgba(59, 130, 246, 0.18);
+    color: #93c5fd;
+}
+
+.home-judgement-chip,
+.home-range-chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    min-height: 1.2rem;
+    padding: 0.25rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.56rem;
+    line-height: 1;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.home-judgement-chip {
+    color: #ffffff;
+    background: #0060ad;
+}
+
+.home-range-chip {
+    color: #173355;
+    background: rgba(23, 51, 85, 0.1);
+}
+
+html.dark .home-judgement-chip {
+    background: #3b82f6;
+}
+
+html.dark .home-range-chip {
+    color: #e0f2fe;
+    background: rgba(255,255,255,0.1);
+}
+
+.home-insight-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding-top: 0.1rem;
+    border-top: 1px solid rgba(23, 51, 85, 0.12);
+}
+
+html.dark .home-insight-row {
+    border-top-color: rgba(255,255,255,0.12);
+}
+
+.home-insight-text,
+.home-carry-text {
+    min-width: 0;
+    margin: 0;
+    font-size: 0.58rem;
+    line-height: 1.25;
+    font-weight: 800;
+}
+
+.home-insight-text {
+    color: rgba(23, 51, 85, 0.78);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-carry-text {
+    color: #0060ad;
+    white-space: nowrap;
+}
+
+html.dark .home-insight-text {
+    color: rgba(255,255,255,0.72);
+}
+
+html.dark .home-carry-text {
+    color: #93c5fd;
+}
+
+.home-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 2.1rem;
+    height: 2.1rem;
+    border: 0;
+    border-radius: 0.8rem;
+    background: rgba(0, 96, 173, 0.1);
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.home-icon-button:hover {
+    background: rgba(0, 96, 173, 0.18);
+}
+
+html.dark .home-icon-button {
+    background: rgba(59, 130, 246, 0.18);
+}
+
+html.dark .home-icon-button:hover {
+    background: rgba(59, 130, 246, 0.28);
+}
+
+@media (max-width: 520px) {
+    .home-decision-bar {
+        gap: 0.45rem;
+        padding: 0.65rem;
+    }
+
+    .home-insight-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.25rem;
+    }
+
+    .home-carry-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
 /* TAP HERE Indicator */
 @keyframes tapPulse {
     0% { transform: scale(1); opacity: 0.8; }

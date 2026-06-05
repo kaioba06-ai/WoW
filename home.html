@@ -5,44 +5,45 @@
         <div class="home-main-card" onclick="openCurrentOutfitDetail()">
             <div id="grid-card-main" class="w-full h-full relative overflow-hidden rounded-[32px] bg-white/40 dark:bg-black/20 border border-white/60 dark:border-white/10 shadow-2xl backdrop-blur-xl group transition-all duration-500 hover:shadow-primary/20">
                 <!-- Main Image (full bleed, bottom padding for bar) -->
-                <div class="w-full h-full pb-20 skeleton">
+                <div class="w-full h-full pb-28 skeleton">
                     <img id="suggest-img-0"
                         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                         onerror="this.src='https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800'; this.onerror=null;"
                         alt="Suggestion" class="w-full h-full object-cover filter drop-shadow-2xl transition-transform duration-700 group-hover:scale-[1.03] opacity-0" onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton')"/>
                 </div>
 
-                <!-- Single Unified Bottom Bar -->
+                <!-- Decision Bottom Bar -->
                 <div class="absolute bottom-4 left-4 right-4 z-20">
-                    <div class="flex items-center gap-2.5 bg-white/60 dark:bg-black/55 backdrop-blur-xl px-4 py-3 rounded-2xl border border-white/60 dark:border-white/10 shadow-lg">
-                        <!-- Weather emoji -->
-                        <span id="suggest-weather-emoji" class="text-xl leading-none shrink-0">--</span>
-                        <span class="w-px h-5 bg-black/15 dark:bg-white/15 shrink-0"></span>
-                        <!-- Time + Temp (compact, 2 rows) -->
-                        <div class="flex flex-col shrink-0">
-                            <span id="suggest-time-label" class="text-[9px] font-black uppercase tracking-widest text-on-surface dark:text-white leading-none">NOW</span>
-                            <div class="flex items-baseline mt-0.5">
-                                <span id="suggest-apparent-temp" class="text-[16px] font-black text-primary dark:text-blue-300 leading-none">--°</span>
-                                <span class="text-[8px] font-bold text-on-surface-variant/60 dark:text-white/40 uppercase ml-1">feels</span>
+                    <div class="home-decision-bar">
+                        <div class="flex items-start gap-2.5 min-w-0">
+                            <div class="home-weather-pill">
+                                <span id="suggest-weather-emoji" class="text-xl leading-none">--</span>
+                                <div class="flex flex-col min-w-0">
+                                    <span id="suggest-time-label" class="text-[9px] font-black uppercase tracking-widest leading-none">NOW</span>
+                                    <span id="suggest-apparent-temp" class="text-[17px] font-black leading-none mt-0.5">--°</span>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <span id="suggest-judgement" class="home-judgement-chip">今日の判断を準備中</span>
+                                    <span id="suggest-range" class="home-range-chip">--</span>
+                                </div>
+                                <h3 id="suggest-title-0" class="font-headline font-bold text-sm text-on-surface dark:text-white leading-tight truncate mt-1">--</h3>
+                                <p id="suggest-desc-0" class="text-[9px] font-bold text-on-surface-variant dark:text-white/65 line-clamp-1 leading-snug mt-0.5">天気に合わせたコーデを読み込み中...</p>
+                            </div>
+                            <button id="refresh-outfits-btn" type="button"
+                                    onclick="event.stopPropagation(); if(typeof manualRegenerateOutfits==='function') manualRegenerateOutfits();"
+                                    title="コーデを再生成"
+                                    class="home-icon-button">
+                                <span class="material-symbols-outlined text-primary dark:text-blue-300 text-[18px]">refresh</span>
+                            </button>
+                            <div class="home-icon-button tap-hint" title="詳しく見る">
+                                <span class="material-symbols-outlined text-primary dark:text-blue-300 text-[18px]">touch_app</span>
                             </div>
                         </div>
-                        <span class="w-px h-5 bg-black/15 dark:bg-white/15 shrink-0"></span>
-                        <!-- Outfit info -->
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[7px] font-black text-primary dark:text-blue-400 uppercase tracking-[0.25em] leading-none mb-0.5">Recommended Look</p>
-                            <h3 id="suggest-title-0" class="font-headline font-bold text-sm text-on-surface dark:text-white leading-tight truncate">--</h3>
-                            <p id="suggest-desc-0" class="text-[8px] font-bold text-on-surface-variant dark:text-white/55 line-clamp-1 leading-snug mt-0.5">Loading fashion recommendations...</p>
-                        </div>
-                        <!-- Refresh outfits button -->
-                        <button id="refresh-outfits-btn" type="button"
-                                onclick="event.stopPropagation(); if(typeof manualRegenerateOutfits==='function') manualRegenerateOutfits();"
-                                title="コーデを再生成"
-                                class="shrink-0 p-2 bg-primary/10 dark:bg-blue-500/20 rounded-xl transition-opacity hover:bg-primary/20 dark:hover:bg-blue-500/30">
-                            <span class="material-symbols-outlined text-primary dark:text-blue-300 text-[18px]">refresh</span>
-                        </button>
-                        <!-- Tap hint -->
-                        <div class="shrink-0 p-2 bg-primary/10 dark:bg-blue-500/20 rounded-xl tap-hint">
-                            <span class="material-symbols-outlined text-primary dark:text-blue-300 text-[18px]">touch_app</span>
+                        <div class="home-insight-row">
+                            <p id="suggest-reason" class="home-insight-text">体感温度と天気から、理由を整理しています。</p>
+                            <p id="suggest-carry" class="home-carry-text">持ち物: --</p>
                         </div>
                     </div>
                 </div>

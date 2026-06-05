@@ -83,7 +83,110 @@ function selectSuggestion(index) {
             mainCard.classList.remove('ring-2', 'ring-primary', 'dark:ring-blue-400');
         }
     }
+
+    renderDecisionInsights(data, sheetMeta);
 }
+
+function getSuggestionTemp(suggestion) {
+    if (!suggestion) return null;
+    const n = Number(suggestion.apparentTemp);
+    return Number.isFinite(n) ? Math.round(n) : null;
+}
+
+function getMaxPrecipProbability(suggestions) {
+    const values = (suggestions || [])
+        .map(s => Number(s && s.precipProbability))
+        .filter(Number.isFinite);
+    return values.length ? Math.max(...values) : null;
+}
+
+function buildCarryItems(selected, tempRange, maxPrecip) {
+    const temp = getSuggestionTemp(selected);
+    const items = [];
+
+    if (maxPrecip !== null && maxPrecip >= 40) items.push('折りたたみ傘');
+    if (tempRange >= 7 || (temp !== null && temp <= 16)) items.push('薄手の羽織り');
+    if (temp !== null && temp <= 10) items.push('マフラー');
+    if (temp !== null && temp >= 28) items.push('水分');
+    if (temp !== null && temp >= 26 && selected && selected.hour >= 9 && selected.hour <= 16) items.push('日焼け止め');
+
+    return items.length ? items.slice(0, 3).join(' / ') : '身軽でOK';
+}
+
+function buildDecisionInsight(selected, sheetMeta) {
+    const suggestions = Array.isArray(hourlySuggestions) ? hourlySuggestions : [];
+    const temps = suggestions.map(getSuggestionTemp).filter(Number.isFinite);
+    const sheetTemp = sheetMeta && sheetMeta.feelsTemp !== null && sheetMeta.feelsTemp !== undefined && sheetMeta.feelsTemp !== ''
+        ? Math.round(Number(sheetMeta.feelsTemp))
+        : null;
+    const selectedTemp = Number.isFinite(sheetTemp) ? sheetTemp : getSuggestionTemp(selected);
+    const minTemp = temps.length ? Math.min(...temps) : selectedTemp;
+    const maxTemp = temps.length ? Math.max(...temps) : selectedTemp;
+    const tempRange = Number.isFinite(minTemp) && Number.isFinite(maxTemp) ? maxTemp - minTemp : 0;
+    const maxPrecip = getMaxPrecipProbability(suggestions);
+    const weatherDesc = selected && selected.weather ? selected.weather.desc : '天気';
+
+    let judgement = 'ちょうどよく調整';
+    let reasonTail = '脱ぎ着しやすさを少し残すと安心';
+
+    if (maxPrecip !== null && maxPrecip >= 60) {
+        judgement = '雨対策を優先';
+        reasonTail = '足元と傘を先に決めると崩れにくい';
+    } else if (selectedTemp !== null && selectedTemp <= 10) {
+        judgement = '防寒しっかり';
+        reasonTail = '首元と手首を温めると体感が安定';
+    } else if (tempRange >= 7) {
+        judgement = '寒暖差に注意';
+        reasonTail = '昼夜で調整できる羽織りが効く';
+    } else if (selectedTemp !== null && selectedTemp >= 28) {
+        judgement = '暑さ対策を優先';
+        reasonTail = '通気性と汗ばみにくさを優先';
+    } else if (selectedTemp !== null && selectedTemp <= 16) {
+        judgement = '軽い羽織り推奨';
+        reasonTail = '薄手アウターで朝晩の冷えを吸収';
+    }
+
+    const rainText = maxPrecip !== null ? ` / 降水${maxPrecip}%` : '';
+    const rangeText = tempRange >= 1 ? `${minTemp}°-${maxTemp}°` : '気温差少なめ';
+    const reason = `体感${selectedTemp !== null ? selectedTemp : '--'}° + ${weatherDesc}${rainText} → ${reasonTail}`;
+
+    return {
+        judgement,
+        rangeText,
+        reason,
+        carry: buildCarryItems(selected, tempRange, maxPrecip)
+    };
+}
+
+function renderDecisionInsights(selected, sheetMeta) {
+    if (!selected) return;
+    const insight = buildDecisionInsight(selected, sheetMeta);
+    const judgementEl = document.getElementById('suggest-judgement');
+    const rangeEl = document.getElementById('suggest-range');
+    const reasonEl = document.getElementById('suggest-reason');
+    const carryEl = document.getElementById('suggest-carry');
+
+    if (judgementEl) judgementEl.textContent = insight.judgement;
+    if (rangeEl) rangeEl.textContent = insight.rangeText;
+    if (reasonEl) reasonEl.textContent = insight.reason;
+    if (carryEl) carryEl.textContent = `持ち物: ${insight.carry}`;
+}
+
+function renderWeatherLoadState(message, detail) {
+    const judgementEl = document.getElementById('suggest-judgement');
+    const rangeEl = document.getElementById('suggest-range');
+    const reasonEl = document.getElementById('suggest-reason');
+    const carryEl = document.getElementById('suggest-carry');
+    const descEl = document.getElementById('suggest-desc-0');
+
+    if (judgementEl) judgementEl.textContent = message || '天気を確認中';
+    if (rangeEl) rangeEl.textContent = '--';
+    if (reasonEl) reasonEl.textContent = detail || '通信状況を見ながら、使えるデータを探しています。';
+    if (carryEl) carryEl.textContent = '持ち物: --';
+    if (descEl) descEl.textContent = detail || '天気に合わせたコーデを読み込み中...';
+}
+
+window.renderWeatherLoadState = renderWeatherLoadState;
 
 function updateHourlyTimeline(data) {
     const now = new Date();
@@ -92,6 +195,7 @@ function updateHourlyTimeline(data) {
     const temps = data.hourly.temperature_2m;
     const apparentTemps = data.hourly.apparent_temperature || [];
     const codes = data.hourly.weather_code;
+    const precipitationProb = data.hourly.precipitation_probability || [];
 
     const startIndex = times.findIndex(t => {
         const d = new Date(t);
@@ -105,7 +209,7 @@ function updateHourlyTimeline(data) {
     }
     const safeStartIndex = startIndex < 0 ? 0 : startIndex;
 
-    const targetOffsets = [0, 3, 4, 12];
+    const targetOffsets = [0, 3, 6, 12];
     hourlySuggestions = [];
 
     targetOffsets.forEach((offset, i) => {
@@ -114,6 +218,9 @@ function updateHourlyTimeline(data) {
 
         const temp = Math.round(temps[idx]);
         const apparentTemp = Math.round(apparentTemps[idx] || temp);
+        const precipProbability = Number.isFinite(Number(precipitationProb[idx]))
+            ? Math.round(Number(precipitationProb[idx]))
+            : null;
         const weatherInfo = getWeatherInfo(codes[idx]);
         const d = new Date(times[idx]);
         const hour = d.getHours();
@@ -132,6 +239,8 @@ function updateHourlyTimeline(data) {
             dateString,
             contextLabel,
             hour,
+            offset,
+            precipProbability,
             meta: bestOutfit
         });
 
@@ -217,6 +326,11 @@ function applyOutfitMeta(data) {
     if (temps[idx] !== null && temps[idx] !== undefined && temps[idx] !== '') {
         const el = document.getElementById('suggest-apparent-temp');
         if (el) el.textContent = `${temps[idx]}°`;
+    }
+    if (Array.isArray(hourlySuggestions) && hourlySuggestions[idx]) {
+        renderDecisionInsights(hourlySuggestions[idx], {
+            feelsTemp: temps[idx]
+        });
     }
 }
 

@@ -189,6 +189,9 @@ async function loadWeather(lat, lon, pref, city) {
             if (descEl) descEl.textContent = '取得失敗';
             const tempEl = document.getElementById('current-temp');
             if (tempEl) tempEl.textContent = '--°C';
+            if (typeof renderWeatherLoadState === 'function') {
+                renderWeatherLoadState('天気を取得できません', '通信状況を確認して、少し時間を置いて再読み込みしてください。');
+            }
         } else {
             console.log('[Weather] Network failed but cache is shown, ignoring');
         }
