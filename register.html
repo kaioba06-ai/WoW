@@ -253,7 +253,7 @@
                     <span class="material-symbols-outlined text-white text-[13px]" style="display:none;font-variation-settings:'FILL' 1">check</span>
                 </div>
                 <span class="text-xs text-on-surface-variant leading-relaxed pt-0.5">
-                    <a href="#" class="text-primary font-semibold underline">利用規約</a>に同意します
+                    <a href="#" onclick="event.preventDefault(); openTermsModal('terms')" class="text-primary font-semibold underline">利用規約</a>に同意します
                 </span>
             </label>
             <label class="flex items-start gap-3 cursor-pointer select-none" onclick="toggleCheck('check-privacy')">
@@ -261,7 +261,7 @@
                     <span class="material-symbols-outlined text-white text-[13px]" style="display:none;font-variation-settings:'FILL' 1">check</span>
                 </div>
                 <span class="text-xs text-on-surface-variant leading-relaxed pt-0.5">
-                    <a href="#" class="text-primary font-semibold underline">プライバシーポリシー</a>に同意します
+                    <a href="#" onclick="event.preventDefault(); openTermsModal('privacy')" class="text-primary font-semibold underline">プライバシーポリシー</a>に同意します
                 </span>
             </label>
             <label class="flex items-start gap-3 cursor-pointer select-none" onclick="toggleCheck('check-news')">
@@ -297,6 +297,30 @@
         <a href="login.html" class="text-primary font-bold hover:underline ml-1">ログイン</a>
     </p>
 
+</div>
+
+<!-- 利用規約・プライバシーポリシー モーダル -->
+<div id="terms-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm hidden overflow-y-auto py-4">
+    <div class="bg-white rounded-[28px] shadow-2xl w-full max-w-2xl mx-auto relative">
+        <!-- クローズボタン -->
+        <button onclick="closeTermsModal()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/80 flex items-center justify-center text-on-surface hover:bg-white transition z-10">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+
+        <!-- モーダルコンテンツ -->
+        <div id="terms-content" class="p-8 max-h-[80vh] overflow-y-auto">
+            <!-- コンテンツはJavaScriptで動的に読み込まれます -->
+            <div class="text-center py-8">
+                <div class="inline-block">
+                    <svg class="animate-spin h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                </div>
+                <p class="text-on-surface-variant text-sm mt-3">読み込み中...</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- 完了オーバーレイ -->
@@ -498,6 +522,67 @@
         el.classList.toggle('checked');
         icon.style.display = el.classList.contains('checked') ? 'block' : 'none';
     }
+
+    // ===== 利用規約・プライバシーポリシー モーダル =====
+    async function openTermsModal(type) {
+        const modal = document.getElementById('terms-modal');
+        const content = document.getElementById('terms-content');
+
+        // ファイルURLを決定
+        const fileName = type === 'terms' ? 'terms.html' : 'privacy.html';
+
+        try {
+            // HTMLファイルを取得
+            const response = await fetch(fileName);
+            if (!response.ok) throw new Error('Failed to load');
+            const html = await response.text();
+
+            // DOMパーサーで解析
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // body内のコンテンツを抽出（ヘッダーを除く）
+            const body = doc.body;
+            const contentDiv = body.querySelector('.max-w-2xl');
+
+            if (contentDiv) {
+                // ヘッダーとコンテンツセクションを取得
+                const header = contentDiv.querySelector('.flex.items-center');
+                const section = contentDiv.querySelector('.content-section');
+
+                // モーダルに表示するHTMLを構築
+                let modalHTML = '';
+                if (header) modalHTML += header.outerHTML;
+                if (section) modalHTML += section.outerHTML;
+
+                content.innerHTML = modalHTML;
+            } else {
+                content.innerHTML = '<p class="text-on-surface-variant">コンテンツを読み込めませんでした。</p>';
+            }
+        } catch (err) {
+            console.error('Error loading modal:', err);
+            content.innerHTML = '<p class="text-on-surface-variant">エラーが発生しました。ページを再読み込みしてください。</p>';
+        }
+
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeTermsModal() {
+        const modal = document.getElementById('terms-modal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    // モーダル外をクリックで閉じる
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('terms-modal');
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeTermsModal();
+            }
+        });
+    });
 </script>
 </body>
 </html>

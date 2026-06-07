@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Kion - プライバシーポリシー</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="styles.css"/>
+    <style>
+        body {
+            background-image: url('背景/weather_sunny.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(248, 250, 255, 0.75);
+            backdrop-filter: blur(10px);
+            z-index: -1;
+        }
+        .content-section {
+            line-height: 1.8;
+        }
+        .content-section h2 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #1a1a1a;
+        }
+        .content-section h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        .content-section p {
+            margin-bottom: 0.75rem;
+            color: #555;
+            font-size: 0.95rem;
+        }
+        .content-section ul {
+            margin: 0.75rem 0 0.75rem 1.5rem;
+            list-style: disc;
+        }
+        .content-section li {
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-dvh px-4 py-10">
+
+<div class="w-full max-w-2xl mx-auto">
+    <!-- ヘッダー & 戻るボタン -->
+    <div class="flex items-center gap-3 mb-6">
+        <a href="javascript:window.history.back()" class="w-10 h-10 rounded-full bg-white/50 backdrop-blur-md border border-white/60 shadow flex items-center justify-center text-on-surface hover:bg-white/80 transition active:scale-90">
+            <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+        </a>
+        <h1 class="font-headline font-extrabold text-2xl tracking-tight text-on-surface">プライバシーポリシー</h1>
+    </div>
+
+    <!-- コンテンツ -->
+    <div class="bg-white/50 backdrop-blur-xl rounded-[28px] border border-white/60 shadow-2xl p-8 content-section">
+        <p class="text-sm text-on-surface-variant mb-6">最終更新日: 2024年6月7日</p>
+
+        <h2>1. はじめに</h2>
+        <p>Kion（以下「当サービス」）は、ユーザーのプライバシーを重視します。本プライバシーポリシーは、当サービスがどのように個人情報を収集、使用、保護するかについて説明するものです。</p>
+
+        <h2>2. 情報の収集</h2>
+        <h3>2.1 直接提供される情報</h3>
+        <p>ユーザーが当サービスに登録する際に、以下の情報が提供されます：</p>
+        <ul>
+            <li>メールアドレス</li>
+            <li>表示名（ニックネーム）</li>
+            <li>パスワード</li>
+        </ul>
+
+        <h3>2.2 プロフィール情報</h3>
+        <p>ユーザーが当サービス内で設定する、以下の情報も収集されます：</p>
+        <ul>
+            <li>アバター選択</li>
+            <li>スタイルの好み</li>
+            <li>体感温度の傾向</li>
+            <li>保存された衣装情報</li>
+        </ul>
+
+        <h3>2.3 位置情報</h3>
+        <p>気象情報提供のため、ユーザーの位置情報（都市または地域）が必要な場合があります。ユーザーは明示的に位置情報の提供に同意する必要があります。</p>
+
+        <h3>2.4 自動収集情報</h3>
+        <p>当サービスは、以下の情報を自動的に収集することがあります：</p>
+        <ul>
+            <li>アクセスログ（IPアドレス、アクセス時刻）</li>
+            <li>ブラウザ情報</li>
+            <li>Cookie情報</li>
+            <li>デバイス識別情報</li>
+        </ul>
+
+        <h2>3. 情報の使用</h2>
+        <p>収集した情報は、以下の目的で使用されます：</p>
+        <ul>
+            <li>当サービスの提供と改善</li>
+            <li>ユーザーのアカウント管理</li>
+            <li>パーソナライズされた気象・衣装提案</li>
+            <li>サービスの統計分析</li>
+            <li>セキュリティ監視と不正防止</li>
+            <li>ユーザーサポート</li>
+        </ul>
+
+        <h2>4. 情報の共有</h2>
+        <p>当社は、以下の場合を除き、ユーザーの個人情報を第三者に共有することはありません：</p>
+        <ul>
+            <li>法律によって要求された場合</li>
+            <li>ユーザーの明示的な同意を得た場合</li>
+            <li>当サービスの運営に必要な委託業者（例：データセンター提供者、メール送信サービス）</li>
+        </ul>
+
+        <h2>5. 情報の保護</h2>
+        <p>当社は、ユーザーの個人情報を保護するために、以下の措置を講じています：</p>
+        <ul>
+            <li>SSL/TLS暗号化通信</li>
+            <li>パスワードの暗号化保存</li>
+            <li>アクセス制御</li>
+            <li>定期的なセキュリティ監査</li>
+        </ul>
+        <p>ただし、インターネット上の送信は完全に安全ではないことをご理解ください。</p>
+
+        <h2>6. データ保持期間</h2>
+        <p>ユーザーが当サービスを利用している間、個人情報は保持されます。アカウント削除後、データは一定期間（通常30日以内）で削除されます。法的義務がある場合は、より長く保持することがあります。</p>
+
+        <h2>7. ユーザーの権利</h2>
+        <p>ユーザーは、以下の権利を有します：</p>
+        <ul>
+            <li>自分の個人情報にアクセスする権利</li>
+            <li>誤った情報を訂正する権利</li>
+            <li>アカウントを削除する権利</li>
+            <li>データの処理に異議を唱える権利</li>
+        </ul>
+
+        <h2>8. Cookie について</h2>
+        <p>当サービスは、セッション管理とユーザー設定の保存のため、Cookieを使用します。ユーザーはブラウザ設定でCookieを制御することができます。</p>
+
+        <h2>9. 外部サービスとの連携</h2>
+        <p>当サービスは、以下の外部サービスを使用しています：</p>
+        <ul>
+            <li>Supabase（認証・データベース）</li>
+            <li>気象情報API</li>
+        </ul>
+        <p>これらのサービスのプライバシーポリシーを確認することをお勧めします。</p>
+
+        <h2>10. ポリシーの変更</h2>
+        <p>当社は、本プライバシーポリシーをいつでも変更することができます。重要な変更がある場合は、当サービスを通じて通知するものとします。</p>
+
+        <h2>11. お問い合わせ</h2>
+        <p>本プライバシーポリシーに関するご質問やご懸念がございましたら、当サービスの公式サポートまでお問い合わせください。</p>
+
+        <div class="border-t border-black/10 mt-8 pt-6">
+            <p class="text-xs text-on-surface-variant">このページは Kion アカウント登録時に表示されます。登録を続行することで、本プライバシーポリシーに同意したものとします。</p>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
