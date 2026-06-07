@@ -1,116 +1,402 @@
-// ===== [Component] weekly.js — 週間予報タブ専用 DOM 操作 =====
-// 依存: app.js (DAY_NAMES), weather.js (getWeatherInfo, getClothingSuggestion)
-// index.html の #weekly-container に inject される weekly.html とセット
+// ===== [Component] weekly.js — 週間ページ =====
+// 新レイアウト: Main + Right 3 slots + Bottom 5 days
+// 依存: app.js (DAY_NAMES)
 
-// 週間コーデ画像
-const WEEKLY_OUTFIT_IMGS = [
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuAHrJn4azvIQYn4lCFONT_hoI1z0ERDeYSabXsJQ9YBkFC9m2umBqgPX4wToLBtaAPw_WgFtrKBG-pqiXkTkrvkilDHFi5P2nD1hvJtYYtleBPVKql4r5ZnHTg9tyBTv1UbyCEMI92jw6XvNinXiktmCwggqli2bnF8emsRPuBfB-wWwhpdKQO4iSMPQjgET9NuSL6EgOQJHnWAZ8GXZPvWrfQrc9GjywkB0bcGWMTELruQXifNdCqOjJwdLw3MrfG8oVqw8OF4uw',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuAaRkINi2JduqKmvssw9miN06u7pb-ZuC_Q42FVre3Twr4oOMbcjBGq_33TB5SHubWOPm6SMovnvO6-Qsh5EQhAN-AwmZ5OcEiHwOWBLdTLmymGEGyaVaVJVBPLWIbJjQAuzVsttLOhgFkyyqAd3UHSSSdEG7xY_NhYtwN4bQfWURuUm5T9qbLWpbapIc0kVwzqttnhGewK6VrZ0wO21ikiDFBVN5TMA9HNhCMkKrN_wyq47tzB_sSbivYUJq3X9fUqM-v3-1aehA',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuBw7ISmhIPAArDRS6RCoH79XsbAEoyfHRLnkyMFjGpL68CjDUxj-QX0d1OGf_uuXSBJD-AUQxXTqEm5yWE9Z5U24DefO7YHkWhOiwp3B6ogA0UkWTph1brWqrp5yyymPU35fEU0XxBwabD9mPQD5cRxnPih1YW6uA0GhhCc-8EI91cIVbIc8ms3Bn3IRce4794R9qCQ-0YsflNmzls1G3s7O7LVK5tVCF1yTp_cQ5tkLFXYL9bZJhDoew95l0G3Pr2I54wLJjk_NA',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuCqvBlbyppfUMTJedHiMwUKAMrhIvvvF5DkYEv6g8wA3XB6pwIOrP144xnsxB5vtmAU3sYOi0kPEKqTcBtb_ibzvv6d0_QeyXAawb97eQaGUI8_08YQ-5N3XYpCWJ-LbSYdDQNz_zvwY_1XCYEFjntnVFjs6H0rcX1tbCVZFjbC1IFxhLEAHrrGOCsWIkg4zsrJp4F1V_VUnqvs0ymjRPPMFRuHLByu-kLBpOfgK5eGq0IZToRRyHQtRHD9C01ScAknmPLV57YoXQ',
-];
+// 状態
+var _wkDays = [];           // シートから取得した6日分のデータ
+var _wkSelectedDay = 0;     // 0..5
+var _wkSelectedSlot = 0;    // 0..2 (朝/昼/夜)
+
+// 「明日」起点の6日間のラベル ['月','火','水','木','金','土'] 等を動的計算
+function _wkComputeDayLabels() {
+    const labels = ['日','月','火','水','木','金','土'];
+    const todayDow = new Date().getDay();
+    const result = [];
+    for (let i = 1; i <= 6; i++) {
+        result.push(labels[(todayDow + i) % 7]);
+    }
+    return result;
+}
+
+const SLOT_LABELS = ['朝', '昼', '夜'];
+const SLOT_HOUR_LABEL = { '朝': '7時', '昼': '13時', '夜': '21時' };
+function _wkSlotTimeLabel(day, slot) {
+    // 曜日はカード外側の枠で表示しているため時刻のみ返す
+    return SLOT_HOUR_LABEL[slot.slot_label] || slot.slot_label;
+}
 
 /**
- * 週間予報グリッドを描画する。
- * weather.js の fetchWeatherData() が返すデータをそのまま受け取る。
- * @param {Object} data  Open-Meteo APIレスポンス
+ * APIから取得した weekly_scenes データを内部状態に格納＋描画
  */
-function updateWeeklyForecast(data) {
-    const grid = document.getElementById('weekly-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
+function applyWeeklyScenes(apiData) {
+    const dayLabels = _wkComputeDayLabels();
+    const apiDays = (apiData && apiData.days) || [];
 
-    const dates      = data.daily.time;
-    const maxTemps   = data.daily.temperature_2m_max;
-    const minTemps   = data.daily.temperature_2m_min;
-    const codes      = data.daily.weather_code;
-    const precipProbs = data.daily.precipitation_probability_max;
+    _wkDays = [];
+    for (let i = 0; i < 6; i++) {
+        const apiDay = apiDays[i] || {};
+        const apiSlots = apiDay.slots || [];
+        const slots = [];
+        for (let s = 0; s < 3; s++) {
+            const apiSlot = apiSlots[s] || {};
+            slots.push({
+                slot_label: SLOT_LABELS[s],
+                time: apiSlot.time || '',
+                feels_temp: apiSlot.feels_temp,
+                weather: apiSlot.weather || '',
+                outfit_name: apiSlot.outfit_name || '',
+                one_point: apiSlot.one_point || '',
+                scene_image: apiSlot.scene_image || null
+            });
+        }
+        _wkDays.push({
+            day_label: dayLabels[i],
+            slots: slots
+        });
+    }
+    renderWeekly();
+}
 
-    // past_days=1 のため index 0 は昨日。index 1 が今日。
-    let cardIndex = 0;
-    for (let i = 1; i < dates.length && cardIndex < 7; i++, cardIndex++) {
-        const d         = new Date(dates[i]);
-        const isToday   = cardIndex === 0;
-        const dayName   = DAY_NAMES[d.getDay()];
-        const dateLabel = isToday
-            ? `Today / ${d.getMonth()+1}月${d.getDate()}日`
-            : `${dayName} / ${d.getDate()}`;
-        const maxT       = Math.round(maxTemps[i]);
-        const minT       = Math.round(minTemps[i]);
-        const weatherInfo = getWeatherInfo(codes[i]);
-        const prob        = precipProbs[i];
-        const imgSrc      = WEEKLY_OUTFIT_IMGS[cardIndex % WEEKLY_OUTFIT_IMGS.length];
-        const suggestion  = getClothingSuggestion(maxT);
+function renderWeekly() {
+    renderWeeklyMain();
+    renderWeeklyRight();
+    renderWeeklyBottom();
+}
 
-        const iconColor = codes[i] <= 3
-            ? 'text-orange-400'
-            : codes[i] <= 49
-            ? 'text-slate-400'
-            : 'text-blue-400';
+function renderWeeklyMain() {
+    const day = _wkDays[_wkSelectedDay];
+    if (!day) return;
+    const slot = day.slots[_wkSelectedSlot];
+    if (!slot) return;
 
-        const detailTip = prob >= 40
-            ? `☂ 降水確率 ${prob}% — 折りたたみ傘を忘れずに`
-            : `晴れ間を活かした ${suggestion} がおすすめ`;
+    const imgEl = document.getElementById('weekly-main-img');
+    if (imgEl) {
+        if (slot.scene_image && slot.scene_image.startsWith('http')) {
+            imgEl.src = slot.scene_image;
+            imgEl.classList.remove('opacity-0');
+            const card = document.getElementById('weekly-main-card');
+            if (card) card.classList.remove('skeleton');
+        }
+    }
+    const labelEl = document.getElementById('weekly-main-day-slot');
+    if (labelEl) labelEl.textContent = _wkSlotTimeLabel(day, slot);
+    const dayChipEl = document.getElementById('weekly-main-day-chip');
+    if (dayChipEl) dayChipEl.textContent = day.day_label || '--';
+    const tempEl = document.getElementById('weekly-main-temp');
+    if (tempEl) tempEl.textContent = (slot.feels_temp != null && slot.feels_temp !== '') ? `${slot.feels_temp}°` : '--°';
+    const nameEl = document.getElementById('weekly-main-name');
+    if (nameEl) nameEl.textContent = slot.outfit_name || '生成待ち';
+    const tipEl = document.getElementById('weekly-main-tip');
+    if (tipEl) tipEl.textContent = slot.one_point || `${_wkSlotTimeLabel(day, slot)}のコーデをここに表示`;
+}
 
+function renderWeeklyRight() {
+    const day = _wkDays[_wkSelectedDay];
+    if (!day) return;
+    for (let s = 0; s < 3; s++) {
+        const slot = day.slots[s];
+        const card = document.getElementById(`weekly-slot-${s}`);
+        if (!card) continue;
+        card.onclick = () => selectWeeklySlot(s);
+        const img = card.querySelector('img');
+        if (img && slot.scene_image && slot.scene_image.startsWith('http')) {
+            img.src = slot.scene_image;
+        }
+        const labelEl = card.querySelector('.weekly-slot-label');
+        if (labelEl) labelEl.textContent = _wkSlotTimeLabel(day, slot);
+        const tempEl = card.querySelector('.weekly-slot-temp');
+        if (tempEl) tempEl.textContent = (slot.feels_temp != null && slot.feels_temp !== '') ? `${slot.feels_temp}°` : '--°';
+
+        // 選択中ハイライト
+        if (s === _wkSelectedSlot) {
+            card.classList.add('is-active');
+            card.classList.remove('opacity-60');
+        } else {
+            card.classList.remove('is-active');
+            card.classList.add('opacity-60');
+        }
+    }
+}
+
+function renderWeeklyBottom() {
+    const row = document.getElementById('weekly-bottom-row');
+    if (!row) return;
+    row.innerHTML = '';
+    // 選択中以外の5日を表示
+    for (let i = 0; i < _wkDays.length; i++) {
+        if (i === _wkSelectedDay) continue;
+        const day = _wkDays[i];
+        // 代表スロット: 現在選択中の時間帯を維持して、その日の同じ時間帯を表示
+        const slot = day.slots[_wkSelectedSlot] || day.slots[0] || {};
         const card = document.createElement('div');
-        card.className = 'k-card' + (isToday ? ' expanded' : '');
-        card.setAttribute('onclick', 'expandFlexCard(this)');
+        card.className = 'weekly-day-card';
+        card.onclick = () => selectWeeklyDay(i);
+        const imgSrc = (slot.scene_image && slot.scene_image.startsWith('http'))
+            ? slot.scene_image
+            : 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        const tempText = (slot.feels_temp != null && slot.feels_temp !== '')
+            ? `${slot.feels_temp}°` : '--°';
         card.innerHTML = `
-            <div class="k-card-main">
-                <div class="k-card-info">
-                    <span class="k-date-label">${dateLabel}</span>
-                    <span class="material-symbols-outlined ${iconColor} ${isToday ? 'text-3xl' : 'text-2xl'} mb-1">${weatherInfo.icon}</span>
-                    <span class="k-temp-main dark:text-white">${maxT}° <span class="text-xs opacity-60 font-normal">/ ${minT}°</span></span>
-                    <span class="text-[9px] font-bold text-primary dark:text-blue-400 mt-1 opacity-80">${suggestion}</span>
-                    ${prob >= 40 ? `<span class="text-[9px] font-bold text-blue-500 dark:text-blue-300 mt-0.5">☂ ${prob}%</span>` : ''}
-                </div>
-                <div class="k-card-img-wrap">
-                    <img src="${imgSrc}" alt="コーデ" loading="lazy" />
-                </div>
+            <img src="${imgSrc}"
+                onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;"/>
+            <div class="weekly-day-overlay">
+                <span class="weekly-day-label">${day.day_label}曜</span>
             </div>
-            <div class="k-card-detail">
-                <div class="border-t border-black/5 dark:border-white/10 pt-2 text-[10px] text-on-surface-variant dark:text-white/70 font-bold leading-relaxed">
-                    ${detailTip}
-                </div>
-            </div>`;
-        grid.appendChild(card);
+            <span class="weekly-day-temp">${tempText}</span>
+        `;
+        row.appendChild(card);
     }
 }
 
 /**
- * カードの展開 / 折りたたみを切り替える。
- * @param {HTMLElement} card  クリックされた .k-card 要素
+ * 日付切替（時間帯は維持）
  */
-function expandFlexCard(card) {
-    const grid = document.getElementById('weekly-grid');
-    if (!grid) return;
-    const cards = grid.querySelectorAll('.k-card');
-    const isAlreadyExpanded = card.classList.contains('expanded');
-    cards.forEach(c => c.classList.remove('expanded'));
-    if (!isAlreadyExpanded) {
-        card.classList.add('expanded');
-        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+function selectWeeklyDay(dayIdx) {
+    if (dayIdx < 0 || dayIdx >= _wkDays.length) return;
+    _wkSelectedDay = dayIdx;
+    renderWeekly();
 }
 
 /**
- * 週間データを再取得してグリッドを更新する。
- * weekly.html の更新ボタンから呼ばれる。
+ * 時間帯切替（同じ日のなかで）
  */
-function refreshWeeklyData() {
-    const grid = document.getElementById('weekly-grid');
-    if (!grid) return;
-    grid.innerHTML = `
-        <div class="k-card skeleton" style="min-height:130px;"></div>
-        <div class="k-card skeleton" style="min-height:130px;"></div>
-        <div class="k-card skeleton" style="min-height:130px;"></div>
-        <div class="k-card skeleton" style="min-height:130px;"></div>`;
-    initWeather(); // weather.js の initWeather → loadWeather → updateWeeklyForecast
+function selectWeeklySlot(slotIdx) {
+    if (slotIdx < 0 || slotIdx > 2) return;
+    _wkSelectedSlot = slotIdx;
+    renderWeeklyMain();
+    renderWeeklyRight();
+    renderWeeklyBottom();  // 下5枚も同じ時間帯の画像に切替
 }
 
-// 公開インターフェース
-window.KionWeekly = {
-    updateWeeklyForecast,
-    expandFlexCard,
-    refreshWeeklyData,
-};
+/**
+ * APIフェッチ＋初期描画
+ */
+async function loadWeekly() {
+    // 初期はプレースホルダーで描画
+    applyWeeklyScenes({ days: [] });
+
+    if (typeof WOW_CONFIG === 'undefined' || !WOW_CONFIG.cloudUrl) return;
+    try {
+        const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+        const userId = profile.handle || 'unknown';
+        if (userId === 'unknown') return;
+        const url = `${WOW_CONFIG.cloudUrl}?action=weekly_scenes&apiKey=${encodeURIComponent(WOW_CONFIG.apiKey)}&user_id=${encodeURIComponent(userId)}`;
+        const resp = await fetch(url, { method: 'GET', redirect: 'follow' });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (data && data.success && data.days) {
+            applyWeeklyScenes(data);
+        }
+    } catch (e) {
+        console.warn('[Weekly] loadWeekly failed:', e);
+    }
+}
+
+// 旧API互換（weather.js から呼ばれる関数を空実装で残す）
+function updateWeeklyForecast(_data) { /* no-op: 新weeklyページはGAS経由のweekly_scenesを直接読みに行く */ }
+
+/**
+ * Open-Meteo の lastWeatherData から指定日(明日起点 0..5)の
+ * 朝7/昼13/夜21 スロット payload を組み立て
+ */
+function _buildWeeklyDayPayload(dayOffset) {
+    const w = (typeof lastWeatherData !== 'undefined') ? lastWeatherData : null;
+    if (!w || !w.hourly || !w.hourly.time) return null;
+
+    const dayLabels = ['日','月','火','水','木','金','土'];
+    const target = new Date();
+    target.setDate(target.getDate() + 1 + dayOffset); // +1 = 明日起点
+    const dayLabel = dayLabels[target.getDay()];
+    const isoDate = target.toISOString().slice(0, 10); // YYYY-MM-DD
+
+    const times = w.hourly.time;
+    const apparent = w.hourly.apparent_temperature || w.hourly.temperature_2m || [];
+    const codes = w.hourly.weather_code || [];
+
+    const slotDefs = [
+        { slot_label: '朝', hour: 7,  time: '07:00' },
+        { slot_label: '昼', hour: 13, time: '13:00' },
+        { slot_label: '夜', hour: 21, time: '21:00' }
+    ];
+
+    const slots = slotDefs.map(s => {
+        const idx = times.findIndex(t => {
+            const d = new Date(t);
+            return d.getFullYear() === target.getFullYear()
+                && d.getMonth() === target.getMonth()
+                && d.getDate() === target.getDate()
+                && d.getHours() === s.hour;
+        });
+        const temp = idx >= 0 ? Math.round(apparent[idx]) : null;
+        const code = idx >= 0 ? codes[idx] : 0;
+        const wInfo = (typeof getWeatherInfo === 'function') ? getWeatherInfo(code) : { desc: '晴れ' };
+        const lv = (temp != null && typeof getThermalLevel === 'function') ? getThermalLevel(temp) : 5;
+        return {
+            slot_label: s.slot_label,
+            time: s.time,
+            temp: temp != null ? temp : 20,
+            lv: lv,
+            weather: wInfo.desc || '晴れ'
+        };
+    });
+
+    return {
+        day_label: dayLabel,
+        date: isoDate,
+        slots: slots
+    };
+}
+
+/**
+ * 週間生成（6日 × 3スロット）を直列で実行
+ * - 本物の天気予報(lastWeatherData)から payload を組み立て
+ * - GAS の 6分タイムアウトを避けるため日単位で sync_weekly_day を呼ぶ
+ */
+async function generateWeeklyAll() {
+    if (typeof WOW_CONFIG === 'undefined' || !WOW_CONFIG.cloudUrl) {
+        alert('クラウド設定が見つかりません');
+        return;
+    }
+    const profile = JSON.parse(localStorage.getItem('kion_profile') || '{}');
+    const userId = profile.handle || 'unknown';
+    if (userId === 'unknown') {
+        alert('プロフィール未設定です');
+        return;
+    }
+    if (typeof lastWeatherData === 'undefined' || !lastWeatherData) {
+        alert('天気データがまだ取得できていません。少し待ってから再試行してください');
+        return;
+    }
+
+    const btn = document.getElementById('weekly-generate-btn');
+    const label = document.getElementById('weekly-generate-btn-label');
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-60', 'pointer-events-none');
+    }
+
+    let failCount = 0;
+    for (let day = 0; day < 6; day++) {
+        if (label) label.textContent = `生成中 ${day + 1}/6`;
+        const dayPayload = _buildWeeklyDayPayload(day);
+        if (!dayPayload) {
+            console.warn(`[Weekly] day ${day} payload missing`);
+            failCount++;
+            continue;
+        }
+
+        const body = JSON.stringify({
+            apiKey: WOW_CONFIG.apiKey,
+            type: 'weekly_day',
+            data: { user_id: userId, day_index: day, day: dayPayload }
+        });
+
+        try {
+            console.log(`[Weekly] generating day ${day}...`, dayPayload);
+            // text/plain で送って CORS preflight を回避
+            const resp = await fetch(WOW_CONFIG.cloudUrl, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: body
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            if (!data || !data.success) {
+                console.warn(`[Weekly] day ${day} failed:`, data);
+                failCount++;
+            } else {
+                console.log(`[Weekly] day ${day} done`);
+                await loadWeekly();
+            }
+        } catch (e) {
+            console.error(`[Weekly] day ${day} error:`, e);
+            failCount++;
+        }
+    }
+
+    if (label) {
+        label.textContent = failCount === 0 ? '完了 ✓' : `完了 (失敗${failCount}日)`;
+    }
+    setTimeout(() => {
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-60', 'pointer-events-none');
+        }
+        if (label) label.textContent = '週間プランを生成';
+    }, 3000);
+}
+
+/**
+ * メインカードタップ → Today と同じ共有モーダル (outfit-detail-*) を開く
+ */
+function openWeeklyOutfitDetail() {
+    const day = _wkDays[_wkSelectedDay];
+    if (!day) return;
+    const slot = day.slots[_wkSelectedSlot];
+    if (!slot) return;
+
+    const overlay = document.getElementById('outfit-detail-overlay');
+    const modal = document.getElementById('outfit-detail-modal');
+    const scrollContainer = document.getElementById('outfit-detail-scroll-container');
+    if (!overlay || !modal) return;
+
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+    // Hero画像
+    const heroEl = document.getElementById('detail-hero-img');
+    const mainImg = document.getElementById('weekly-main-img');
+    const heroUrl = (slot.scene_image && slot.scene_image.startsWith('http'))
+        ? slot.scene_image
+        : (mainImg ? mainImg.src : null);
+    if (heroEl && heroUrl) {
+        heroEl.src = heroUrl;
+        heroEl.onerror = () => {
+            heroEl.src = 'https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800';
+            heroEl.onerror = null;
+        };
+    }
+
+    // タイトル / 天気行
+    set('detail-title', slot.outfit_name || '生成待ち');
+    set('detail-weather-temp', (slot.feels_temp != null && slot.feels_temp !== '') ? `${slot.feels_temp}°` : '--°');
+
+    const wInfo = (typeof getWeatherInfo === 'function' && slot.weather_code != null)
+        ? getWeatherInfo(slot.weather_code)
+        : { emoji: '🌤️', desc: slot.weather || '' };
+    set('detail-weather-emoji', wInfo.emoji || '🌤️');
+    set('detail-weather-desc', wInfo.desc || slot.weather || '');
+    set('detail-time-label', _wkSlotTimeLabel(day, slot));
+    set('detail-weather-precip', '0%');
+
+    // Stylist's Note
+    set('detail-desc', slot.one_point || '--');
+
+    // Parts セクション（weekly にはデータなしなので非表示）
+    const partsList = document.getElementById('detail-parts-list');
+    const partsSection = document.getElementById('detail-outfit-section');
+    if (partsList) partsList.innerHTML = '';
+    if (partsSection) partsSection.style.display = 'none';
+
+    // 表示アニメーション
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        modal.style.transform = 'translateX(-50%) translateY(0)';
+        if (scrollContainer) scrollContainer.scrollTop = 0;
+    });
+}
+
+window.openWeeklyOutfitDetail = openWeeklyOutfitDetail;
+window.selectWeeklyDay = selectWeeklyDay;
+window.selectWeeklySlot = selectWeeklySlot;
+window.loadWeekly = loadWeekly;
+window.generateWeeklyAll = generateWeeklyAll;
+
+// 初期化（sectionsLoaded 後に1回）
+if (typeof window !== 'undefined') {
+    window.addEventListener('sectionsLoaded', () => {
+        loadWeekly();
+    });
+}

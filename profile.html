@@ -279,6 +279,25 @@
                     </h4>
                     
                     <div id="body-data-settings-content" class="hidden wow-settings-card space-y-6">
+                        <!-- 顔写真→AIで自動入力（似顔絵2ステップ方式） -->
+                        <div class="p-3 rounded-xl bg-primary/5 dark:bg-blue-500/10 border border-primary/20 dark:border-blue-500/20 space-y-2">
+                            <p class="text-[11px] font-bold text-primary dark:text-blue-300 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+                                AI で性別・年代・髪型などを自動入力
+                            </p>
+                            <p class="text-[10px] text-on-surface-variant dark:text-white/60 leading-relaxed">
+                                自分の顔写真から特徴を抽出してフォームに反映します。<br>
+                                写真はサーバーに保存されません（特徴抽出にのみ使用）。
+                            </p>
+                            <button id="analyze-photo-btn" type="button" onclick="analyzePhotoForProfile()"
+                                class="w-full py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-sm active:scale-[0.98] transition-all">
+                                📷 写真からAIで自動入力
+                            </button>
+                            <p class="text-[9px] text-on-surface-variant/60 dark:text-white/40 text-center">
+                                ※ 18歳以上・自分自身の写真のみ
+                            </p>
+                        </div>
+
                         <!-- 1. 基本体型 -->
                         <div class="space-y-4">
                             <div class="grid grid-cols-2 gap-3">
@@ -478,6 +497,11 @@
                                         <button onclick="selectProfileOption(this, 'hair-style')" class="profile-opt-hair-style segmented-control-btn" data-active="false" data-value="very-short" data-label="ベリーショート">ベリーショート</button>
                                     </div>
                                 </div>
+                                <!-- 髪型詳細（AI自由記述） -->
+                                <div class="space-y-2">
+                                    <label class="wow-label !text-[10px]">髪型詳細(英語自由記述・AI自動入力)</label>
+                                    <input id="hair-detail" type="text" maxlength="100" placeholder='e.g. side-parted with side-swept bangs, slight wave on top' onchange="debouncedSaveProfile()" class="wow-input-base !px-3 !py-2 !text-xs" />
+                                </div>
                                 <!-- 髪色 -->
                                 <div class="space-y-2">
                                     <label class="wow-label !text-[10px]">髪色</label>
@@ -487,6 +511,35 @@
                                         <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="false" data-value="light-brown" data-label="ライトブラウン">ライトブラウン</button>
                                         <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="false" data-value="blond" data-label="ブロンド">ブロンド</button>
                                         <button onclick="selectProfileOption(this, 'hair-color')" class="profile-opt-hair-color segmented-control-btn" data-active="false" data-value="gray" data-label="グレー/白">グレー/白</button>
+                                    </div>
+                                </div>
+                                <!-- 眼鏡 -->
+                                <div class="space-y-2">
+                                    <label class="wow-label !text-[10px]">眼鏡</label>
+                                    <div class="segmented-control">
+                                        <button onclick="selectProfileOption(this, 'glasses')" class="profile-opt-glasses segmented-control-btn" data-active="true" data-value="none" data-label="なし">なし</button>
+                                        <button onclick="selectProfileOption(this, 'glasses')" class="profile-opt-glasses segmented-control-btn" data-active="false" data-value="prescription" data-label="度付き">度付き</button>
+                                        <button onclick="selectProfileOption(this, 'glasses')" class="profile-opt-glasses segmented-control-btn" data-active="false" data-value="sunglasses" data-label="サングラス">サングラス</button>
+                                    </div>
+                                </div>
+                                <!-- ひげ -->
+                                <div class="space-y-2">
+                                    <label class="wow-label !text-[10px]">ひげ</label>
+                                    <div class="segmented-control flex-wrap">
+                                        <button onclick="selectProfileOption(this, 'beard')" class="profile-opt-beard segmented-control-btn" data-active="true" data-value="none" data-label="なし">なし</button>
+                                        <button onclick="selectProfileOption(this, 'beard')" class="profile-opt-beard segmented-control-btn" data-active="false" data-value="light-stubble" data-label="薄い無精ひげ">薄い無精ひげ</button>
+                                        <button onclick="selectProfileOption(this, 'beard')" class="profile-opt-beard segmented-control-btn" data-active="false" data-value="full" data-label="しっかり生やしている">しっかり</button>
+                                        <button onclick="selectProfileOption(this, 'beard')" class="profile-opt-beard segmented-control-btn" data-active="false" data-value="designed" data-label="整えたデザインひげ">デザイン</button>
+                                    </div>
+                                </div>
+                                <!-- 化粧 -->
+                                <div class="space-y-2">
+                                    <label class="wow-label !text-[10px]">化粧の傾向</label>
+                                    <div class="segmented-control flex-wrap">
+                                        <button onclick="selectProfileOption(this, 'makeup')" class="profile-opt-makeup segmented-control-btn" data-active="true" data-value="none" data-label="ノーメイク">ノーメイク</button>
+                                        <button onclick="selectProfileOption(this, 'makeup')" class="profile-opt-makeup segmented-control-btn" data-active="false" data-value="natural" data-label="ナチュラル">ナチュラル</button>
+                                        <button onclick="selectProfileOption(this, 'makeup')" class="profile-opt-makeup segmented-control-btn" data-active="false" data-value="strong" data-label="しっかり">しっかり</button>
+                                        <button onclick="selectProfileOption(this, 'makeup')" class="profile-opt-makeup segmented-control-btn" data-active="false" data-value="mode" data-label="モード/個性的">モード</button>
                                     </div>
                                 </div>
                             </div>

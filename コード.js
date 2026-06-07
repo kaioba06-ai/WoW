@@ -222,6 +222,58 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (params.action === 'weekly_scenes') {
+      var wsUserId = params.user_id;
+      if (!wsUserId) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'user_id required' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var wsResult = getWeeklyScenes(wsUserId);
+      return ContentService.createTextOutput(JSON.stringify(wsResult))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Weekly テスト用: 単日のみ (day_index 指定)
+    if (params.action === 'test_weekly_day') {
+      var twdUserId = params.user_id || 'alessandro_riva';
+      var twdIdx = (params.day_index || 0) | 0;
+      var twdLabels = ['月','火','水','木','金','土'];
+      var twdDay = {
+        day_label: twdLabels[twdIdx % twdLabels.length],
+        date: '2026-05-' + (25 + twdIdx),
+        slots: [
+          { slot_label:'朝', time:'07:00', temp: 14 + twdIdx, lv: 5, weather:'晴れ' },
+          { slot_label:'昼', time:'13:00', temp: 22 + twdIdx, lv: 6, weather:'晴れ' },
+          { slot_label:'夜', time:'21:00', temp: 16 + twdIdx, lv: 5, weather:'晴れ' }
+        ]
+      };
+      var twdResult = syncWeeklyDay({ user_id: twdUserId, day_index: twdIdx, day: twdDay });
+      return ContentService.createTextOutput(JSON.stringify({ success: true, result: twdResult }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Weekly テスト用: ダミー予報で全パイプライン実行
+    if (params.action === 'test_weekly') {
+      var twUserId = params.user_id || 'alessandro_riva';
+      // 6日分のダミー予報 (朝7/昼13/夜21)
+      var dayLabels = ['月','火','水','木','金','土'];
+      var dummyDays = [];
+      for (var dd = 0; dd < 6; dd++) {
+        dummyDays.push({
+          day_label: dayLabels[dd],
+          date: '2026-05-' + (25 + dd),
+          slots: [
+            { slot_label:'朝', time:'07:00', temp: 14 + dd, lv: 5, weather:'晴れ' },
+            { slot_label:'昼', time:'13:00', temp: 22 + dd, lv: 6, weather:'晴れ' },
+            { slot_label:'夜', time:'21:00', temp: 16 + dd, lv: 5, weather:'晴れ' }
+          ]
+        });
+      }
+      var twResult = syncWeeklyData({ user_id: twUserId, days: dummyDays });
+      return ContentService.createTextOutput(JSON.stringify({ success: true, result: twResult }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // フェーズ5 品質評価用: プロフィール上書き＋カスタム予報で全パイプライン実行
     // 用途: alessandro_riva をテストアカウントとして使い、様々な属性・条件を試す
     if (params.action === 'test_pipeline') {
@@ -233,15 +285,21 @@ function doGet(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
       try {
-        // 1) プロフィール行2を上書き
-        //    パラメータ: gender, age, height, weight, body_type, skeletal_type, face_shape, hair_style, hair_color, skin_color
-        var headerRow = sh3.getRange(1, 1, 1, 22).getValues()[0];
-        var existing  = sh3.getRange(2, 1, 1, 22).getValues()[0];
+        // 1) 行1ヘッダーを最新形(25列)に拡張（既に v2 なら上書きしない値も多いが冪等で安全）
+        var fullHeader = ['同期日時','性別','年代','身長','体重','体格','骨格','肩幅','胸囲','首回り','裄丈','腹囲','ウエスト','ヒップ','股下','太もも','靴','手首','肌の色','顔の形','髪型','髪色','眼鏡','ひげ','化粧','髪型詳細'];
+        sh3.getRange(1, 1, 1, fullHeader.length).setValues([fullHeader]);
+
+        // 2) プロフィール行2を上書き
+        //    パラメータ: gender, age, height, weight, body_type, skeletal_type, face_shape, hair_style, hair_color, skin_color, glasses, beard, makeup
+        var headerRow = sh3.getRange(1, 1, 1, 26).getValues()[0];
+        var existing  = sh3.getRange(2, 1, 1, 26).getValues()[0];
         var keyMap = {
           gender: '性別', age: '年代', height: '身長', weight: '体重',
           body_type: '体格', skeletal_type: '骨格',
           face_shape: '顔の形', hair_style: '髪型', hair_color: '髪色',
-          skin_color: '肌の色'
+          skin_color: '肌の色',
+          glasses: '眼鏡', beard: 'ひげ', makeup: '化粧',
+          hair_detail: '髪型詳細'
         };
         for (var k in keyMap) {
           if (params[k]) {
@@ -250,7 +308,7 @@ function doGet(e) {
           }
         }
         existing[0] = new Date().toISOString();  // 同期日時
-        sh3.getRange(2, 1, 1, 22).setValues([existing]);
+        sh3.getRange(2, 1, 1, 26).setValues([existing]);
 
         // 2) アバター再生成
         var pd = {};
@@ -258,7 +316,9 @@ function doGet(e) {
         var avData = {
           gender: pd['性別'], age: pd['年代'], height: pd['身長'], weight: pd['体重'],
           body_type: pd['体格'], skeletal_type: pd['骨格'], skin_color: pd['肌の色'],
-          face_shape: pd['顔の形'], hair_style: pd['髪型'], hair_color: pd['髪色']
+          face_shape: pd['顔の形'], hair_style: pd['髪型'], hair_color: pd['髪色'],
+          glasses: pd['眼鏡'], beard: pd['ひげ'], makeup: pd['化粧'],
+          hair_detail: pd['髪型詳細']
         };
         var prompt = generateAvatarPrompt(avData);
         sh3.getRange(4, 1).setValue(Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss"));
@@ -320,6 +380,13 @@ function doGet(e) {
           one_points: onePoints
         })).setMimeType(ContentService.MimeType.JSON);
       } catch (te) {
+        // 失敗時: A5の「画像生成中...」を残さない
+        try {
+          var stuckVal2 = String(sh3.getRange(5, 1).getValue());
+          if (stuckVal2 === '画像生成中...') {
+            sh3.getRange(5, 1).setValue('画像生成失敗: ' + Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm"));
+          }
+        } catch (_) {}
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: te.toString(), stack: te.stack }))
           .setMimeType(ContentService.MimeType.JSON);
       }
@@ -338,10 +405,11 @@ function doGet(e) {
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'sheet not found' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
+      // 失敗時にA5が「画像生成中...」のまま残らないよう finally でクリーンアップ
       try {
         // 行1ヘッダー → 行2データを取得して連想配列化
-        var headerRow = sh2.getRange(1, 1, 1, 22).getValues()[0];
-        var dataRow = sh2.getRange(2, 1, 1, 22).getValues()[0];
+        var headerRow = sh2.getRange(1, 1, 1, 26).getValues()[0];
+        var dataRow = sh2.getRange(2, 1, 1, 26).getValues()[0];
         var profileData = {};
         for (var hi = 0; hi < headerRow.length; hi++) {
           profileData[headerRow[hi]] = dataRow[hi];
@@ -357,7 +425,11 @@ function doGet(e) {
           skin_color: profileData['肌の色'],
           face_shape: profileData['顔の形'],
           hair_style: profileData['髪型'],
-          hair_color: profileData['髪色']
+          hair_color: profileData['髪色'],
+          glasses: profileData['眼鏡'],
+          beard: profileData['ひげ'],
+          makeup: profileData['化粧'],
+          hair_detail: profileData['髪型詳細']
         };
         var prompt = generateAvatarPrompt(data);
         sh2.getRange(4, 1).setValue(Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss"));
@@ -379,6 +451,13 @@ function doGet(e) {
         return ContentService.createTextOutput(JSON.stringify({ success: true, imageUrl: imageUrl }))
           .setMimeType(ContentService.MimeType.JSON);
       } catch (re) {
+        // 失敗時: A5の「画像生成中...」を残さない
+        try {
+          var stuckVal = String(sh2.getRange(5, 1).getValue());
+          if (stuckVal === '画像生成中...') {
+            sh2.getRange(5, 1).setValue('画像生成失敗: ' + Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm"));
+          }
+        } catch (_) {}
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: re.toString() }))
           .setMimeType(ContentService.MimeType.JSON);
       }
@@ -406,6 +485,101 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // デバッグ用: CostLog 集計（モデル別 ok/fail 件数 + 直近明細）
+    if (params.action === 'cost_summary') {
+      var ssC = SpreadsheetApp.getActiveSpreadsheet();
+      var cl = ssC.getSheetByName('CostLog');
+      if (!cl || cl.getLastRow() < 2) {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, total: 0, byModel: {}, recent: [] }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var rowsC = cl.getRange(2, 1, cl.getLastRow() - 1, 4).getValues();
+      var byModel = {};
+      rowsC.forEach(function(r){
+        var m = String(r[1] || ''), st = String(r[3] || '');
+        if (!byModel[m]) byModel[m] = { ok: 0, fail: 0 };
+        if (st === 'ok') byModel[m].ok++; else byModel[m].fail++;
+      });
+      var recent = rowsC.slice(0, 12).map(function(r){
+        return { ts: String(r[0]), model: String(r[1]), action: String(r[2]), status: String(r[3]) };
+      });
+      return ContentService.createTextOutput(JSON.stringify({ success: true, total: rowsC.length, byModel: byModel, recent: recent }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 計測: 北極星指標(NSM)＋生成ファネル集計
+    if (params.action === 'nsm_stats') {
+      var ssN = SpreadsheetApp.getActiveSpreadsheet();
+      var el = ssN.getSheetByName('EventLog');
+      if (!el || el.getLastRow() < 2) {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, total: 0 }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var rowsN = el.getRange(2, 1, el.getLastRow() - 1, 5).getValues();
+      var funnel = {};                 // event -> 件数
+      var userDays = {};               // "user|date" -> true（完走したユニークuser-day=NSM素）
+      var dayActive = {};              // date -> {user:true}（日次アクティブ）
+      rowsN.forEach(function(r){
+        var date = String(r[1]), ev = String(r[2]), uid = String(r[3]);
+        funnel[ev] = (funnel[ev] || 0) + 1;
+        if (ev === 'generate_complete') {
+          userDays[uid + '|' + date] = true;
+          if (!dayActive[date]) dayActive[date] = {};
+          dayActive[date][uid] = true;
+        }
+      });
+      var dau = {};
+      Object.keys(dayActive).forEach(function(d){ dau[d] = Object.keys(dayActive[d]).length; });
+      // ファネル転換率（start→complete）
+      var starts = funnel['generate_start'] || 0;
+      var completes = funnel['generate_complete'] || 0;
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        total: rowsN.length,
+        nsm_unique_user_days: Object.keys(userDays).length,   // 北極星の素データ
+        funnel: funnel,
+        start_to_complete_rate: starts ? Math.round(completes / starts * 100) / 100 : 0,
+        dau_by_date: dau
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // デバッグ用: キャッシュ余地集計（同一 user+signature の重複＝キャッシュで削れた回数）
+    if (params.action === 'regen_stats') {
+      var ssR = SpreadsheetApp.getActiveSpreadsheet();
+      var rl = ssR.getSheetByName('RegenLog');
+      if (!rl || rl.getLastRow() < 2) {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, total: 0, unique: 0, cacheableRate: 0 }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var rowsR = rl.getRange(2, 1, rl.getLastRow() - 1, 3).getValues();
+      var seen = {};
+      var total = rowsR.length, dup = 0;
+      rowsR.forEach(function(r){
+        var key = String(r[1]) + '##' + String(r[2]);
+        if (seen[key]) dup++; else seen[key] = true;
+      });
+      var unique = total - dup;
+      // dup = 既出条件の再生成 = キャッシュがあれば省けた生成。シーン画像は1生成=4呼び出し。
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        total: total,
+        unique: unique,
+        cacheable_regens: dup,
+        cacheable_rate: total ? Math.round(dup / total * 100) / 100 : 0,
+        saved_scene_calls_if_cached: dup * 4
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // デバッグ用: ユーザーシート名一覧（システムシート除外）
+    if (params.action === 'list_users') {
+      var ssU = SpreadsheetApp.getActiveSpreadsheet();
+      var users = ssU.getSheets().map(function(s){ return s.getName(); }).filter(function(n){
+        return n !== 'DebugLog' && n !== 'CostLog' && n !== 'RegenLog' && n !== 'EventLog' && n.indexOf('_backup_') === -1;
+      });
+      return ContentService.createTextOutput(JSON.stringify({ success: true, users: users }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // デバッグ用: 指定ユーザーシートの主要セルをダンプ
     if (params.action === 'debug_dump') {
       var userId = params.user_id;
@@ -424,8 +598,8 @@ function doGet(e) {
         b5_value: String(sheet.getRange(5, 2).getValue()).substring(0, 300),
         b5_formula: sheet.getRange(5, 2).getFormula().substring(0, 300),
         b4_prompt: String(sheet.getRange(4, 2).getValue()).substring(0, 1000),
-        profile_row1: sheet.getRange(1, 1, 1, 22).getValues()[0],
-        profile_row2: sheet.getRange(2, 1, 1, 22).getValues()[0],
+        profile_row1: sheet.getRange(1, 1, 1, 26).getValues()[0],
+        profile_row2: sheet.getRange(2, 1, 1, 26).getValues()[0],
         c14_value: String(sheet.getRange(14, 3).getValue()),
         c14_formula: sheet.getRange(14, 3).getFormula(),
         c15_value: String(sheet.getRange(15, 3).getValue()),
@@ -504,6 +678,18 @@ function doGet(e) {
         feelsTemps.push(sheet.getRange(rr, 2).getValue());
       }
 
+      // 詳細ビュー用: G9:T12 (14部位) を構造化して返す
+      var partKeys = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
+      var partsAll = sheet.getRange(9, 7, 4, 14).getValues();  // 4行 × 14列
+      var parts = partsAll.map(function(row) {
+        var o = {};
+        for (var pi = 0; pi < partKeys.length; pi++) {
+          var v = row[pi];
+          if (v != null && String(v).trim() !== '' && v !== '-') o[partKeys[pi]] = v;
+        }
+        return o;
+      });
+
       // 完了シグナル: 4枚全部に有効な画像URLがあるか
       var ready = scenes.length === 4 && scenes.every(function(u){ return u && typeof u === 'string' && u.indexOf('http') === 0; });
       // 最新生成時刻（A5タイムスタンプを流用、なければ現在）
@@ -521,7 +707,8 @@ function doGet(e) {
           poses: poses,
           outfit_names: outfitNames,
           one_points: onePoints,
-          feels_temps: feelsTemps
+          feels_temps: feelsTemps,
+          parts: parts
         }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -537,33 +724,160 @@ function doGet(e) {
 function doPost(e) {
   try {
     var contents = e.postData.contents;
-    logDebug('doPost called', contents);
-    
+    // analyze_face は画像base64が巨大かつPIIなので、本体はログに残さない
     var params = JSON.parse(contents);
-    
+    if (params.type === 'analyze_face') {
+      logDebug('doPost called', 'type=analyze_face (image body redacted)');
+    } else {
+      logDebug('doPost called', contents);
+    }
+
     // APIキーの簡易認証
-    var API_KEY = PropertiesService.getScriptProperties().getProperty('SYNC_API_KEY') || "kion_sync_99"; 
+    var API_KEY = PropertiesService.getScriptProperties().getProperty('SYNC_API_KEY') || "kion_sync_99";
     if (params.apiKey !== API_KEY) {
       logDebug('Auth Failed', { received: params.apiKey, expected: API_KEY });
       return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Unauthorized" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
-    
+
     var result;
-    if (params.type === 'weather' || params.type === 'weather_v2') {
+    if (params.type === 'analyze_face') {
+      result = analyzeFacePhoto(params.data);
+    } else if (params.type === 'weather' || params.type === 'weather_v2') {
       result = syncWeatherData(params.data);
+    } else if (params.type === 'weekly') {
+      result = syncWeeklyData(params.data);
+    } else if (params.type === 'weekly_day') {
+      result = syncWeeklyDay(params.data);
     } else {
       result = syncProfileData(params.data);
     }
-    logDebug('Sync result (' + (params.type || 'profile') + ')', result);
-    
+    // analyze_face の結果も画像base64は含まれないがログ短縮
+    logDebug('Sync result (' + (params.type || 'profile') + ')', params.type === 'analyze_face' ? { success: result.success } : result);
+
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
-      
+
   } catch (err) {
     logDebug('Error in doPost', err.toString());
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * 顔写真→特徴抽出（写真は保存しない・破棄する）
+ *
+ * 規約・法的配慮:
+ *   - 写真はDriveに保存せず、Gemini Vision応答後に変数破棄のみで終わる
+ *   - DebugLogにbase64は出さない
+ *   - 抽象度を上げて「本人と判別できない」レベルに留める
+ *   - 出力はプロフィール画面のドロップダウン選択肢と互換のenum値のみ
+ *
+ * @param {Object} data
+ * @param {string} data.image_base64  画像のbase64(プレフィックスなし)
+ * @param {string} [data.mime_type]   "image/jpeg" 等。省略時 image/jpeg
+ * @return {{success:boolean, features?:Object, error?:string}}
+ */
+function analyzeFacePhoto(data) {
+  if (!data || !data.image_base64) {
+    return { success: false, error: 'image_base64 required' };
+  }
+  var apiKey = PropertiesService.getScriptProperties().getProperty('GOOGLE_API_KEY');
+  if (!apiKey) return { success: false, error: 'GOOGLE_API_KEY not set' };
+
+  var mime = data.mime_type || 'image/jpeg';
+
+  // プロンプト: 抽象度の高いenum値のみを返させる
+  // 個人識別に繋がる「ほくろ位置」「目の間隔」等の詳細は出さない
+  // 性別・年代は手動入力させるので抽出しない
+  var promptText = [
+    'Analyze this photo and extract abstract avatar features ONLY.',
+    'DO NOT describe the person\'s identity, name, or any identifying marks (moles, scars, tattoos).',
+    'DO NOT attempt to recognize who this person is.',
+    'DO NOT infer gender or age — the user enters those manually.',
+    'Choose the closest value from each enum below. Return JSON.',
+    '',
+    'face_shape: "卵型" | "丸顔" | "面長" | "逆三角形"',
+    'hair_style: "ベリーショート" | "ショート" | "ミディアム" | "ロング" | "ボブ"',
+    'hair_detail: free-text English description of the hair shape, MAX 80 chars.',
+    '  Include: parting (center/side/none), bangs (yes/no/style), layering, wave/curl/straight, volume, edge style (e.g. undercut/asymmetric).',
+    '  Example: "side-parted with side-swept bangs, slight wave on top, tapered sides"',
+    '  Example: "center-parted long straight hair past shoulders, no bangs"',
+    '  DO NOT include identifying details (specific salon names, named cuts of specific people).',
+    'hair_color: "ブラック" | "ダークブラウン" | "ライトブラウン" | "ブロンド" | "グレー/白"',
+    'skin_color: "色白" | "普通" | "小麦色" | "褐色"',
+    'glasses: "なし" | "度付き" | "サングラス"',
+    'beard: "なし" | "薄い無精ひげ" | "しっかり生やしている" | "整えたデザインひげ"   ※女性等で該当しない場合は "なし"',
+    'makeup: "ノーメイク" | "ナチュラル" | "しっかり" | "モード/個性的"',
+    '',
+    'If the image does not contain a clear single human face, return {"success":false,"error":"no_face"}.'
+  ].join('\n');
+
+  var schema = {
+    type: "OBJECT",
+    properties: {
+      face_shape:  { type: "STRING" },
+      hair_style:  { type: "STRING" },
+      hair_detail: { type: "STRING" },
+      hair_color:  { type: "STRING" },
+      skin_color:  { type: "STRING" },
+      glasses:     { type: "STRING" },
+      beard:       { type: "STRING" },
+      makeup:      { type: "STRING" }
+    },
+    required: ["face_shape","hair_style","hair_detail","hair_color","skin_color","glasses","beard","makeup"]
+  };
+
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+  var payload = {
+    contents: [{
+      role: "user",
+      parts: [
+        { inlineData: { mimeType: mime, data: data.image_base64 } },
+        { text: promptText }
+      ]
+    }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: schema,
+      temperature: 0.2
+    }
+  };
+
+  logDebug('analyze_face start', 'mime=' + mime);
+  try {
+    var resp = UrlFetchApp.fetch(url, {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+    var code = resp.getResponseCode();
+    var text = resp.getContentText();
+    // 重要: 入力画像のbase64は変数からも明示的に外す（GAS GCで回収される）
+    payload = null;
+    logCost('gemini-2.5-flash', code === 200 ? 'ok' : 'fail', 'analyze_face');
+    if (code !== 200) {
+      logDebug('analyze_face failed', 'code=' + code + ' ' + text.substring(0, 200));
+      return { success: false, error: 'Vision API ' + code };
+    }
+    var json = JSON.parse(text);
+    var inner = json.candidates && json.candidates[0] && json.candidates[0].content
+                && json.candidates[0].content.parts && json.candidates[0].content.parts[0].text;
+    if (!inner) {
+      var fr = json.candidates && json.candidates[0] && json.candidates[0].finishReason;
+      if (fr === 'SAFETY' || fr === 'IMAGE_SAFETY') {
+        return { success: false, error: 'safety_blocked' };
+      }
+      return { success: false, error: 'empty_response' };
+    }
+    var features = JSON.parse(inner);
+    logDebug('analyze_face done', features);  // 抽象enum値のみ。個人識別情報なし
+    return { success: true, features: features };
+  } catch (e) {
+    logDebug('analyze_face error', e.toString());
+    return { success: false, error: e.toString() };
   }
 }
 
@@ -588,6 +902,104 @@ function logDebug(msg, data) {
     debugSheet.getRange(2, 1, 1, 3).setValues([[new Date(), msg, typeof data === 'object' ? JSON.stringify(data) : data]]);
   } catch (e) {
     console.error('logDebug failed', e.toString());
+  }
+}
+
+/**
+ * API呼び出しのコスト計測メータ。
+ * strategy.md「価格より原価実測が先決」の足場。
+ * モデル別の呼び出し回数・成否を CostLog シートへ構造化記録する。
+ * 後でモデル単価を掛ければ 1生成あたり実原価が算出できる。
+ *
+ * ログ失敗は本処理を止めない（try/catchで握りつぶす）。
+ *
+ * @param {string} model   例: 'gemini-2.5-flash', 'imagen-4.0', 'nano-banana'
+ * @param {string} status  'ok' | 'fail'
+ * @param {string} [action] 例: 'outfit_json', 'scene_image', 'avatar', 'analyze_face'
+ */
+function logCost(model, status, action) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) return;
+    var sheet = ss.getSheetByName('CostLog');
+    if (!sheet) {
+      sheet = ss.insertSheet('CostLog');
+      sheet.appendRow(['日時', 'model', 'action', 'status']);
+      sheet.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#f3f3f3');
+      sheet.setFrozenRows(1);
+    }
+    sheet.insertRowBefore(2);
+    sheet.getRange(2, 1, 1, 4).setValues([[new Date(), model, action || '', status]]);
+  } catch (e) {
+    console.error('logCost failed', e.toString());
+  }
+}
+
+/**
+ * キャッシュ余地の計測メータ（strategy.md「キャッシュは粗利の主レバー」検証用）。
+ * 生成のたび「ユーザー＋気温帯(3°C刻み)＋天気」の条件シグネチャを RegenLog へ記録。
+ * 後で同一シグネチャの重複を数えれば「同条件の再生成回数＝キャッシュで削れた呼び出し」が分かる。
+ * キャッシュ本体はまだ作らない（新鮮さとのトレードオフが設計判断のため）。
+ *
+ * @param {string} userId
+ * @param {Array} slots  [{temp, weather}, ...]（4スロット）
+ */
+function logRegen(userId, slots) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) return;
+    var sheet = ss.getSheetByName('RegenLog');
+    if (!sheet) {
+      sheet = ss.insertSheet('RegenLog');
+      sheet.appendRow(['日時', 'user_id', 'signature']);
+      sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#f3f3f3');
+      sheet.setFrozenRows(1);
+    }
+    // シグネチャ: 各スロットを「気温帯_天気」にし連結。気温帯=floor(temp/3)*3
+    var sig = (slots || []).map(function(s){
+      var t = Number(s.temp);
+      var band = isNaN(t) ? '?' : (Math.floor(t / 3) * 3);
+      return band + '_' + (s.weather || '?');
+    }).join('|');
+    sheet.insertRowBefore(2);
+    sheet.getRange(2, 1, 1, 3).setValues([[new Date(), userId || '', sig]]);
+  } catch (e) {
+    console.error('logRegen failed', e.toString());
+  }
+}
+
+/**
+ * 統一イベントメータ（strategy.md 原則8「計測は基礎工事」の実装）。
+ * 北極星指標（週内アクティブ日数＝朝の生成完走）＋ファネル＋サーバー側記録を1本化。
+ * クライアント改ざん不可なサーバー側に記録する。
+ *
+ * 想定 eventType:
+ *   generate_start / generate_complete / generate_fail   … 生成ファネルの核（NSM土台）
+ *   scene_fail                                           … 失敗チケット返金の根拠（第2-5）
+ *   tryon / share / invite_qualified / convert           … 将来のフロント実装時に配線
+ *
+ * @param {string} eventType
+ * @param {string} userId
+ * @param {(string|Object)} [detail]
+ */
+function logEvent(eventType, userId, detail) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) return;
+    var sheet = ss.getSheetByName('EventLog');
+    if (!sheet) {
+      sheet = ss.insertSheet('EventLog');
+      sheet.appendRow(['日時', 'date', 'event', 'user_id', 'detail']);
+      sheet.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3f3f3');
+      sheet.setFrozenRows(1);
+    }
+    var now = new Date();
+    var dateStr = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd');
+    var d = (typeof detail === 'object' && detail !== null) ? JSON.stringify(detail) : (detail || '');
+    sheet.insertRowBefore(2);
+    sheet.getRange(2, 1, 1, 5).setValues([[now, dateStr, eventType || '', userId || '', d]]);
+  } catch (e) {
+    console.error('logEvent failed', e.toString());
   }
 }
 
@@ -628,7 +1040,7 @@ function syncProfileData(data) {
     var timestamp = Utilities.formatDate(new Date(), "GMT+9", "yyyy/MM/dd HH:mm:ss");
 
     // 1行目のヘッダー
-    var header = ['同期日時', '性別', '年代', '身長', '体重', '体格', '骨格', '肩幅', '胸囲', '首回り', '裄丈', '腹囲', 'ウエスト', 'ヒップ', '股下', '太もも', '靴', '手首', '肌の色', '顔の形', '髪型', '髪色'];
+    var header = ['同期日時', '性別', '年代', '身長', '体重', '体格', '骨格', '肩幅', '胸囲', '首回り', '裄丈', '腹囲', 'ウエスト', 'ヒップ', '股下', '太もも', '靴', '手首', '肌の色', '顔の形', '髪型', '髪色', '眼鏡', 'ひげ', '化粧', '髪型詳細'];
     sheet.getRange(1, 1, 1, header.length).setValues([header]);
     sheet.getRange(1, 1, 1, header.length).setFontWeight('bold').setBackground('#f3f3f3');
     sheet.setFrozenRows(1);
@@ -656,7 +1068,11 @@ function syncProfileData(data) {
       data.skin_tone || '',
       data.face_shape || '',
       data.hair_style || '',
-      data.hair_color || ''
+      data.hair_color || '',
+      data.glasses || '',
+      data.beard || '',
+      data.makeup || '',
+      data.hair_detail || ''
     ];
     sheet.getRange(2, 1, 1, row.length).setValues([row]);
 
@@ -685,10 +1101,15 @@ function syncProfileData(data) {
       skin_tone:     sheetRow[18],
       face_shape:    sheetRow[19],
       hair_style:    sheetRow[20],
-      hair_color:    sheetRow[21]
+      hair_color:    sheetRow[21],
+      glasses:       sheetRow[22],
+      beard:         sheetRow[23],
+      makeup:        sheetRow[24],
+      hair_detail:   sheetRow[25]
     };
 
     // プロンプトに使う全フィールドが埋まっているかチェック（1つでも空なら生成しない）
+    // 眼鏡/ひげ/化粧は未入力でも生成する（必須ではなく装飾）
     var promptFields = [sheetData.gender, sheetData.age, sheetData.height, sheetData.weight,
                         sheetData.body_type, sheetData.skeletal_type, sheetData.skin_tone,
                         sheetData.face_shape, sheetData.hair_style, sheetData.hair_color];
@@ -828,7 +1249,7 @@ function syncWeatherData(data) {
       // G9:T12 にコーディネート4案を生成
       try {
         // プロフィール情報を2行目から読み取り
-        var profileRow = sheet.getRange(2, 1, 1, 22).getValues()[0];
+        var profileRow = sheet.getRange(2, 1, 1, 26).getValues()[0];
         var profile = {
           gender: profileRow[1],
           age: profileRow[2],
@@ -849,6 +1270,12 @@ function syncWeatherData(data) {
             lv: adjLv
           };
         });
+
+        // キャッシュ余地計測: 条件シグネチャを記録（本体生成は従来通り）
+        logRegen(sheetName, slots);
+        // ファネル: 生成開始（NSM＝朝の生成完走の分母）
+        logEvent('generate_start', sheetName);
+        var sceneOk = 0, sceneFail = 0;
 
         // ① コーデJSON一括生成（4スロット分・部位+名前+ワンポイント）
         var outfits = generateOutfitsForForecast(slots, profile);
@@ -940,8 +1367,12 @@ function syncWeatherData(data) {
                 // 成功時のみ旧画像をアーカイブ
                 if (prevSceneId) archiveImageById_(prevSceneId);
                 logDebug('Scene image generated', 'slot ' + (sk+1) + ': ' + sceneUrl);
+                sceneOk++;
               } catch (se) {
                 var smsg = se.toString();
+                sceneFail++;
+                // 失敗チケット返金の根拠を記録（第2-5）。実際の返金はチケット台帳実装後。
+                logEvent('scene_fail', sheetName, { slot: sk + 1, reason: smsg.substring(0, 80) });
                 // 失敗時は前回画像を復元（C案）。前回画像が無ければエラー文言を残す
                 if (prevSceneFormula && prevSceneFormula.indexOf('=IMAGE(') === 0) {
                   prevSceneCell.setFormula(prevSceneFormula);
@@ -957,8 +1388,11 @@ function syncWeatherData(data) {
         } catch (serr) {
           logDebug('Scene stage FAILED', serr.toString());
         }
+        // ファネル: 生成完走（NSM＝週内アクティブ日数の分子）。シーンの成否内訳も記録。
+        logEvent('generate_complete', sheetName, { scenes_ok: sceneOk, scenes_fail: sceneFail });
       } catch (oerr) {
         logDebug('Outfit generation FAILED', oerr.toString());
+        logEvent('generate_fail', sheetName, ('outfit: ' + oerr.toString()).substring(0, 80));
         // 失敗時は "-" で埋める（既存予報は壊さない）
         var dash = [];
         for (var j = 0; j < 4; j++) dash.push(['-','-','-','-','-','-','-','-','-','-','-','-','-','-']);
@@ -973,6 +1407,330 @@ function syncWeatherData(data) {
   } finally {
     try { lock.releaseLock(); } catch (le) { /* ignore */ }
   }
+}
+
+// ============================================================
+// Weekly Plan: 明日から6日 × 3時間帯(朝7/昼13/夜21) のコーデ生成
+// シート行19-37 に格納 (Today=行8-17 とは分離)
+// ============================================================
+var WEEKLY_HEADER_ROW = 19;
+var WEEKLY_DATA_START_ROW = 20;
+var WEEKLY_DAY_COUNT = 6;
+var WEEKLY_SLOTS_PER_DAY = 3;
+
+/**
+ * Weekly 1日分のみ更新 (6分タイムアウト対策のため日単位に分割)
+ * @param {Object} data
+ *   data.user_id
+ *   data.day_index: 0〜5 (どの日か)
+ *   data.day: { day_label, date, slots: [...3] }
+ */
+function syncWeeklyDay(data) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) {
+    return { success: false, error: 'Another weekly sync in progress' };
+  }
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = data.user_id || 'UnknownUser';
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return { success: false, error: 'sheet not found' };
+    var dayIdx = data.day_index | 0;
+    var day = data.day;
+    if (!day || !day.slots || day.slots.length < WEEKLY_SLOTS_PER_DAY) {
+      return { success: false, error: 'invalid day data' };
+    }
+
+    // 行19ヘッダーは初回のみ書き込み（既に正しい値なら冪等）
+    var a19 = sheet.getRange(WEEKLY_HEADER_ROW, 1).getValue();
+    if (a19 !== 'day_label') {
+      var header = [
+        'day_label','slot_label','time','feels_temp','lv','weather',
+        'head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory',
+        'outfit_name','one_point','location','pose','scene_image'
+      ];
+      sheet.getRange(WEEKLY_HEADER_ROW, 1, 1, header.length).setValues([header]);
+      sheet.getRange(WEEKLY_HEADER_ROW, 1, 1, header.length)
+           .setFontWeight('bold').setBackground('#e6f0ff').setHorizontalAlignment('center');
+    }
+
+    // プロフィール + ベースアバター取得
+    var profileRow = sheet.getRange(2, 1, 1, 26).getValues()[0];
+    var profile = {
+      gender: profileRow[1], age: profileRow[2],
+      body_type: profileRow[5], skeletal_type: profileRow[6]
+    };
+    var baseFormulaCell = sheet.getRange(5, 2);
+    var baseFormula = baseFormulaCell.getFormula();
+    var baseUrl = '';
+    if (baseFormula) {
+      var bm = baseFormula.match(/=IMAGE\("([^"]+)"\)/i);
+      if (bm) baseUrl = bm[1];
+    }
+    if (!baseUrl) {
+      var rawVal = baseFormulaCell.getValue();
+      if (typeof rawVal === 'string' && rawVal.indexOf('http') === 0) baseUrl = rawVal;
+    }
+    var baseBlob = null;
+    if (baseUrl && baseUrl.indexOf('http') === 0) {
+      try { baseBlob = fetchDriveImageAsBlob(baseUrl); } catch (_) {}
+    }
+
+    var partKeys = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
+    var apiSlots = day.slots.map(function(s){
+      return { time:s.time, temp:s.temp, weather:s.weather, lv:s.lv };
+    });
+
+    var outfits = generateOutfitsForForecast(apiSlots, profile);
+    var scenes;
+    try { scenes = generateScenesForOutfits(outfits, apiSlots, profile); }
+    catch (_) { scenes = apiSlots.map(function(){ return {location:'', pose:''}; }); }
+
+    var startRow = WEEKLY_DATA_START_ROW + dayIdx * WEEKLY_SLOTS_PER_DAY;
+    for (var s = 0; s < WEEKLY_SLOTS_PER_DAY; s++) {
+      var row = startRow + s;
+      var slot = day.slots[s];
+      var outfit = outfits[s] || {};
+      var scene = scenes[s] || { location:'', pose:'' };
+      sheet.getRange(row, 1, 1, 6).setValues([[
+        day.day_label || '', slot.slot_label || '', slot.time || '',
+        slot.temp != null ? slot.temp : '',
+        slot.lv != null ? slot.lv : '',
+        slot.weather || ''
+      ]]);
+      sheet.getRange(row, 7, 1, 14).setValues([partKeys.map(function(k){ return outfit[k] || ''; })]);
+      sheet.getRange(row, 21).setValue(outfit.outfit_name || '');
+      sheet.getRange(row, 22).setValue(outfit.one_point || '');
+      sheet.getRange(row, 23).setValue(scene.location || '');
+      sheet.getRange(row, 24).setValue(scene.pose || '');
+
+      var prevSceneCell = sheet.getRange(row, 25);
+      var prevSceneFormula = prevSceneCell.getFormula();
+      var prevSceneId = extractIdFromCell_(prevSceneCell);
+      if (!baseBlob) { prevSceneCell.setValue('ベースアバターなし'); continue; }
+      prevSceneCell.setValue('生成中...');
+      SpreadsheetApp.flush();
+      try {
+        var sceneUrl = generateSceneImage(baseBlob, scene, profile, slot, sheetName, dayIdx * WEEKLY_SLOTS_PER_DAY + s + 100, outfit);
+        prevSceneCell.setFormula('=IMAGE("' + sceneUrl + '")');
+        if (prevSceneId) archiveImageById_(prevSceneId);
+      } catch (ie) {
+        if (prevSceneFormula && prevSceneFormula.indexOf('=IMAGE(') === 0) {
+          prevSceneCell.setFormula(prevSceneFormula);
+        } else {
+          prevSceneCell.setValue((ie.toString().indexOf('SAFETY') !== -1) ? 'セーフティ' : '画像失敗');
+        }
+        logDebug('Weekly day scene FAILED', day.day_label + ' slot' + s + ': ' + ie.toString());
+      }
+    }
+
+    sheet.setColumnWidth(25, 200);
+    for (var rh = startRow; rh < startRow + WEEKLY_SLOTS_PER_DAY; rh++) sheet.setRowHeight(rh, 200);
+
+    return { success: true, day_index: dayIdx, day_label: day.day_label };
+  } catch (e) {
+    logDebug('syncWeeklyDay ERROR', e.toString());
+    return { success: false, error: e.toString() };
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+/**
+ * Weekly 全更新（内部実装: syncWeeklyDay を6回呼ぶ）
+ * ※ Apps Script の6分タイムアウトを超えるため、本番はフロントから syncWeeklyDay を6回個別呼出推奨
+ */
+function syncWeeklyData(data) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) {
+    return { success: false, error: 'Another weekly sync in progress' };
+  }
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = data.user_id || 'UnknownUser';
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return { success: false, error: 'sheet not found' };
+
+    // 行19: ヘッダー書き込み
+    var header = [
+      'day_label','slot_label','time','feels_temp','lv','weather',
+      'head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory',
+      'outfit_name','one_point','location','pose','scene_image'
+    ];
+    sheet.getRange(WEEKLY_HEADER_ROW, 1, 1, header.length).setValues([header]);
+    sheet.getRange(WEEKLY_HEADER_ROW, 1, 1, header.length)
+         .setFontWeight('bold').setBackground('#e6f0ff').setHorizontalAlignment('center');
+
+    // プロフィール読み込み
+    var profileRow = sheet.getRange(2, 1, 1, 26).getValues()[0];
+    var profile = {
+      gender: profileRow[1], age: profileRow[2],
+      body_type: profileRow[5], skeletal_type: profileRow[6]
+    };
+
+    // ベースアバター取得
+    var baseFormulaCell = sheet.getRange(5, 2);
+    var baseFormula = baseFormulaCell.getFormula();
+    var baseUrl = '';
+    if (baseFormula) {
+      var bm = baseFormula.match(/=IMAGE\("([^"]+)"\)/i);
+      if (bm) baseUrl = bm[1];
+    }
+    if (!baseUrl) {
+      var rawVal = baseFormulaCell.getValue();
+      if (typeof rawVal === 'string' && rawVal.indexOf('http') === 0) baseUrl = rawVal;
+    }
+    var baseBlob = null;
+    if (baseUrl && baseUrl.indexOf('http') === 0) {
+      try { baseBlob = fetchDriveImageAsBlob(baseUrl); }
+      catch (be) { logDebug('Weekly: base avatar fetch FAILED', be.toString()); }
+    }
+
+    var partKeys = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
+
+    var days = data.days || [];
+    for (var d = 0; d < Math.min(days.length, WEEKLY_DAY_COUNT); d++) {
+      var day = days[d];
+      var slots = day.slots || [];
+      if (slots.length < WEEKLY_SLOTS_PER_DAY) {
+        logDebug('Weekly: day skipped (insufficient slots)', day.day_label);
+        continue;
+      }
+      // generateOutfitsForForecast 用のスロット形式に整形
+      var apiSlots = slots.map(function(s) {
+        return { time: s.time, temp: s.temp, weather: s.weather, lv: s.lv };
+      });
+
+      // 1) コーデJSON一括生成 (3案)
+      var outfits;
+      try {
+        outfits = generateOutfitsForForecast(apiSlots, profile);
+        logDebug('Weekly outfits ok', day.day_label + ' - ' + (outfits[0] && outfits[0].outfit_name));
+      } catch (oe) {
+        logDebug('Weekly outfit gen FAILED', day.day_label + ': ' + oe.toString());
+        continue;
+      }
+
+      // 2) ロケ・ポーズ一括生成 (3案)
+      var scenes;
+      try {
+        scenes = generateScenesForOutfits(outfits, apiSlots, profile);
+      } catch (se) {
+        logDebug('Weekly scenes gen FAILED', day.day_label + ': ' + se.toString());
+        scenes = apiSlots.map(function(){ return {location:'', pose:''}; });
+      }
+
+      // 3) 行ごとに書き込み + シーン画像生成
+      var startRow = WEEKLY_DATA_START_ROW + d * WEEKLY_SLOTS_PER_DAY;
+      for (var s = 0; s < WEEKLY_SLOTS_PER_DAY; s++) {
+        var row = startRow + s;
+        var slot = slots[s];
+        var outfit = outfits[s] || {};
+        var scene = scenes[s] || { location:'', pose:'' };
+
+        // A-F: メタ
+        sheet.getRange(row, 1, 1, 6).setValues([[
+          day.day_label || '', slot.slot_label || '', slot.time || '',
+          slot.temp != null ? slot.temp : '',
+          slot.lv != null ? slot.lv : '',
+          slot.weather || ''
+        ]]);
+        // G-T: 14部位
+        var partsRow = partKeys.map(function(k){ return outfit[k] || ''; });
+        sheet.getRange(row, 7, 1, 14).setValues([partsRow]);
+        // U-V: 名前+ワンポイント
+        sheet.getRange(row, 21).setValue(outfit.outfit_name || '');
+        sheet.getRange(row, 22).setValue(outfit.one_point || '');
+        // W-X: location/pose
+        sheet.getRange(row, 23).setValue(scene.location || '');
+        sheet.getRange(row, 24).setValue(scene.pose || '');
+
+        // Y: シーン画像 (失敗時は前画像残置・C案)
+        var prevSceneCell = sheet.getRange(row, 25);
+        var prevSceneFormula = prevSceneCell.getFormula();
+        var prevSceneId = extractIdFromCell_(prevSceneCell);
+        if (!baseBlob) {
+          prevSceneCell.setValue('ベースアバターなし');
+          continue;
+        }
+        prevSceneCell.setValue('シーン画像生成中...');
+        SpreadsheetApp.flush();
+        try {
+          var sceneUrl = generateSceneImage(baseBlob, scene, profile, slot, sheetName, d * WEEKLY_SLOTS_PER_DAY + s + 100, outfit);
+          prevSceneCell.setFormula('=IMAGE("' + sceneUrl + '")');
+          if (prevSceneId) archiveImageById_(prevSceneId);
+        } catch (ie) {
+          if (prevSceneFormula && prevSceneFormula.indexOf('=IMAGE(') === 0) {
+            prevSceneCell.setFormula(prevSceneFormula);
+          } else {
+            prevSceneCell.setValue((ie.toString().indexOf('SAFETY') !== -1) ? 'セーフティでブロック' : 'シーン画像失敗');
+          }
+          logDebug('Weekly scene image FAILED', day.day_label + ' ' + slot.slot_label + ': ' + ie.toString());
+        }
+      }
+    }
+
+    // 行高・列幅の調整
+    sheet.setColumnWidth(25, 200);
+    for (var rh = WEEKLY_DATA_START_ROW; rh < WEEKLY_DATA_START_ROW + WEEKLY_DAY_COUNT * WEEKLY_SLOTS_PER_DAY; rh++) {
+      sheet.setRowHeight(rh, 200);
+    }
+
+    return { success: true };
+  } catch (e) {
+    logDebug('syncWeeklyData ERROR', e.toString());
+    return { success: false, error: e.toString() };
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+/**
+ * Weekly データ取得 (フロント表示用)
+ * 行20-37 から day_label/slot_label/scene_image_url 等を返す
+ */
+function getWeeklyScenes(userId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(userId);
+  if (!sheet) return { success: false, error: 'sheet not found' };
+  var rows = sheet.getRange(WEEKLY_DATA_START_ROW, 1, WEEKLY_DAY_COUNT * WEEKLY_SLOTS_PER_DAY, 25).getValues();
+  var partKeys = ['head','face','ear','neck','inner','outer','wrist','finger','waist','leg','ankle','foot','hand','accessory'];
+  // Y列のフォーミュラから URL を抽出
+  var days = [];
+  for (var d = 0; d < WEEKLY_DAY_COUNT; d++) {
+    var slots = [];
+    for (var s = 0; s < WEEKLY_SLOTS_PER_DAY; s++) {
+      var rowIdx = d * WEEKLY_SLOTS_PER_DAY + s;
+      var r = rows[rowIdx];
+      // Y列のformula
+      var formulaCell = sheet.getRange(WEEKLY_DATA_START_ROW + rowIdx, 25);
+      var formula = formulaCell.getFormula();
+      var m = formula.match(/=IMAGE\("([^"]+)"\)/);
+      var imgUrl = null;
+      if (m) {
+        var idM = m[1].match(/[?&]id=([a-zA-Z0-9_-]+)/) || m[1].match(/\/d\/([a-zA-Z0-9_-]+)/);
+        imgUrl = idM ? ('https://drive.google.com/thumbnail?id=' + idM[1] + '&sz=w2000') : m[1];
+      }
+      var parts = {};
+      for (var pi = 0; pi < partKeys.length; pi++) {
+        var v = r[6 + pi];
+        if (v != null && String(v).trim() !== '' && v !== '-') parts[partKeys[pi]] = v;
+      }
+      slots.push({
+        day_label: r[0], slot_label: r[1], time: r[2],
+        feels_temp: r[3], lv: r[4], weather: r[5],
+        parts: parts,
+        outfit_name: r[20], one_point: r[21],
+        location: r[22], pose: r[23],
+        scene_image: imgUrl
+      });
+    }
+    days.push({
+      day_label: slots[0] ? slots[0].day_label : '',
+      slots: slots
+    });
+  }
+  return { success: true, days: days };
 }
 
 /**
@@ -1038,6 +1796,19 @@ function generateAvatarPrompt(data) {
   var ageMap = {
     "10代":"teens", "20代":"20s", "30代":"30s", "40代":"40s", "50代":"50s", "60代以上":"60s or older"
   };
+  // 「なし」は空文字にして parts.filter で除外する
+  var glassesMap = {
+    "なし":"", "度付き":"wearing prescription eyeglasses", "サングラス":"wearing sunglasses",
+    "none":"", "prescription":"wearing prescription eyeglasses", "sunglasses":"wearing sunglasses"
+  };
+  var beardMap = {
+    "なし":"", "薄い無精ひげ":"with light stubble", "しっかり生やしている":"with a full beard", "整えたデザインひげ":"with a well-groomed designer beard",
+    "none":"", "light-stubble":"with light stubble", "full":"with a full beard", "designed":"with a well-groomed designer beard"
+  };
+  var makeupMap = {
+    "ノーメイク":"", "ナチュラル":"with natural light makeup", "しっかり":"with defined makeup (visible eye makeup and lip color)", "モード/個性的":"with bold avant-garde makeup",
+    "none":"", "natural":"with natural light makeup", "strong":"with defined makeup (visible eye makeup and lip color)", "mode":"with bold avant-garde makeup"
+  };
 
   var gender   = data.gender === "女性" ? "woman" : (data.gender === "男性" ? "man" : "person");
   var age      = ageMap[data.age] || data.age || '';
@@ -1049,12 +1820,27 @@ function generateAvatarPrompt(data) {
   var face     = faceMap[data.face_shape] || data.face_shape || '';
   var hairSt   = hairStyleMap[data.hair_style] || data.hair_style || '';
   var hairCol  = hairColorMap[data.hair_color] || data.hair_color || '';
+  // 眼鏡/ひげ/化粧（マップに無い値はそのまま、空/「なし」相当は空文字に）
+  var glasses  = (data.glasses in glassesMap) ? glassesMap[data.glasses] : (data.glasses || '');
+  var beard    = (data.beard   in beardMap)   ? beardMap[data.beard]     : (data.beard   || '');
+  var makeup   = (data.makeup  in makeupMap)  ? makeupMap[data.makeup]   : (data.makeup  || '');
 
   // 安全フィルタ回避: topless/briefs は高齢者や特定組合せでImagenが弾くため、
   // 軽量で身体ラインが分かる無地下着系の表現に統一
   var clothing = (data.gender === "女性")
     ? "wearing a plain neutral fitted tank top and matching leggings"
     : "wearing a plain neutral fitted tank top and matching shorts";
+
+  // 髪型: hair_detail (自由記述) があれば優先、無ければ enum ベース
+  var hairDetail = (data.hair_detail || '').toString().trim();
+  var hairText;
+  if (hairDetail) {
+    hairText = hairCol ? (hairCol + ' hair: ' + hairDetail) : ('hair: ' + hairDetail);
+  } else if (hairSt) {
+    hairText = hairSt + ' ' + hairCol + ' hair';
+  } else {
+    hairText = '';
+  }
 
   var parts = [
     "A full-body photorealistic image of a " + gender,
@@ -1065,12 +1851,19 @@ function generateAvatarPrompt(data) {
     skeletal ? skeletal + " bone structure" : '',
     skin,
     face ? face + " face shape" : '',
-    hairSt ? hairSt + " " + hairCol + " hair" : ''
+    hairText,
+    glasses,
+    beard,
+    makeup
   ].filter(function(x){ return x; });
 
   var prompt = parts.join(", ") + ". ";
   prompt += clothing + ". Standing pose, facing camera, plain white studio background, 8K photorealistic. ";
-  prompt += "The image must contain no text, no numbers, no labels of any kind.";
+  prompt += "The image must contain no text, no numbers, no labels of any kind. ";
+  // 50代以上の年齢忠実性: 既知の傾向としてAIが若く描きがちなため明示
+  if (age === '50s' || age === '60s or older') {
+    prompt += "IMPORTANT: render the age realistically — show natural signs of maturity appropriate for the stated age (skin texture, hairline, facial structure consistent with " + age + "). Do NOT depict the person as significantly younger than stated. ";
+  }
 
   return prompt;
 }
@@ -1327,6 +2120,33 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
     '時間帯1→outfits[0], 時間帯2→outfits[1], 時間帯3→outfits[2], 時間帯4→outfits[3]。'
   ].join('\n');
 
+  // ★ 可変スロット対応: プロンプト内の固定数値 (4案/全6ペア等) を slots.length に合わせて置換
+  //   Today=4スロット時はそのまま、Weekly=3スロット時は3案/全3ペアに自動変換
+  (function rewriteSlotNumbers() {
+    var N = slots.length;
+    if (N === 4) return;  // デフォルトのままで OK
+    var pairCount = N * (N - 1) / 2;
+    // ペア列挙文字列を生成 (例 N=3: "ペア(1,2) ペア(1,3) ペア(2,3)")
+    var pairListSp = [], pairListDash = [];
+    for (var a = 1; a <= N; a++) {
+      for (var b = a + 1; b <= N; b++) {
+        pairListSp.push('ペア(' + a + ',' + b + ')');
+        pairListDash.push(a + '-' + b);
+      }
+    }
+    var outfitsRefs = [];
+    for (var i = 0; i < N; i++) outfitsRefs.push('時間帯' + (i+1) + '→outfits[' + i + ']');
+    promptText = promptText
+      .replace(/4案/g,   N + '案')
+      .replace(/4スロット/g, N + 'スロット')
+      // 具体パターン (長い方) を先に置換。先に汎用 /全6ペア/ を潰すと、
+      // 後段の "全6ペア(1-2, …)" がマッチせず古い表記が残るため順序が重要。
+      .replace(/全6ペア\(1-2, 1-3, 1-4, 2-3, 2-4, 3-4\)/g, '全' + pairCount + 'ペア(' + pairListDash.join(', ') + ')')
+      .replace(/ペア\(1,2\) ペア\(1,3\) ペア\(1,4\) ペア\(2,3\) ペア\(2,4\) ペア\(3,4\)/g, pairListSp.join(' '))
+      .replace(/全6ペア/g, '全' + pairCount + 'ペア')
+      .replace(/時間帯1→outfits\[0\], 時間帯2→outfits\[1\], 時間帯3→outfits\[2\], 時間帯4→outfits\[3\]/g, outfitsRefs.join(', '));
+  })();
+
   // リトライ時: 前回の批評内容を末尾に付加
   if (prevCritique) {
     var critiqueBlock = [
@@ -1338,7 +2158,7 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
       '改善方針:',
       prevCritique.directive || '(指示なし)',
       '',
-      '今回はこれらをすべて修正した上で、上記すべてのルールを満たす4案を再提案してください。'
+      '今回はこれらをすべて修正した上で、上記すべてのルールを満たす' + slots.length + '案を再提案してください。'
     ].join('\n');
     promptText += '\n' + critiqueBlock;
   }
@@ -1403,6 +2223,7 @@ function generateOutfitsForForecast(slots, profile, prevCritique) {
   var code = resp.getResponseCode();
   var text = resp.getContentText();
   logDebug('Outfit API Response', 'Code: ' + code);
+  logCost('gemini-2.5-flash', code === 200 ? 'ok' : 'fail', 'outfit_json');
 
   if (code !== 200) {
     throw new Error("Gemini API error " + code + ": " + text.substring(0, 500));

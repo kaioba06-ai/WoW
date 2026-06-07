@@ -355,16 +355,20 @@ function getSelectedTags(formId) {
     return Array.from(document.querySelectorAll(`#${formId} .tag-btn.selected-tag`)).map(b => b.textContent);
 }
 
-// 文字数カウント（モーダルがDOM済みの場合のみ登録）
-const _qaTextEl    = document.getElementById('qa-text');
-const _trendTextEl = document.getElementById('trend-text');
-if (_qaTextEl) _qaTextEl.addEventListener('input', function() {
-    document.getElementById('qa-char').textContent = `${this.value.length} / 200`;
-    if(this.value.length > 200) this.value = this.value.slice(0, 200);
-});
-if (_trendTextEl) _trendTextEl.addEventListener('input', function() {
-    document.getElementById('trend-char').textContent = `${this.value.length} / 150`;
-    if(this.value.length > 150) this.value = this.value.slice(0, 150);
+// 文字数カウント（modals.html は loadSections で後から注入されるため sectionsLoaded 後に登録）
+window.addEventListener('sectionsLoaded', () => {
+    const qaTextEl    = document.getElementById('qa-text');
+    const trendTextEl = document.getElementById('trend-text');
+    if (qaTextEl) qaTextEl.addEventListener('input', function() {
+        const c = document.getElementById('qa-char');
+        if (c) c.textContent = `${this.value.length} / 200`;
+        if(this.value.length > 200) this.value = this.value.slice(0, 200);
+    });
+    if (trendTextEl) trendTextEl.addEventListener('input', function() {
+        const c = document.getElementById('trend-char');
+        if (c) c.textContent = `${this.value.length} / 150`;
+        if(this.value.length > 150) this.value = this.value.slice(0, 150);
+    });
 });
 
 // 写真プレビュー
@@ -2043,7 +2047,8 @@ function initCommunitySearch() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', initCommunitySearch);
+// DOMContentLoaded はセクション注入より先に発火するため sectionsLoaded を使う
+window.addEventListener('sectionsLoaded', initCommunitySearch);
 
 // ===== 初期化エントリポイント =====
 function initCommunity() {
@@ -2245,7 +2250,9 @@ class DiscoveryModule {
     }
 }
 
-class FountainComponent {
+// 注: window.FountainComponent (js/FountainComponent.js) とは別物。
+// あちらは .fire() を持つ IIFE、こちらは .spawn() を持つ単純な紙吹雪スポナー。
+class FountainSpawner {
     static spawn(cardEl, colorStr, customTags = []) {
         const container = document.getElementById('fountain-container') || document.body;
         const rect = cardEl.getBoundingClientRect();
@@ -2391,7 +2398,7 @@ class ReactionModule {
 
         this.applyTheme(reaction, card || display);
         const cardTags = card?.dataset?.hashtags ? card.dataset.hashtags.split(',').filter(Boolean) : [];
-        FountainComponent.spawn(card || display, reaction.color, cardTags);
+        FountainSpawner.spawn(card || display, reaction.color, cardTags);
         if (reaction.id === 'dig') _triggerGemBurst(reaction.effects);
         _triggerCelebration(reaction, display);
     }
@@ -2500,7 +2507,7 @@ class ReactionModule {
         }
 
         const cardTags = cardEl?.dataset?.hashtags ? cardEl.dataset.hashtags.split(',').filter(Boolean) : [];
-        FountainComponent.spawn(cardEl, reaction.color, cardTags);
+        FountainSpawner.spawn(cardEl, reaction.color, cardTags);
         setTimeout(() => this.releaseFocus(cardEl), 800);
     }
 }

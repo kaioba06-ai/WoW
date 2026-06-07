@@ -1,24 +1,193 @@
-    <section id="page-weekly" class="page-section hidden-section px-6 pb-32 space-y-8 relative">
+    <section id="page-weekly" class="page-section hidden-section relative px-4 weekly-viewport">
 
-        <div class="flex justify-between items-end">
-            <div class="space-y-1">
-                <p class="font-label text-[10px] font-bold tracking-[0.2em] uppercase text-primary dark:text-blue-400 mb-1">長期予報</p>
-                <h2 class="font-headline text-3xl font-extrabold tracking-tight dark:text-white">Weekly Plan</h2>
-                <p class="font-label text-xs text-on-surface-variant dark:text-white/70 font-bold opacity-80">10着から28通りの組み合わせ！</p>
+        <!-- ===== Top: Unified Main + Right3 panel ===== -->
+        <div class="weekly-top-panel">
+            <!-- Main Card (Left, large) -->
+            <div id="weekly-main-card" class="weekly-main-card group relative overflow-hidden skeleton cursor-pointer" onclick="openWeeklyOutfitDetail()">
+                <img id="weekly-main-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                    class="w-full h-full object-cover opacity-0"
+                    onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton')"
+                    onerror="this.src='https://images.unsplash.com/photo-1445205170230-053b830c6050?auto=format&fit=crop&q=80&w=800'; this.onerror=null;"
+                    alt="Main Outfit"/>
+                <!-- 曜日チップ (左上) -->
+                <div class="absolute top-2 left-2 z-20">
+                    <span id="weekly-main-day-chip"
+                        class="inline-flex items-center justify-center w-9 h-9 rounded-full
+                               bg-white/70 dark:bg-black/55 backdrop-blur-md
+                               border border-white/60 dark:border-white/10 shadow-md
+                               text-[13px] font-black tracking-tight
+                               text-on-surface dark:text-white">--</span>
+                </div>
+                <div class="absolute bottom-3 left-3 right-3 z-20">
+                    <div class="flex items-center gap-2.5 bg-white/60 dark:bg-black/55 backdrop-blur-xl px-3 py-2.5 rounded-2xl border border-white/60 dark:border-white/10 shadow-lg">
+                        <div class="flex flex-col shrink-0">
+                            <span id="weekly-main-day-slot" class="text-[10px] font-black uppercase tracking-widest text-on-surface dark:text-white leading-none">--</span>
+                            <div class="flex items-baseline mt-0.5">
+                                <span id="weekly-main-temp" class="text-[16px] font-black text-primary dark:text-blue-300 leading-none">--°</span>
+                                <span class="text-[8px] font-bold text-on-surface-variant/60 dark:text-white/40 uppercase ml-1">feels</span>
+                            </div>
+                        </div>
+                        <span class="w-px h-5 bg-black/15 dark:bg-white/15 shrink-0"></span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[7px] font-black text-primary dark:text-blue-400 uppercase tracking-[0.25em] leading-none mb-0.5">Suggestion</p>
+                            <h3 id="weekly-main-name" class="font-headline font-bold text-sm text-on-surface dark:text-white leading-tight truncate">--</h3>
+                            <p id="weekly-main-tip" class="text-[8px] font-bold text-on-surface-variant dark:text-white/55 line-clamp-1 leading-snug mt-0.5">--</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button onclick="refreshWeeklyData()"
-                class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-2.5 rounded-full border border-white/50 dark:border-white/10 shadow-sm active:scale-90 transition-transform">
-                <span class="material-symbols-outlined text-primary dark:text-blue-400" data-icon="refresh">refresh</span>
-            </button>
+
+            <!-- Right Column: 3 slots -->
+            <div class="weekly-right-column">
+                <div id="weekly-slot-0" class="weekly-slot-card group relative overflow-hidden cursor-pointer transition-all">
+                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                        onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;"/>
+                    <div class="absolute inset-x-1.5 bottom-1.5 p-1.5 bg-black/55 backdrop-blur-md rounded-lg flex items-center justify-between">
+                        <span class="weekly-slot-label text-[10px] font-black tracking-wider text-white/90 pl-1">--</span>
+                        <span class="weekly-slot-temp text-[11px] font-black text-white pr-1">--°</span>
+                    </div>
+                </div>
+                <div id="weekly-slot-1" class="weekly-slot-card group relative overflow-hidden cursor-pointer transition-all">
+                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                        onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;"/>
+                    <div class="absolute inset-x-1.5 bottom-1.5 p-1.5 bg-black/55 backdrop-blur-md rounded-lg flex items-center justify-between">
+                        <span class="weekly-slot-label text-[10px] font-black tracking-wider text-white/90 pl-1">--</span>
+                        <span class="weekly-slot-temp text-[11px] font-black text-white pr-1">--°</span>
+                    </div>
+                </div>
+                <div id="weekly-slot-2" class="weekly-slot-card group relative overflow-hidden cursor-pointer transition-all">
+                    <img class="w-full h-full object-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                        onerror="this.src='https://images.unsplash.com/photo-1441984908746-d44ba895ee32?auto=format&fit=crop&q=80&w=400'; this.onerror=null;"/>
+                    <div class="absolute inset-x-1.5 bottom-1.5 p-1.5 bg-black/55 backdrop-blur-md rounded-lg flex items-center justify-between">
+                        <span class="weekly-slot-label text-[10px] font-black tracking-wider text-white/90 pl-1">--</span>
+                        <span class="weekly-slot-temp text-[11px] font-black text-white pr-1">--°</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Weekly Planner Grid (k-card) -->
-        <div class="k-weekly-grid" id="weekly-grid">
-            <!-- Open-Meteo APIから動的生成 -->
-            <!-- ローディング中のスケルトン -->
-            <div class="k-card skeleton" style="min-height:130px;"></div>
-            <div class="k-card skeleton" style="min-height:130px;"></div>
-            <div class="k-card skeleton" style="min-height:130px;"></div>
-            <div class="k-card skeleton" style="min-height:130px;"></div>
+        <!-- ===== Generate Banner (上の3スロット帯と下5枚の間) ===== -->
+        <button id="weekly-generate-btn" onclick="generateWeeklyAll()"
+            class="weekly-generate-banner group flex items-center justify-center gap-2 w-full
+                   py-2.5 rounded-2xl
+                   bg-gradient-to-r from-primary/15 via-primary/10 to-primary/15
+                   dark:from-blue-500/15 dark:via-blue-500/10 dark:to-blue-500/15
+                   border border-primary/25 dark:border-blue-500/30
+                   text-primary dark:text-blue-300
+                   hover:from-primary/25 hover:to-primary/25
+                   dark:hover:from-blue-500/25 dark:hover:to-blue-500/25
+                   active:scale-[0.98] transition-all">
+            <span class="material-symbols-outlined text-[18px] group-hover:rotate-12 transition-transform">auto_awesome</span>
+            <span id="weekly-generate-btn-label" class="text-[12px] font-black tracking-wide">週間プランを生成</span>
+            <span class="text-[9px] font-bold opacity-50 tracking-wider">· 約3分</span>
+        </button>
+
+        <!-- ===== Bottom Row: 5 day cards (image + temp + day label) ===== -->
+        <div id="weekly-bottom-row" class="weekly-bottom-row">
+            <!-- 動的生成 -->
         </div>
+
     </section>
+
+    <style>
+        /* セクション全体: スクロールせず1画面に収める。上6:下4。 */
+        /* 概算: 100vh - 上部天気バー(~70px) - ボトムナビ(~64px) - 余白(~20px) = 利用可能高さ */
+        .weekly-viewport {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: -8px;             /* 天気バーとの間隔を詰める */
+            height: calc(100vh - 130px);  /* 上部余白を切り詰めて利用域を広げる */
+            min-height: 480px;
+            overflow: hidden;
+            padding-top: 0;
+        }
+        /* Top panel: Main + Right3 を「ひとつの統合カード」として見せる */
+        .weekly-top-panel {
+            flex: 6;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 32px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(12px);
+            min-height: 0;
+        }
+        .dark .weekly-top-panel {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .weekly-main-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            min-height: 0;
+        }
+        .weekly-right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 0;
+        }
+        .weekly-slot-card {
+            flex: 1;
+            min-height: 0;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .weekly-slot-card.is-active {
+            box-shadow: 0 0 0 2px #0060ad, 0 4px 12px rgba(0, 96, 173, 0.3);
+        }
+        .dark .weekly-slot-card.is-active {
+            box-shadow: 0 0 0 2px #60a5fa, 0 4px 12px rgba(96, 165, 250, 0.3);
+        }
+
+
+        /* Bottom row: 5 day cards (画像+気温+曜日付き) */
+        .weekly-bottom-row {
+            flex: 4;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            min-height: 0;
+        }
+        .weekly-day-card {
+            position: relative;
+            overflow: hidden;
+            height: 100%;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .weekly-day-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+        .weekly-day-card img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .weekly-day-card .weekly-day-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 60%);
+            display: flex; flex-direction: column; justify-content: flex-end;
+            padding: 8px;
+        }
+        .weekly-day-card .weekly-day-temp {
+            position: absolute; top: 8px; right: 8px;
+            background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+            color: white; font-weight: 900; font-size: 11px;
+            padding: 3px 7px; border-radius: 8px;
+        }
+        .weekly-day-card .weekly-day-label {
+            color: white; font-weight: 800; font-size: 13px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+    </style>

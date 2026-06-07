@@ -18,13 +18,19 @@
     <script src="js/app.js?v=6" defer></script>
     <script src="js/ui.js?v=6" defer></script>
     <script src="js/outfits.js?v=1" defer></script>
-    <script src="js/weather.js?v=6" defer></script>
+    <script src="js/locationModal.js?v=2" defer></script>
+    <script src="js/weather.js?v=11" defer></script>
+    <script src="js/outfitDetail.js?v=2" defer></script>
+    <script src="js/headerView.js?v=2" defer></script>
+    <script src="js/homeView.js?v=2" defer></script>
+    <script src="js/weekly.js?v=4" defer></script>
     <script src="js/home.js?v=5" defer></script>
     <script src="js/closet.js?v=5" defer></script>
     <script src="js/community.js?v=5" defer></script>
     <script src="js/profile.js?v=5" defer></script>
     <script src="js/scene.js?v=5" defer></script>
     <script src="js/social.js?v=5" defer></script>
+    <script src="js/FountainComponent.js?v=1" defer></script>
 </head>
 <body class="loading-app overflow-x-hidden transition-colors duration-500">
 
@@ -97,23 +103,23 @@
     <nav class="fixed bottom-0 left-0 w-full z-[9999] flex justify-around items-center px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 bg-white/40 dark:bg-slate-900/60 backdrop-blur-2xl rounded-t-[1.5rem] shadow-[0_-12px_40px_rgba(0,0,0,0.1)] border-t border-white/30 dark:border-white/10 transition-colors h-[3.5rem]">
         <button id="nav-home" type="button" onclick="switchTab('home', this)" class="nav-item flex-1 flex flex-col items-center justify-center text-on-surface-variant dark:text-white/60 transition-all hover:text-primary dark:hover:text-blue-400 rounded-xl h-full text-center">
             <span class="material-symbols-outlined text-[20px]">wb_sunny</span>
-            <span class="font-bold text-[7px] tracking-[0.2em] uppercase mt-1">今日</span>
+            <span class="font-bold text-[7px] tracking-[0.2em] uppercase mt-1">Today</span>
         </button>
         <button id="nav-weekly" type="button" onclick="switchTab('weekly', this)" class="nav-item flex-1 flex flex-col items-center justify-center text-on-surface-variant dark:text-white/60 transition-all hover:text-primary dark:hover:text-blue-400 rounded-xl h-full text-center">
             <span class="material-symbols-outlined text-[20px]">date_range</span>
-            <span class="font-bold text-[7px] tracking-[0.2em] uppercase mt-1">週間</span>
+            <span class="font-bold text-[7px] tracking-[0.2em] uppercase mt-1">Weekly</span>
         </button>
         <button id="nav-discover" type="button" onclick="switchTab('discover', this)" class="nav-item flex-1 flex flex-col items-center justify-center text-on-surface-variant dark:text-white/60 transition-all hover:text-primary dark:hover:text-blue-400 rounded-xl h-full text-center">
             <span class="material-symbols-outlined text-[20px]">explore</span>
-            <span class="font-bold text-[7px] tracking-[0.2em] uppercase mt-1">コミュニティ</span>
+            <span class="font-bold text-[7px] tracking-[0.2em] uppercase mt-1">Community</span>
         </button>
         <button id="nav-closet" type="button" onclick="switchTab('closet', this)" class="nav-item flex-1 flex flex-col items-center justify-center text-on-surface-variant dark:text-white/60 transition-all hover:text-primary dark:hover:text-blue-400 rounded-xl h-full text-center">
             <span class="material-symbols-outlined text-[20px]">checkroom</span>
-            <span class="font-bold text-[7px] tracking-[0.2em] uppercase mt-1">クローゼット</span>
+            <span class="font-bold text-[7px] tracking-[0.2em] uppercase mt-1">Closet</span>
         </button>
         <button id="nav-profile" type="button" onclick="switchTab('profile', this)" class="nav-item flex-1 flex flex-col items-center justify-center text-on-surface-variant dark:text-white/60 transition-all hover:text-primary dark:hover:text-blue-400 rounded-xl h-full text-center">
             <span class="material-symbols-outlined text-[20px]">person</span>
-            <span class="font-bold text-[7px] tracking-[0.2em] uppercase mt-1">プロフ</span>
+            <span class="font-bold text-[7px] tracking-[0.2em] uppercase mt-1">Profile</span>
         </button>
     </nav>
 
@@ -123,306 +129,14 @@
     <!-- modals-container -->
     <div id="modals-container"></div>
 
-    <!-- Supabase Client Initialization & 認証ガード -->
+    <!-- Supabase Client (グローバル公開のため inline。実ロジックは js/auth.js) -->
     <script>
         const { createClient } = window.supabase;
-        // クライアントをグローバルに公開（他スクリプトからアクセスできるように）
         window.supabaseClient = createClient(WOW_CONFIG.supabase.url, WOW_CONFIG.supabase.anonKey);
-
-        // ===== 認証ガード：未ログインなら login.html へリダイレクト =====
-        async function checkAuthGuard() {
-            const { data, error } = await window.supabaseClient.auth.getSession();
-            if (error) {
-                console.error('Session error:', error);
-                return;
-            }
-            if (!data.session) {
-                console.log('Not logged in. Redirecting to login.html');
-                window.location.href = 'login.html';
-                return;
-            }
-            console.log('User logged in:', data.session.user.email);
-            // ログイン中ユーザー情報をグローバルに保存
-            window.currentUser = data.session.user;
-
-            // プロフィール情報を Supabase から取得
-            await loadUserProfile();
-        }
-
-        // ===== Supabase からプロフィール情報を取得 =====
-        async function loadUserProfile() {
-            if (!window.currentUser) return;
-
-            const { data, error } = await window.supabaseClient
-                .from('users')
-                .select('*')
-                .eq('id', window.currentUser.id)
-                .single();
-
-            if (error) {
-                console.error('[Profile] Load error:', error);
-                return;
-            }
-
-            if (data) {
-                console.log('[Profile] Loaded from Supabase:', data.username);
-
-                // 既存の localStorage プロフィールを保持しつつ、Supabase 由来のフィールドだけマージ
-                // （身長/体重/採寸/personalize 等の詳細データを潰さないため）
-                const existing = JSON.parse(localStorage.getItem('kion_profile') || '{}');
-                const supabaseFields = {
-                    name: data.username || existing.name || '',
-                    handle: data.username || existing.handle || '',
-                    avatar: data.avatar_emoji || existing.avatar || '🧣',
-                    bio: data.bio || existing.bio || '',
-                    temp_preference: data.temp_preference || existing.temp_preference || 'normal',
-                    styles: data.styles || existing.styles || [],
-                    photo: data.avatar_url || existing.photo || '',
-                    email: data.email || existing.email || ''
-                };
-                const profile = Object.assign({}, existing, supabaseFields);
-                localStorage.setItem('kion_profile', JSON.stringify(profile));
-                window.currentProfile = profile;
-
-                // sectionsLoaded 後に画面に反映するため公開
-                window.applyProfileFromDB = function() {
-                    if (typeof applyProfileDisplay === 'function') {
-                        applyProfileDisplay(profile);
-                    }
-                };
-            }
-
-            // クローゼットも Supabase から読み込み
-            await loadClosetData();
-        }
-
-        // ===== クローゼットデータを Supabase から読み込み =====
-        async function loadClosetData() {
-            const items = await window.loadClosetFromSupabase();
-
-            // Supabase 形式 → ローカル形式へ変換
-            const closetItems = items.map(item => ({
-                id: item.id,  // UUID をそのまま使用
-                name: item.name,
-                category: item.category,
-                color: item.color,
-                colorName: item.color_name,
-                memo: item.memo,
-                img: item.image_url,
-                addedAt: item.created_at ? new Date(item.created_at).toLocaleDateString('ja-JP') : ''
-            }));
-
-            // localStorage と互換性のある形式で保存
-            localStorage.setItem('kion_closet_items', JSON.stringify(closetItems));
-
-            // グローバル変数にも反映（app.js で参照されている）
-            if (typeof window.closetItems !== 'undefined') {
-                window.closetItems = closetItems;
-            }
-        }
-
-        // ============================================
-        // ===== クローゼット連携機能 =====
-        // ============================================
-
-        // クローゼットアイテムを Supabase から読み込み
-        window.loadClosetFromSupabase = async function() {
-            if (!window.currentUser) return [];
-
-            const { data, error } = await window.supabaseClient
-                .from('closet_items')
-                .select('*')
-                .eq('user_id', window.currentUser.id)
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                console.error('[Closet] Load error:', error);
-                return [];
-            }
-
-            console.log('[Closet] Loaded from Supabase:', data?.length || 0, 'items');
-            return data || [];
-        };
-
-        // クローゼットアイテムを Supabase に保存（新規）
-        window.addClosetItemToSupabase = async function(item) {
-            if (!window.currentUser) {
-                console.error('[Closet] Not logged in');
-                return { success: false };
-            }
-
-            const insertData = {
-                user_id: window.currentUser.id,
-                name: item.name || '',
-                category: item.category || 'other',
-                color: item.color || '#888',
-                color_name: item.colorName || '',
-                image_url: item.img || '',
-                memo: item.memo || ''
-            };
-
-            const { data, error } = await window.supabaseClient
-                .from('closet_items')
-                .insert(insertData)
-                .select()
-                .single();
-
-            if (error) {
-                console.error('[Closet] Add error:', error);
-                return { success: false, error: error.message };
-            }
-
-            console.log('[Closet] Added to Supabase:', data.id);
-            return { success: true, data };
-        };
-
-        // クローゼットアイテムを Supabase で更新
-        window.updateClosetItemInSupabase = async function(itemId, item) {
-            if (!window.currentUser) return { success: false };
-
-            const updateData = {
-                name: item.name,
-                category: item.category,
-                color: item.color,
-                color_name: item.colorName || '',
-                image_url: item.img || '',
-                memo: item.memo || '',
-                updated_at: new Date().toISOString()
-            };
-
-            const { data, error } = await window.supabaseClient
-                .from('closet_items')
-                .update(updateData)
-                .eq('id', itemId)
-                .eq('user_id', window.currentUser.id)
-                .select();
-
-            if (error) {
-                console.error('[Closet] Update error:', error);
-                return { success: false, error: error.message };
-            }
-
-            console.log('[Closet] Updated in Supabase:', itemId);
-            return { success: true, data };
-        };
-
-        // クローゼットアイテムを Supabase から削除
-        window.deleteClosetItemFromSupabase = async function(itemId) {
-            if (!window.currentUser) return { success: false };
-
-            const { error } = await window.supabaseClient
-                .from('closet_items')
-                .delete()
-                .eq('id', itemId)
-                .eq('user_id', window.currentUser.id);
-
-            if (error) {
-                console.error('[Closet] Delete error:', error);
-                return { success: false, error: error.message };
-            }
-
-            console.log('[Closet] Deleted from Supabase:', itemId);
-            return { success: true };
-        };
-
-        // ===== プロフィール情報を Supabase に保存 =====
-        window.saveProfileToSupabase = async function(profileData) {
-            if (!window.currentUser) {
-                console.error('[Profile] Not logged in');
-                return { success: false, error: 'Not logged in' };
-            }
-
-            const updates = {
-                username: profileData.name || profileData.username || '',
-                avatar_emoji: profileData.avatar || '🧣',
-                bio: profileData.bio || '',
-                temp_preference: profileData.temp_preference || 'normal',
-                styles: profileData.styles || [],
-                avatar_url: profileData.photo || profileData.avatar_url || '',
-                updated_at: new Date().toISOString()
-            };
-
-            console.log('[Profile] Sending to Supabase:', updates);
-
-            const { data, error } = await window.supabaseClient
-                .from('users')
-                .update(updates)
-                .eq('id', window.currentUser.id)
-                .select();
-
-            if (error) {
-                console.error('[Profile] Save error:', error);
-                return { success: false, error: error.message };
-            }
-
-            console.log('[Profile] Saved to Supabase:', data);
-            return { success: true, data };
-        };
-
-        // ===== ログアウト機能（グローバル関数として公開） =====
-        window.logout = async function() {
-            const confirmed = confirm('ログアウトしますか？');
-            if (!confirmed) return;
-            const { error } = await window.supabaseClient.auth.signOut();
-            if (error) {
-                console.error('Logout error:', error);
-                alert('ログアウトに失敗しました。');
-                return;
-            }
-            window.location.href = 'login.html';
-        };
-
-        // ページロード時に認証チェック
-        checkAuthGuard();
     </script>
+    <script src="js/auth.js?v=1"></script>
 
-    <!-- Vue Community App Initialization (after sections loaded) -->
-    <script type="module">
-        import { CommunityView } from './js/components/CommunityView.js';
-
-        function setupVueCommunity() {
-            if (window.communityApp) return;
-            const mountPoint = document.getElementById('community-app');
-            if (!mountPoint) {
-                console.warn('[Vue] community-app mount point not found');
-                return;
-            }
-
-            const app = Vue.createApp({
-                components: { CommunityView },
-                data() {
-                    return { currentTab: 'trending' }
-                },
-                template: `
-                    <KeepAlive>
-                        <component :is="'CommunityView'" :key="currentTab" :type="currentTab" />
-                    </KeepAlive>
-                `
-            });
-
-            window.communityApp = app;
-            const vm = app.mount('#community-app');
-
-            window.switchCommunityTabVue = function(tab) {
-                vm.currentTab = tab;
-                const ACTIVE   = 'flex-1 py-3 border-b-2 border-black dark:border-white text-black dark:text-white font-black text-[10px] tracking-[0.18em] uppercase text-center transition-all';
-                const INACTIVE = 'flex-1 py-3 border-b border-black/10 dark:border-white/10 text-black/30 dark:text-white/30 font-bold text-[10px] tracking-[0.18em] uppercase text-center hover:text-black/60 dark:hover:text-white/60 transition-all';
-                const tabDiscover = document.getElementById('tab-btn-discover');
-                const tabTrending = document.getElementById('tab-btn-trending');
-                const tabQa       = document.getElementById('tab-btn-qa');
-                if (tabDiscover) tabDiscover.className = tab === 'discover' ? ACTIVE : INACTIVE;
-                if (tabTrending) tabTrending.className = tab === 'trending' ? ACTIVE : INACTIVE;
-                if (tabQa)       tabQa.className       = tab === 'qa' ? ACTIVE : INACTIVE;
-            };
-
-            if (typeof initCommunity === 'function') initCommunity();
-            console.log('[Vue] Community app mounted successfully');
-        }
-
-        // sectionsLoaded イベント後に Vue を初期化
-        window.addEventListener('sectionsLoaded', () => {
-            setTimeout(setupVueCommunity, 100);
-        });
-    </script>
+    <!-- Vue Community App Initialization (タブ責務に従い js/communityVueInit.js へ分離) -->
+    <script type="module" src="js/communityVueInit.js?v=1"></script>
 </body>
 </html>
