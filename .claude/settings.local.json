@@ -3,7 +3,32 @@
     "allow": [
       "Bash(python \"c:/Users/Xtoy8/OneDrive/デスクトップ/drive-download-20260405T101814Z-1-001/check.py\")",
       "Bash(python3 -c ':*)",
-      "Bash(python -c ':*)"
+      "Bash(python -c ':*)",
+      "PowerShell(Get-Command python, python3, node, npx -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Command node -ErrorAction SilentlyContinue)",
+      "PowerShell(node --version 2>&1)",
+      "PowerShell(Get-Process python -ErrorAction SilentlyContinue)",
+      "PowerShell($proc = Start-Process -FilePath \"python\" -ArgumentList \"-m http.server 8888\" -WorkingDirectory \"C:\\\\Users\\\\Xtoy8\\\\OneDrive\\\\ドキュメント\\\\GitHub\\\\WoW\" -PassThru -NoNewWindow -RedirectStandardOutput \"C:\\\\Temp\\\\server_out.txt\" -RedirectStandardError \"C:\\\\Temp\\\\server_err.txt\"; Start-Sleep 2; Get-Content \"C:\\\\Temp\\\\server_err.txt\" -ErrorAction SilentlyContinue; $proc.HasExited)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Xtoy8\\\\AppData\\\\Roaming\\\\npm\" -ErrorAction SilentlyContinue | Select-Object Name; Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\\\\node\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "PowerShell($py = \"C:\\\\Users\\\\Xtoy8\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python311\\\\python.exe\"; & $py --version)",
+      "PowerShell($py = \"C:\\\\Users\\\\Xtoy8\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python311\\\\python.exe\"; Start-Process -FilePath $py -ArgumentList \"-m\", \"http.server\", \"7777\" -WorkingDirectory \"C:\\\\Users\\\\Xtoy8\\\\OneDrive\\\\ドキュメント\\\\GitHub\\\\WoW\" -PassThru | Select-Object Id; Start-Sleep -Seconds 2; try { $r = Invoke-WebRequest \"http://127.0.0.1:7777/\" -UseBasicParsing -TimeoutSec 5; \"OK: $\\($r.StatusCode\\)\" } catch { \"FAIL: $_\" })",
+      "PowerShell(Start-Sleep -Seconds 3; $resp = Invoke-WebRequest \"http://127.0.0.1:9222/json\" -UseBasicParsing; \\($resp.Content | ConvertFrom-Json\\) | Select-Object id, url, webSocketDebuggerUrl)",
+      "PowerShell(Stop-Process -Name chrome -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(\"Cleanup done\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":7778\")",
+      "Bash(python -m http.server 7778 --bind 127.0.0.1)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:7778/)",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Xtoy8\\\\OneDrive\\\\ドキュメント\\\\GitHub\\\\WoW\"; Start-Process python -ArgumentList \"-m\",\"http.server\",\"7778\",\"--bind\",\"127.0.0.1\" -WindowStyle Hidden; Start-Sleep 2; try { $r = Invoke-WebRequest -Uri \"http://127.0.0.1:7778/\" -TimeoutSec 3 -UseBasicParsing; $r.StatusCode } catch { \"ERROR: $_\" })",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Xtoy8\\\\OneDrive\\\\ドキュメント\\\\GitHub\\\\WoW\"; $job = Start-Job -ScriptBlock { Set-Location \"c:\\\\Users\\\\Xtoy8\\\\OneDrive\\\\ドキュメント\\\\GitHub\\\\WoW\"; python -m http.server 7778 }; Start-Sleep 3; try { $r = Invoke-WebRequest -Uri \"http://127.0.0.1:7778/\" -TimeoutSec 4 -UseBasicParsing; \"HTTP $\\($r.StatusCode\\)\" } catch { \"NOT RESPONDING: $_\" })",
+      "PowerShell(python --version)",
+      "PowerShell(python3 --version 2>$null)",
+      "PowerShell($env:PYTHONPATH = \"\"; & \"C:\\\\Users\\\\Xtoy8\\\\AppData\\\\Local\\\\Microsoft\\\\WindowsApps\\\\python.exe\" -c \"print\\('ok'\\)\")",
+      "PowerShell(Get-Command py -ErrorAction SilentlyContinue; \\(Get-Command py -ErrorAction SilentlyContinue\\).Source; py --version 2>&1)",
+      "PowerShell($job = Start-Job -ScriptBlock { Set-Location \"c:\\\\Users\\\\Xtoy8\\\\OneDrive\\\\ドキュメント\\\\GitHub\\\\WoW\"; & \"C:\\\\windows\\\\py.exe\" -m http.server 7778 2>&1 }; Start-Sleep 3; try { $r = Invoke-WebRequest -Uri \"http://127.0.0.1:7778/\" -TimeoutSec 4 -UseBasicParsing; \"HTTP $\\($r.StatusCode\\)\" } catch { \"NOT RESPONDING: $_\" })",
+      "Bash(curl -s \"http://127.0.0.1:7778/styles.css\")",
+      "PowerShell($css = Invoke-WebRequest -Uri \"http://127.0.0.1:7778/styles.css\" -UseBasicParsing; $lines = $css.Content -split \"`n\"; $lines | Select-String \"postcard-flip|is-flipped|postcard-back\")"
     ]
   }
 }

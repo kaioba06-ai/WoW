@@ -36,13 +36,6 @@
 
         <!-- Transition Overlay -->
         <div id="transition-overlay"></div>
-        <!-- Focus & Burst Overlay Elements -->
-        <div id="dim-overlay" class="dim-overlay"></div>
-        <div id="radial-layer" class="radial-gradient-burst"></div>
-        <div id="giant-emoji-actor" class="giant-emoji"></div>
-        <div id="fountain-container"></div>
-
-        <!-- Global DIG Reaction Button & Palette (Demo based integration) - REMOVED PER REQUIREMENT -->
 
 
         <!-- ===== Community Vue App Mount Point ===== -->
@@ -184,12 +177,6 @@
     <div id="filter-bottom-sheet" class="fixed inset-0 z-[100] hidden items-end justify-center">
         <!-- 省略。モーダル等の処理は元のものを維持 -->
     </div>
-
-    <!-- ===== Full Screen Effects UI ===== -->
-    <div id="dimOverlay" class="fixed inset-0 bg-black/80 z-[9900] opacity-0 pointer-events-none transition-opacity duration-300"></div>
-    <div id="radialLayer" class="fixed inset-0 z-[9905] opacity-0 pointer-events-none transition-opacity duration-300"></div>
-    <div id="hashtagContainer" class="fixed inset-0 pointer-events-none z-[9910]"></div>
-    <div id="giantEmoji" class="big-emoji-actor opacity-0 pointer-events-none"></div>
 
 <!-- 注意: ここに <script> を書いても loadSections() の innerHTML 注入では実行されない。
      community.js / FountainComponent.js / Vue 初期化は index.html 側でロード済み。 -->

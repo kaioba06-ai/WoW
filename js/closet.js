@@ -289,6 +289,7 @@ function submitClosetItem() {
         editingItemId = null;
         saveCloset();
         renderClosetGrid();
+        renderColorBreakdown(currentFilter);
         closeClosetModal();
         setTimeout(() => {
             if(navigator.vibrate) navigator.vibrate([10,5,20]);
@@ -319,6 +320,7 @@ function submitClosetItem() {
         closetItems.unshift(item);
         saveCloset();
         renderClosetGrid();
+        renderColorBreakdown(currentFilter);
         closeClosetModal();
         setTimeout(() => {
             if(navigator.vibrate) navigator.vibrate([10,5,20]);
@@ -376,6 +378,7 @@ function confirmDeleteCloset() {
     pendingDeleteId = null;
     saveCloset();
     renderClosetGrid();
+    renderColorBreakdown(currentFilter);
     document.getElementById('delete-confirm-overlay').classList.add('hidden');
 
     // Supabase からも削除
@@ -437,12 +440,137 @@ function renderClosetGrid(filter) {
 
 function filterCloset(cat, el) {
     if(navigator.vibrate) navigator.vibrate([8]);
+    currentColorFilter = null; // カテゴリ切替時はカラーフィルターをリセット
     document.querySelectorAll('.closet-filter-btn').forEach(b => b.classList.remove('active-filter'));
     el.classList.add('active-filter');
     renderClosetGrid(cat);
+    renderColorBreakdown(cat);
+}
+
+// ===== カラー保有割合チャート =====
+let currentColorFilter = null;
+
+function renderColorBreakdown(categoryFilter) {
+    const container = document.getElementById('closet-color-breakdown');
+    if (!container) return;
+
+    const baseItems = (categoryFilter && categoryFilter !== 'all')
+        ? closetItems.filter(i => i.category === categoryFilter)
+        : closetItems;
+
+    if (!baseItems.length) {
+        container.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+    }
+
+    // カラーごとにカウント
+    const counts = {};
+    baseItems.forEach(item => {
+        const cn = item.colorName || '不明';
+        if (!counts[cn]) counts[cn] = { count: 0, hex: item.color || '#888888', name: cn };
+        counts[cn].count++;
+    });
+
+    const sorted = Object.values(counts).sort((a, b) => b.count - a.count);
+    const total  = baseItems.length;
+    const maxCnt = sorted[0]?.count || 1;
+
+    container.classList.remove('hidden');
+    container.innerHTML = `
+        <div class="flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-[15px] text-primary dark:text-blue-400">palette</span>
+            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-on-surface dark:text-white">カラー保有割合</p>
+            ${currentColorFilter
+                ? `<button onclick="clearColorFilter()" class="ml-auto flex items-center gap-0.5 text-[9px] font-bold text-primary dark:text-blue-400 active:scale-95 transition-transform">
+                        <span class="material-symbols-outlined text-[11px]">close</span>解除
+                   </button>`
+                : ''}
+        </div>
+        <div class="space-y-2">
+            ${sorted.map(c => {
+                const pct    = Math.round((c.count / maxCnt) * 100);
+                const share  = Math.round((c.count / total) * 100);
+                const active = currentColorFilter === c.name;
+                return `
+                <button onclick="filterClosetByColor('${c.name.replace(/'/g, '&#39;')}')"
+                    class="w-full flex items-center gap-2.5 active:scale-[0.98] transition-transform">
+                    <div class="w-4 h-4 rounded-full flex-shrink-0 shadow-sm border border-black/10 dark:border-white/10 ${active ? 'ring-2 ring-primary dark:ring-blue-400 ring-offset-1' : ''}"
+                         style="background:${c.hex}"></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-0.5">
+                            <span class="text-[9px] font-bold truncate ${active ? 'text-primary dark:text-blue-400' : 'text-on-surface dark:text-white'}">${c.name}</span>
+                            <span class="text-[8px] font-mono text-on-surface-variant dark:text-white/40 ml-1 flex-shrink-0">${c.count}点 · ${share}%</span>
+                        </div>
+                        <div class="h-1.5 bg-black/5 dark:bg-white/8 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-500"
+                                 style="width:${pct}%;background:${c.hex};opacity:${active ? '1' : '0.7'};box-shadow:0 0 5px ${c.hex}60"></div>
+                        </div>
+                    </div>
+                </button>`;
+            }).join('')}
+        </div>`;
+}
+
+function filterClosetByColor(colorName) {
+    if (navigator.vibrate) navigator.vibrate([6]);
+    currentColorFilter = currentColorFilter === colorName ? null : colorName;
+    _applyColorFilter();
+}
+
+function clearColorFilter() {
+    currentColorFilter = null;
+    _applyColorFilter();
+}
+
+function _applyColorFilter() {
+    const baseItems = (currentFilter && currentFilter !== 'all')
+        ? closetItems.filter(i => i.category === currentFilter)
+        : closetItems;
+    const filtered = currentColorFilter
+        ? baseItems.filter(i => i.colorName === currentColorFilter)
+        : baseItems;
+
+    const grid    = document.getElementById('closet-grid');
+    const addCard = document.getElementById('closet-add-card');
+    Array.from(grid.children).forEach(child => { if (child.id !== 'closet-add-card') child.remove(); });
+
+    filtered.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'closet-item-card bg-white/60 dark:bg-slate-800/60 backdrop-blur-md aspect-square rounded-[28px] border border-white/50 dark:border-white/10 shadow-sm overflow-hidden relative group flex flex-col';
+        card.dataset.category = item.category;
+        card.innerHTML = `
+            ${item.img
+                ? `<img src="${item.img}" class="w-full h-3/4 object-cover"/>`
+                : `<div class="w-full h-3/4 flex flex-col items-center justify-center gap-1" style="background:${item.color}20">
+                       <div class="w-10 h-10 rounded-full shadow-inner" style="background:${item.color}"></div>
+                       <span class="material-symbols-outlined text-2xl" style="color:${item.color}">${CATEGORY_ICONS[item.category] || 'checkroom'}</span>
+                   </div>`
+            }
+            <div class="flex-1 px-3 py-2 flex flex-col justify-center">
+                <p class="font-bold text-[10px] dark:text-white leading-snug truncate">${item.name}</p>
+                <p class="text-[8px] text-on-surface-variant dark:text-white/50 mt-0.5">${CATEGORY_LABELS[item.category] || item.category}${item.colorName ? ' · ' + item.colorName : ''}</p>
+            </div>
+            <div class="absolute top-2 right-2 hidden group-hover:flex group-focus-within:flex flex-col gap-1">
+                <button onclick="openEditClosetModal(${item.id})" class="bg-primary/80 text-white w-6 h-6 rounded-full flex items-center justify-center active:scale-90 transition-all shadow">
+                    <span class="material-symbols-outlined text-[12px]">edit</span>
+                </button>
+                <button onclick="deleteClosetItem(${item.id})" class="bg-black/50 text-white w-6 h-6 rounded-full flex items-center justify-center active:scale-90 transition-all shadow">
+                    <span class="material-symbols-outlined text-[12px]">close</span>
+                </button>
+            </div>`;
+        grid.insertBefore(card, addCard);
+    });
+
+    document.getElementById('closet-count').textContent = currentColorFilter
+        ? `${filtered.length} / ${closetItems.length} アイテム（${currentColorFilter}）`
+        : `${closetItems.length} アイテム`;
+
+    renderColorBreakdown(currentFilter);
 }
 
 // 初期レンダリング
 window.addEventListener('sectionsLoaded', () => {
     renderClosetGrid();
+    renderColorBreakdown('all');
 });

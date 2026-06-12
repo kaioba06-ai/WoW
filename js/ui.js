@@ -7,6 +7,15 @@ window.addEventListener('popstate', (e) => {
 
 function switchTab(tabId, el) {
     if(navigator.vibrate) navigator.vibrate([10]);
+    
+    // コミュニティタブを開いている際に再度コミュニティタブを押したときの判定
+    if (tabId === 'discover' && localStorage.getItem('kion_current_tab') === 'discover') {
+        if (typeof window.FountainComponent !== 'undefined' && typeof window.FountainComponent.toggleGlobalPalette === 'function') {
+            window.FountainComponent.toggleGlobalPalette();
+        }
+        return;
+    }
+
     switchTabReal(tabId, el, false);
 }
 
@@ -306,4 +315,3 @@ window.addEventListener('sectionsLoaded', () => {
         }
     }, 600);
 });
-

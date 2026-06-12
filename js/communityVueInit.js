@@ -2,7 +2,7 @@
 // index.html に直書きされていたものをタブ責務に従い分離。
 // 元は <script type="module"> だったため、こちらも ES module として読み込む。
 
-import { CommunityView } from './components/CommunityView.js';
+import { CommunityView } from './components/CommunityView.js?v=4';
 
 function setupVueCommunity() {
     if (window.communityApp) return;

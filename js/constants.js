@@ -36,28 +36,42 @@ window.WOW_CONSTANTS = {
         other: 'more_horiz' 
     },
 
-    REACTION_THEME_MASTER: {
+    REACTION_THEMES: {
+        cool: {
+            id: 'cool',
+            label: 'かっこいい',
+            emoji: '🔥',
+            color: '#FF5722', // 力強いディープオレンジ
+            subs: ['🕶️', '⚡', '🏎️']
+        },
+        kawaii: {
+            id: 'kawaii',
+            label: 'かわいい',
+            emoji: '❤️',
+            color: '#E91E63', // 鮮やかなピンク
+            subs: ['🎀', '🧸', '✨']
+        },
         dig: {
-            id: 'dig', label: 'ディグる', emoji: '🕳️', icon: '⛏️', color: '#1A1A2E', rgb: '26,26,46', bg: 'rgba(26,26,46,0.18)', effects: ['💎','🔷','🌟']
+            id: 'dig',
+            label: 'ディグる',
+            emoji: '⛏️',
+            color: '#9C27B0', // ミステリアスなパープル
+            subs: ['🔍', '💎', '💡']
         },
         emoi: {
-            id: 'emoi', label: 'エモい', emoji: '🌙', icon: '🌇', color: '#FF7F50', rgb: '255,127,80', bg: 'rgba(255,127,80,0.18)', effects: ['🌆','📸','✨']
-        },
-        cool: {
-            id: 'cool', label: 'かっこいい', emoji: '😎', icon: '⚡', color: '#4A90E2', rgb: '74,144,226', bg: 'rgba(74,144,226,0.18)', effects: ['🔥','⚡','😎']
-        },
-        dress: {
-            id: 'dress', label: 'これ着る', emoji: '👕', icon: '👗', color: '#FF4757', rgb: '255,71,87', bg: 'rgba(255,71,87,0.18)', effects: ['👗','🛍️','✨']
+            id: 'emoi',
+            label: 'エモい',
+            emoji: '🎨',
+            color: '#FFC107', // ノスタルジックなアンバーイエロー
+            subs: ['🌆', '🌙', '📸']
         },
         useful: {
-            id: 'useful', label: '役に立つ', emoji: '💡', icon: '✅', color: '#2ECC71', rgb: '46,204,113', bg: 'rgba(46,204,113,0.18)', effects: ['💡','✅','📝']
-        },
-        sense: {
-            id: 'sense', label: 'センス', emoji: '🎨', icon: '👑', color: '#F1C40F', rgb: '241,196,15', bg: 'rgba(241,196,15,0.18)', effects: ['🎨','👑','🌟']
-        },
-        cute: {
-            id: 'cute', label: 'かわいい', emoji: '💖', icon: '🎀', color: '#FF80AB', rgb: '255,128,171', bg: 'rgba(255,128,171,0.18)', effects: ['💖','🎀','🌸']
-        },
+            id: 'useful',
+            label: '参考になる',
+            emoji: '✅',
+            color: '#4CAF50', // 信頼感のあるグリーン
+            subs: ['📝', '💡', '👏']
+        }
     },
 
     PROFILE_OPTIONS: {

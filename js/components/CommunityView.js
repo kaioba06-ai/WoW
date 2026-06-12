@@ -1,6 +1,6 @@
 // js/components/CommunityView.js
 
-import { PostCard } from './PostCard.js';
+import { PostCard } from './PostCard.js?v=4';
 
 // モックアップデータジェネレータ
 const generateMockPosts = (startIndex, count, type) => {
@@ -62,7 +62,7 @@ const generateMockPosts = (startIndex, count, type) => {
             image: type === 'qa' && Math.random() > 0.5 ? null : `https://picsum.photos/id/${imageId}/${isDiscover ? '300/400' : '400/400'}`,
             temperature: temp,
             caption: caption,
-            reactions: Math.floor(Math.random() * 500) + 10,
+            replies: type === 'qa' ? Math.floor(Math.random() * 50) + 1 : 0,
             isNew: id < 5,
             matchedCategory: matchedCategory,
             isResolved: type === 'qa' ? Math.random() > 0.7 : false,
@@ -212,12 +212,11 @@ export const CommunityView = {
 
                     <!-- Feed Grid -->
                     <div :class="gridClass">
-                        <div v-for="post in filteredPosts" :key="post.id" :class="[post.isExpanded && type === 'discover' ? 'col-span-2' : '']">
-                            <PostCard 
-                                :post="post" 
-                                :type="type" 
-                                :isExpanded="post.isExpanded"
-                                @toggle-expand="post.isExpanded = !post.isExpanded"
+                        <div v-for="post in filteredPosts" :key="post.id">
+                            <PostCard
+                                :post="post"
+                                :type="type"
+                                @open-detail="openPostDetail"
                             />
                         </div>
                         
@@ -238,11 +237,113 @@ export const CommunityView = {
             </transition>
 
         </div>
+
+        <!-- ===== Post Detail Bottom Sheet ===== -->
+        <div v-if="selectedPost"
+             class="fixed inset-0 z-[10000] flex flex-col justify-end"
+             style="contain:layout">
+
+            <!-- Backdrop -->
+            <div class="absolute inset-0"
+                 style="background:rgba(0,0,0,0.6);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:bs-backdrop-in 0.3s ease forwards"
+                 @click="closePostDetail">
+            </div>
+
+            <!-- Sheet -->
+            <div class="relative bg-white dark:bg-[#0c1422] rounded-t-[28px] shadow-2xl overflow-hidden flex flex-col"
+                 style="max-height:91vh;animation:bs-slide-up 0.44s cubic-bezier(0.34,1,0.64,1) forwards">
+
+                <!-- Drag handle -->
+                <div class="flex-shrink-0 flex justify-center pt-3 pb-1">
+                    <div class="w-9 h-[3px] rounded-full bg-gray-200 dark:bg-slate-700"></div>
+                </div>
+
+                <!-- Scrollable body -->
+                <div class="overflow-y-auto overscroll-contain flex-1">
+
+                    <!-- Hero image -->
+                    <div class="relative w-full" style="aspect-ratio:4/5;animation:bs-img-reveal 0.5s 0.08s ease-out both">
+                        <img :src="selectedPost.image || 'https://picsum.photos/400/500'"
+                             class="w-full h-full object-cover">
+                        <!-- Gradient -->
+                        <div class="absolute inset-0 pointer-events-none"
+                             style="background:linear-gradient(to top,rgba(0,0,0,0.72) 0%,rgba(0,0,0,0.12) 45%,transparent 70%)">
+                        </div>
+                        <!-- Temperature (cinematic) -->
+                        <div class="absolute bottom-5 left-5 font-mono font-black text-white leading-none"
+                             style="font-size:3rem;letter-spacing:-0.05em;text-shadow:0 4px 32px rgba(0,0,0,0.5)">
+                            {{ selectedPost.temperature }}<span style="font-size:1.1rem;opacity:0.5">°C</span>
+                        </div>
+                        <!-- Category (bottom-right) -->
+                        <div class="absolute bottom-5 right-5">
+                            <span :class="['px-3 py-1 rounded-xl text-[8.5px] font-black tracking-[0.28em] uppercase border backdrop-blur-md', selectedPostCategoryClass]">
+                                {{ selectedPostCategory }}
+                            </span>
+                        </div>
+                        <!-- Close -->
+                        <button @click="closePostDetail"
+                            class="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                            style="background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)">
+                            <span class="material-symbols-outlined text-white" style="font-size:20px">close</span>
+                        </button>
+                        <!-- matchedTag badge -->
+                        <div v-if="selectedPost.matchedTag"
+                             class="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[8.5px] font-bold text-primary"
+                             style="background:rgba(255,255,255,0.93);backdrop-filter:blur(8px)">
+                            <span class="material-symbols-outlined text-[11px]">check_circle</span>{{ selectedPost.matchedTag }}
+                        </div>
+                        <div v-else-if="selectedPost.isNew"
+                             class="absolute top-4 left-4 bg-primary text-white px-2.5 py-1 rounded-lg text-[9px] font-extrabold shadow-lg tracking-wider">
+                            NEW ✨
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="px-5 pt-5 pb-10 flex flex-col gap-4"
+                         style="animation:bs-content-in 0.4s 0.16s ease both">
+
+                        <!-- User row -->
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-full overflow-hidden bg-gray-100 dark:bg-slate-700 border-2 border-gray-100 dark:border-slate-600 flex-shrink-0">
+                                <img :src="selectedPost.userAvatar" class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-black text-[14px] text-on-surface dark:text-white leading-tight">{{ selectedPost.user }}</p>
+                                <p class="text-[10px] text-gray-400 dark:text-white/30 font-medium mt-0.5">{{ selectedPost.time }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Caption -->
+                        <p v-if="selectedPost.caption"
+                           class="text-[14.5px] font-medium text-gray-800 dark:text-gray-200 leading-relaxed">
+                            {{ selectedPost.caption }}
+                        </p>
+
+                        <!-- Hashtags -->
+                        <div v-if="selectedPost.hashtags && selectedPost.hashtags.length"
+                             class="flex flex-wrap gap-2">
+                            <span v-for="tag in selectedPost.hashtags" :key="tag"
+                                  class="px-3 py-1.5 rounded-full text-[10px] font-bold bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-slate-700 active:scale-95 transition-transform cursor-default select-none">
+                                {{ tag }}
+                            </span>
+                        </div>
+
+                        <!-- Flip hint -->
+                        <div class="flex items-center justify-center gap-2 pt-3 mt-auto">
+                            <span class="material-symbols-outlined text-gray-300 dark:text-white/15" style="font-size:13px">touch_app</span>
+                            <span class="font-bold text-gray-300 dark:text-white/20 tracking-wider" style="font-size:9px">長押しでリアクション統計をフリップ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
     `,
     props: {
         type: {
             type: String,
-            required: true, // 'trending' または 'discover'
+            required: true,
             default: 'trending'
         }
     },
@@ -257,6 +358,7 @@ export const CommunityView = {
             activeTrendingGenre: null,
             selectedPost: null,
             discoverPreference: 'Signature',
+
             // 検索関連
             searchQuery: '',
             isSearching: false,
@@ -337,7 +439,16 @@ export const CommunityView = {
                 ].join(' ').toLowerCase();
                 return text.includes(q);
             });
-        }
+        },
+        selectedPostCategory() {
+            if (!this.selectedPost) return '';
+            return String(this.selectedPost.category).toLowerCase().includes('signature') ? 'Signature' : 'Standard';
+        },
+        selectedPostCategoryClass() {
+            return this.selectedPostCategory === 'Signature'
+                ? 'border-amber-400/50 text-amber-300 bg-transparent'
+                : 'border-white/30 text-white/70 bg-transparent';
+        },
     },
     methods: {
         // ランクを全角小欇イチ（＃１）形式に変換
@@ -346,6 +457,15 @@ export const CommunityView = {
             const fw = ['\uff10','\uff11','\uff12','\uff13','\uff14','\uff15','\uff16','\uff17','\uff18','\uff19'];
             const digits = String(rank).split('').map(d => fw[parseInt(d)] || d).join('');
             return fullWidthHash + digits;
+        },
+        openPostDetail(post) {
+            this.selectedPost = post;
+            document.body.style.overflow = 'hidden';
+            if (navigator.vibrate) navigator.vibrate([10]);
+        },
+        closePostDetail() {
+            this.selectedPost = null;
+            document.body.style.overflow = '';
         },
         isMaterialMatch(tag) {
             if (!this.closetMaterials || this.closetMaterials.length === 0) return false;
@@ -380,9 +500,22 @@ export const CommunityView = {
             // API コールのモック遅延
             await new Promise(resolve => setTimeout(resolve, 800));
             
-            // 件数を 6件 から 12件（1.5倍〜倍増）に増量して表示密度向上
-            let newPosts = generateMockPosts(this.posts.length, 12, this.type);
-            
+            let newPosts = [];
+            if (window.PostService && typeof window.PostService.getPosts === 'function') {
+                try {
+                    newPosts = await window.PostService.getPosts(this.page, 12, this.type);
+                } catch (e) {
+                    console.warn('[CommunityView] Failed to fetch from DB, using mock data', e);
+                    newPosts = generateMockPosts(this.posts.length, 12, this.type);
+                }
+                // DBが空の場合はフォールバックとしてモックを表示
+                if (!newPosts || newPosts.length === 0) {
+                    newPosts = generateMockPosts(this.posts.length, 12, this.type);
+                }
+            } else {
+                newPosts = generateMockPosts(this.posts.length, 12, this.type);
+            }
+
             // ==========================================
             // Discover パーソナライズ・アルゴリズム要件
             // ==========================================

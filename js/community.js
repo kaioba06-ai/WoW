@@ -69,9 +69,8 @@ function bindAndroidTouchFixes() {
 }
 
 // ===== スマートフィルター =====
-// reaction: リアクション種別フィルター（オシャレ、かわいい等）
 // genre:    ジャンル別フィルター（ストリート、カジュアル等）
-const filterState = { scene: 'すべて', temp: '15mid', purpose: null, reaction: null, genre: null };
+const filterState = { scene: 'すべて', temp: '15mid', purpose: null, genre: null };
 
 function toggleFilterSheet() {
     const sheet   = document.getElementById('filter-bottom-sheet');
@@ -114,7 +113,6 @@ function toggleSheetFilter(btn, group) {
 function applyFilters() {
     const hasFilter = filterState.scene !== 'すべて'
         || filterState.genre !== null
-        || filterState.reaction !== null
         || filterState.purpose !== null;
     document.getElementById('filter-dot').classList.toggle('hidden', !hasFilter);
     filterTrendCards();
@@ -123,12 +121,12 @@ function applyFilters() {
 }
 
 // ===== トレンドカードのフィルタリング =====
-// scene × genre を AND 検索し、reaction が選択されていればそのリアクション数順にソート
+// scene × genre を AND 検索
 function filterTrendCards() {
     const trendGrid = document.querySelector('#discover-trend .grid');
     if (!trendGrid) return;
     const addCard = Array.from(trendGrid.children).find(el => el.classList.contains('add-post-card')) || trendGrid.lastElementChild;
-    const posts = Array.from(trendGrid.children).filter(el => el !== addCard && el.dataset.reactions !== undefined);
+    const posts = Array.from(trendGrid.children).filter(el => el !== addCard && el.dataset.likes !== undefined);
 
     posts.forEach(card => {
         let visible = true;
@@ -146,42 +144,7 @@ function filterTrendCards() {
         card.style.display = visible ? '' : 'none';
     });
 
-    // リアクション別ソート（reaction フィルター適用時）
-    if (filterState.reaction) {
-        sortTrendByReaction(filterState.reaction);
-    } else {
-        sortTrendPosts();
-    }
-}
-
-// 指定リアクションのカウントが多い順にカードをソート
-// toggleReaction の dataset.reacted も参照してユーザーがリアクション済みのカードを優先表示
-function sortTrendByReaction(reactionLabel) {
-    const trendGrid = document.querySelector('#discover-trend .grid');
-    if (!trendGrid) return;
-    const addCard = Array.from(trendGrid.children).find(el => el.classList.contains('add-post-card')) || trendGrid.lastElementChild;
-    const posts = Array.from(trendGrid.children).filter(
-        el => el !== addCard && el.dataset.reactions !== undefined && el.style.display !== 'none'
-    );
-
-    const getReactionScore = (card) => {
-        const btns = card.querySelectorAll('.reaction-btn, button[onclick*="toggleReaction"], button[onclick*="handleTrendReaction"]');
-        for (const btn of btns) {
-            const txt = btn.innerText.trim();
-            if (!txt.includes(reactionLabel)) continue;
-            const m = txt.match(/(\d+(?:\.\d+)?k?)$/);
-            if (!m) continue;
-            const v = m[1];
-            const count = v.endsWith('k') ? parseFloat(v) * 1000 : parseInt(v);
-            // ユーザー自身がリアクション済みなら +0.5 ボーナス（同数の場合に優先表示）
-            const reactedBonus = btn.dataset.reacted === '1' ? 0.5 : 0;
-            return count + reactedBonus;
-        }
-        return 0;
-    };
-
-    posts.sort((a, b) => getReactionScore(b) - getReactionScore(a));
-    posts.forEach(p => trendGrid.insertBefore(p, addCard));
+    sortTrendPosts();
 }
 
 // ===== アクティブフィルタータグの描画（discover.html 上部に表示） =====
@@ -192,7 +155,6 @@ function renderActiveFilterTags() {
     const tags = [];
     if (filterState.scene && filterState.scene !== 'すべて') tags.push({ key: 'scene',    label: `🗺️ ${filterState.scene}` });
     if (filterState.genre)                                   tags.push({ key: 'genre',    label: `🎨 ${filterState.genre}` });
-    if (filterState.reaction)                                tags.push({ key: 'reaction', label: `✨ ${filterState.reaction}` });
     if (filterState.purpose)                                 tags.push({ key: 'purpose',  label: `🔄 ${filterState.purpose}` });
 
     if (tags.length === 0) {
@@ -234,7 +196,6 @@ function removeFilter(key) {
 
     const hasFilter = filterState.scene !== 'すべて'
         || filterState.genre !== null
-        || filterState.reaction !== null
         || filterState.purpose !== null;
     document.getElementById('filter-dot').classList.toggle('hidden', !hasFilter);
     filterTrendCards();
@@ -284,15 +245,6 @@ function applyVibeFilter(vibe) {
     renderActiveFilterTags();
     const hasFilter = document.getElementById('filter-dot');
     if(hasFilter) hasFilter.classList.remove('hidden');
-
-    // 演出をキックするロジック（Vibeに準じたAntiGravity）
-    // vibeの名前に応じてリアクションをマッピング
-    let reactionType = 'エモい'; 
-    if (vibe === 'Tokyo Night') reactionType = 'クール';
-    else if (vibe === 'Cafe Casual') reactionType = 'かわいい';
-    
-    // AntiGravityをトリガー
-    triggerAntiGravity(reactionType);
 }
 
 // ===== 投稿モーダル =====
@@ -394,31 +346,50 @@ function removePhoto() {
 // 投稿送信
 function submitPost(type) {
     if(kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([10,5,20]);
+    let postData = null;
     if(type === 'qa') {
         const text = document.getElementById('qa-text').value.trim();
         if(!text) { shakeElement(document.getElementById('qa-text')); return; }
         const temp = getSelectedTemp('modal-form-qa');
         const tags = getSelectedTags('modal-form-qa');
         addQaPost(text, temp, tags);
+        postData = { caption: text, temperature: parseInt(temp.replace(/[^0-9]/g, '')) || null, hashtags: tags, category: 'standard', genre: '', scene: '' };
         document.getElementById('qa-text').value = '';
         document.getElementById('qa-char').textContent = '0 / 200';
         document.querySelectorAll('#modal-form-qa .tag-btn').forEach(b => b.classList.remove('selected-tag'));
     } else {
         const text = document.getElementById('trend-text').value.trim();
-        const imgSrc = document.getElementById('photo-preview-img').src;
+        const imgEl = document.getElementById('photo-preview-img');
+        const imgSrc = imgEl && imgEl.src && !imgEl.src.endsWith('undefined') ? imgEl.src : null;
         if(!text && !imgSrc) { shakeElement(document.getElementById('trend-text')); return; }
         const temp = getSelectedTemp('modal-form-trend');
         addTrendPost(text, temp, imgSrc || null);
+        postData = { caption: text, imageUrl: imgSrc, temperature: parseInt(temp.replace(/[^0-9]/g, '')) || null, hashtags: [], category: 'standard', genre: '', scene: selectedPostBg?.label || '' };
         document.getElementById('trend-text').value = '';
         document.getElementById('trend-char').textContent = '0 / 150';
         removePhoto();
     }
+
+    // Persist to Supabase asynchronously (no UI blocking)
+    if(postData && window.PostService) {
+        window.PostService.savePost(postData).catch(() => {});
+    }
+
     closePostModal();
     setTimeout(() => {
         switchTab('discover', document.querySelectorAll('.nav-item')[2]);
         switchCommunityTab(type === 'qa' ? 'qa' : 'trending');
-        alert('投稿しました！✨');
+        _showToast('投稿しました！✨');
     }, 350);
+}
+
+function _showToast(msg) {
+    const el = document.createElement('div');
+    el.textContent = msg;
+    el.style.cssText = 'position:fixed;bottom:calc(5rem + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:rgba(15,23,42,0.9);color:#fff;font-size:13px;font-weight:700;padding:10px 22px;border-radius:999px;z-index:99999;opacity:0;transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.3);pointer-events:none;white-space:nowrap;';
+    document.body.appendChild(el);
+    requestAnimationFrame(() => { requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateX(-50%) translateY(0)'; }); });
+    setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(-50%) translateY(-10px)'; setTimeout(() => el.remove(), 350); }, 2200);
 }
 
 function addQaPost(text, temp, tags) {
@@ -455,7 +426,7 @@ function addTrendPost(text, _temp, imgSrc) {
     const addCard = trendGrid.lastElementChild;
     const card = document.createElement('div');
     const dynId = Date.now();
-    card.dataset.reactions = 0;
+    card.dataset.likes = 0;
     card.dataset.postedAt  = dynId;
     card.dataset.scene     = selectedPostBg.label !== 'なし' ? selectedPostBg.label : '';
     card.dataset.genre     = '';
@@ -464,30 +435,11 @@ function addTrendPost(text, _temp, imgSrc) {
         ${imgSrc ? `<div class="relative cursor-pointer"><img class="w-full h-36 object-cover" src="${imgSrc}"/><div class="absolute top-2 right-2 bg-primary text-white px-2 py-0.5 rounded text-[8px] font-extrabold shadow-md">NEW ✨</div><button onclick="copyToCloset(this,'${imgSrc.replace(/'/g,"\\'")}','${text.replace(/'/g,"\\'").slice(0,20) || 'シェアコーデ'}')" class="save-closet-btn absolute top-2 left-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-primary dark:text-blue-400 w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all border border-white/50"><span class="material-symbols-outlined text-[16px]">hanger</span></button></div>` : ''}
         <div class="px-3 py-2 text-[10px] font-bold dark:text-white/80 text-on-surface-variant leading-snug">${text.replace(/</g,'&lt;')}</div>
         <div class="px-2.5 pt-2 pb-1 space-y-1.5 mt-auto">
-            <div id="react-display-dyn-${dynId}" class="flex gap-1 flex-wrap min-h-[20px]"></div>
             <div class="flex items-center justify-between">
-                <span class="text-[9px] font-black text-on-surface-variant dark:text-white/40 tracking-wider">0 CURATIONS</span>
-                <button class="reaction-plus-btn w-8 h-8 bg-primary dark:bg-blue-500 text-white rounded-full flex items-center justify-center text-lg shadow-md active:scale-90 transition-transform"
-                    data-display-id="react-display-dyn-${dynId}" data-card-idx="-1">👍</button>
+                <span class="text-[9px] font-black text-on-surface-variant dark:text-white/40 tracking-wider">0 LIKES</span>
             </div>
         </div>`;
     trendGrid.insertBefore(card, addCard);
-}
-
-function handleTrendReaction(btn, emoji, label) {
-    if(kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([8]);
-    const match = btn.innerText.match(/\d+$/);
-    let count = match ? parseInt(match[0]) : 0;
-    count++;
-    btn.innerHTML = `${emoji} ${label} ${count}`;
-
-    const card = btn.closest('.flex-col');
-    if(card) {
-        let total = parseInt(card.dataset.reactions || 0);
-        total++;
-        card.dataset.reactions = total;
-        sortTrendPosts();
-    }
 }
 
 let currentSortMode = 'trend';
@@ -514,15 +466,15 @@ function sortTrendPosts() {
     const trendGrid = document.querySelector('#discover-trend .grid');
     if(!trendGrid) return;
     const addCard = Array.from(trendGrid.children).find(el => el.classList.contains('add-post-card')) || trendGrid.lastElementChild;
-    const posts = Array.from(trendGrid.children).filter(el => el !== addCard && el.dataset.reactions !== undefined);
+    const posts = Array.from(trendGrid.children).filter(el => el !== addCard && el.dataset.likes !== undefined);
 
     const firstPositions = new Map();
     posts.forEach(p => firstPositions.set(p, p.getBoundingClientRect()));
 
     if (currentSortMode === 'niche') {
-        posts.sort((a, b) => parseInt(a.dataset.reactions || 0) - parseInt(b.dataset.reactions || 0));
+        posts.sort((a, b) => parseInt(a.dataset.likes || 0) - parseInt(b.dataset.likes || 0));
     } else {
-        posts.sort((a, b) => parseInt(b.dataset.reactions || 0) - parseInt(a.dataset.reactions || 0));
+        posts.sort((a, b) => parseInt(b.dataset.likes || 0) - parseInt(a.dataset.likes || 0));
     }
     posts.forEach(p => trendGrid.insertBefore(p, addCard));
 
@@ -583,38 +535,6 @@ function submitReply(btn) {
     alert('回答を送信しました！');
 }
 
-// ===== トレンド: リアクショントグル =====
-function toggleReaction(btn, baseCount) {
-    if(kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([8]);
-    const reacted = btn.dataset.reacted === '1';
-    btn.dataset.reacted = reacted ? '0' : '1';
-
-    const count = reacted ? baseCount : baseCount + 1;
-    const parts = btn.innerText.trim().split(' ');
-    const emoji = parts[0];
-    const label = parts.slice(1, -1).join(' ');
-    const displayCount = count >= 1000 ? (count/1000).toFixed(1) + 'k' : count;
-    btn.innerHTML = `${emoji} ${label} ${displayCount}`;
-
-    btn.style.transform = reacted ? '' : 'scale(1.05)';
-    setTimeout(() => { btn.style.transform = ''; }, 200);
-
-    const card = btn.closest('.flex-col');
-    if(card) {
-        let total = 0;
-        card.querySelectorAll('.reaction-btn, button[onclick*="Reaction"]').forEach(b => {
-             const txt = b.innerText.trim();
-             const m = txt.match(/(\d+(\.\d+)?[k]?)$/);
-             if(m) {
-                 let valStr = m[1];
-                 total += valStr.endsWith('k') ? parseFloat(valStr) * 1000 : parseInt(valStr);
-             }
-        });
-        card.dataset.reactions = total;
-        sortTrendPosts();
-    }
-}
-
 // コミュニティ投稿をクローゼットにコピー
 function copyToCloset(btn, imgSrc, name) {
     if(btn.dataset.saved === '1') {
@@ -657,1099 +577,18 @@ function applyContextPill(btn, context) {
     const grid = document.getElementById('curated-feed-grid');
     if (!grid) return;
     const addCard = grid.querySelector('.add-post-card');
-    Array.from(grid.children).filter(el => el !== addCard && el.dataset.reactions !== undefined).forEach(card => {
+    Array.from(grid.children).filter(el => el !== addCard && el.dataset.likes !== undefined).forEach(card => {
         card.style.display = (!context || card.dataset.context === context) ? '' : 'none';
     });
 }
-
-// ===== リアクションテーマのマスターデータ =====
-const REACTION_THEME_MASTER = WOW_CONSTANTS.REACTION_THEME_MASTER;
-const NEW_REACTIONS = Object.values(REACTION_THEME_MASTER);
-
-// 扇形オフセット (px) — 6ボタンを弧状に配置
-const FAN_OFFSETS = [
-    { x: -88, y: -24 },
-    { x: -60, y: -68 },
-    { x: -18, y: -86 },
-    { x:  26, y: -86 },
-    { x:  58, y: -68 },
-    { x:  80, y: -24 },
-];
-
-let _activePopupDisplayId = null;
-let _activePopupCardIdx   = null;
-let _activePopupEl        = null;
-
-// タップ時のシンプルアーク（ドラッグ系は _initReactionDelegation で処理）
-function openReactionPopup(triggerBtn, displayId, cardIdx) {
-    if(kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([8]);
-    if (_activePopupEl) { _closeReactionPopup(); return; }
-
-    _activePopupDisplayId = displayId;
-    _activePopupCardIdx   = cardIdx;
-
-    const rect = triggerBtn.getBoundingClientRect();
-    const popup = document.createElement('div');
-    popup.id = 'reaction-popup';
-    popup.style.cssText = `position:fixed;left:${rect.left + rect.width/2}px;top:${rect.top}px;z-index:10000;`;
-
-    NEW_REACTIONS.forEach((r, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'reaction-fan-btn w-11 h-11 rounded-full flex items-center justify-center text-xl shadow-lg border-2 border-white active:scale-90';
-        btn.style.cssText = `--fx:${FAN_OFFSETS[i].x}px;--fy:${FAN_OFFSETS[i].y}px;background:${r.bg};animation-delay:${i * 30}ms;`;
-        btn.textContent = r.emoji;
-        btn.title = r.label;
-        btn.dataset.reactionIdx = i;
-
-        const tip = document.createElement('span');
-        tip.className = 'reaction-fan-tip';
-        tip.textContent = r.label;
-        btn.appendChild(tip);
-
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            _applyNewReaction(r, displayId, cardIdx);
-            _closeReactionPopup();
-        });
-    });
-
-    document.body.appendChild(popup);
-    void popup.offsetWidth; // 描画ライフサイクルを強制しアニメーションを着火
-    _activePopupEl = popup;
-    setTimeout(() => document.addEventListener('click', _onOutsideClick), 0);
-}
-
-function _onOutsideClick() {
-    _closeReactionPopup();
-}
-
-function _closeReactionPopup() {
-    if (!_activePopupEl) return;
-    document.removeEventListener('click', _onOutsideClick);
-    _activePopupEl.querySelectorAll('.reaction-fan-btn').forEach(b => b.classList.add('closing'));
-    setTimeout(() => { _activePopupEl?.remove(); _activePopupEl = null; }, 220);
-}
-
-// ===== ドラッグ＆ドロップ・リアクションシステム =====
-let _reactionDragState = null;
-
-function _initReactionDelegation() {
-    document.addEventListener('pointerdown', _handleRxPointerDown, { passive: false });
-}
-
-function _handleRxPointerDown(e) {
-    const plusBtn = e.target.closest('.reaction-plus-btn');
-    if (!plusBtn || _reactionDragState || _activePopupEl) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-    plusBtn.setPointerCapture(e.pointerId);
-
-    const displayId = plusBtn.dataset.displayId;
-    const cardIdx   = parseInt(plusBtn.dataset.cardIdx || 0);
-
-    _reactionDragState = {
-        btn:        plusBtn,
-        displayId,
-        cardIdx,
-        pointerId:  e.pointerId,
-        startX:     e.clientX,
-        startY:     e.clientY,
-        lpFired:    false,
-        lpTimer:    null,
-        arcEl:      null,
-        reaction:   null,    // 選択中の NEW_REACTIONS アイテム
-        ghost:      null,    // 指に追従する絵文字 DOM
-        targetCard: null,    // ドロップ先カード
-    };
-
-    const st = _reactionDragState;
-
-    // 長押しタイマー (450ms)
-    st.lpTimer = setTimeout(() => {
-        st.lpFired = true;
-        if (kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([20, 10]);
-        _openDragArc(st);
-    }, 450);
-
-    plusBtn.addEventListener('pointermove',   _handleRxPointerMove,   { passive: false });
-    plusBtn.addEventListener('pointerup',     _handleRxPointerUp,     { once: true, passive: false });
-    plusBtn.addEventListener('pointercancel', _handleRxPointerCancel, { once: true });
-}
-
-function _handleRxPointerMove(e) {
-    const st = _reactionDragState;
-    if (!st || e.pointerId !== st.pointerId) return;
-
-    // アーク未展開かつ移動量 10px 未満 → 長押しタイマーを妨げない
-    if (!st.arcEl) {
-        const moved = Math.hypot(e.clientX - st.startX, e.clientY - st.startY);
-        if (moved < 10) return;
-        // 10px 以上動いたらタイマーをキャンセルし、タップとして処理
-        clearTimeout(st.lpTimer);
-        st.btn.removeEventListener('pointermove', _handleRxPointerMove);
-        _cleanupDragState(false);
-        openReactionPopup(st.btn, st.displayId, st.cardIdx);
-        return;
-    }
-    e.preventDefault();
-
-    // ゴーストを指に追従
-    if (st.ghost) {
-        st.ghost.style.left = `${e.clientX - 20}px`;
-        st.ghost.style.top  = `${e.clientY - 70}px`;
-    }
-
-    // ゴーストを一時的に非表示にしてhitTestを正確にする
-    if (st.ghost) st.ghost.style.visibility = 'hidden';
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    if (st.ghost) st.ghost.style.visibility = '';
-
-    // 扇ボタン上か？→ リアクション選択
-    const fanBtn = el?.closest('.reaction-fan-btn');
-    if (fanBtn) {
-        const idx = parseInt(fanBtn.dataset.reactionIdx);
-        if (st.reaction !== NEW_REACTIONS[idx]) {
-            st.arcEl.querySelectorAll('.reaction-fan-btn').forEach(b => b.classList.remove('drag-selected'));
-            fanBtn.classList.add('drag-selected');
-            st.reaction = NEW_REACTIONS[idx];
-            if (st.ghost) {
-                st.ghost.textContent = st.reaction.emoji;
-                st.ghost.style.opacity = '1';
-                st.ghost.style.filter  = `drop-shadow(0 0 10px ${st.reaction.color})`;
-            }
-            if (kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([6]);
-        }
-        if (st.targetCard) { st.targetCard.classList.remove('drag-over-card'); st.targetCard = null; }
-        return;
-    }
-
-    // カード上か？→ ドロップ先をハイライト
-    if (st.reaction) {
-        const card = el?.closest('[data-reactions]');
-        if (card !== st.targetCard) {
-            if (st.targetCard) st.targetCard.classList.remove('drag-over-card');
-            st.targetCard = card || null;
-            if (st.targetCard) {
-                st.targetCard.classList.add('drag-over-card');
-                if (kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([8]);
-            }
-        }
-    }
-}
-
-function _handleRxPointerUp(e) {
-    const st = _reactionDragState;
-    if (!st || e.pointerId !== st.pointerId) return;
-    clearTimeout(st.lpTimer);
-    st.btn.removeEventListener('pointermove', _handleRxPointerMove);
-
-    if (!st.lpFired) {
-        // 短タップ → タップアーク表示
-        _cleanupDragState(false);
-        openReactionPopup(st.btn, st.displayId, st.cardIdx);
-        return;
-    }
-
-    // ドラッグ終了 → リアクション確定
-    if (st.reaction) {
-        let targetDisplayId = st.displayId;
-        if (st.targetCard) {
-            const disp = st.targetCard.querySelector('[id^="react-display"]');
-            if (disp) targetDisplayId = disp.id;
-        }
-        _applyNewReaction(st.reaction, targetDisplayId, st.cardIdx);
-    }
-    _cleanupDragState(true);
-}
-
-function _handleRxPointerCancel() {
-    const st = _reactionDragState;
-    if (!st) return;
-    clearTimeout(st.lpTimer);
-    st.btn.removeEventListener('pointermove', _handleRxPointerMove);
-    _cleanupDragState(true);
-}
-
-function _openDragArc(st) {
-    const rect = st.btn.getBoundingClientRect();
-    const arc  = document.createElement('div');
-    arc.id = 'reaction-popup';
-    // pointer-events:none on container — individual buttons handle their own events via pointermove hit-test
-    arc.style.cssText = `position:fixed;left:${rect.left + rect.width/2}px;top:${rect.top}px;z-index:10000;pointer-events:none;`;
-
-    NEW_REACTIONS.forEach((r, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'reaction-fan-btn w-11 h-11 rounded-full flex items-center justify-center text-xl shadow-lg border-2 border-white';
-        btn.style.cssText = `--fx:${FAN_OFFSETS[i].x}px;--fy:${FAN_OFFSETS[i].y}px;background:${r.bg};animation-delay:${i * 30}ms;pointer-events:none;`;
-        btn.textContent = r.emoji;
-        btn.dataset.reactionIdx = i;
-
-        const tip = document.createElement('span');
-        tip.className = 'reaction-fan-tip';
-        tip.textContent = r.label;
-        btn.appendChild(tip);
-
-        arc.appendChild(btn);
-    });
-
-    document.body.appendChild(arc);
-    void arc.offsetWidth; // 描画ライフサイクルを強制
-    st.arcEl      = arc;
-    _activePopupEl = arc; // close-on-outside-tap compatibility
-
-    // ゴースト絵文字（不透明度1で出現）
-    const ghost = document.createElement('span');
-    ghost.className = 'drag-emoji-ghost';
-    ghost.style.cssText = `left:${rect.left}px;top:${rect.top - 70}px;opacity:1;z-index:10001;`;
-    document.body.appendChild(ghost);
-    st.ghost = ghost;
-}
-
-function _cleanupDragState(animated) {
-    const st = _reactionDragState;
-    _reactionDragState = null;
-    if (!st) return;
-
-    if (st.arcEl) {
-        if (animated) {
-            st.arcEl.querySelectorAll('.reaction-fan-btn').forEach(b => b.classList.add('closing'));
-            setTimeout(() => st.arcEl?.remove(), 220);
-        } else {
-            st.arcEl.remove();
-        }
-        _activePopupEl = null;
-    }
-    if (st.ghost)      st.ghost.remove();
-    if (st.targetCard) st.targetCard.classList.remove('drag-over-card');
-}
-
-// ===== Elastic Pull リアクション =====
-// カードを右スワイプ → ゴム伸び → 扇状アーク → スライド選択 → 確定
-
-const PULL_THRESHOLD = 52;   // px: アーク出現閾値
-const PULL_MAX       = 115;  // px: 減衰開始距離
-const PULL_RESIST    = 0.52; // 減衰係数（ゴム感）
-
-// 左サイドから扇状に広がるオフセット
-const PULL_ARC_OFFSETS = [
-    { x:  8,  y: -82 },
-    { x: 42,  y: -54 },
-    { x: 58,  y: -14 },
-    { x: 58,  y:  26 },
-    { x: 42,  y:  58 },
-    { x:  8,  y:  80 },
-];
-
-let _pullState      = null;
-let _doubleTapTimer = null;  // ダブルタップ判定タイマー
-let _doubleTapCard  = null;  // 1回目タップのカード参照
-
-function _initElasticPull() {
-    const grid = document.getElementById('curated-feed-grid');
-    if (!grid) return;
-    // 既にリスナー登録済みなら重複しない
-    if (grid._elasticPullInit) return;
-    grid._elasticPullInit = true;
-    grid.addEventListener('pointerdown', _onPullDown, { passive: false });
-}
-
-function _onPullDown(e) {
-    if (_pullState) return;
-    const card = e.target.closest('[data-reactions]');
-    if (!card) return;
-    // "+" / QUICK DIG / クローゼットボタン / 既存リアクションバッジは除外
-    e.preventDefault();
-    e.stopPropagation(); // 二重発火防止
-    card.setPointerCapture(e.pointerId);
-    window._kionElasticActive = true;  // タブスワイプとの排他制御
-
-    _pullState = {
-        card,
-        startX:    e.clientX,
-        startY:    e.clientY,
-        pointerId: e.pointerId,
-        pulling:   false,
-        elastic:   0,
-        reaction:  null,
-        arcEl:     null,
-        clickBlocked: false,  // スワイプ時にカードのclick発火を抑制
-    };
-
-    card.addEventListener('pointermove',   _onPullMove);
-    card.addEventListener('pointerup',     _onPullUp,     { once: true });
-    card.addEventListener('pointercancel', _onPullCancel, { once: true });
-}
-
-function _onPullMove(e) {
-    const st = _pullState;
-    if (!st || e.pointerId !== st.pointerId) return;
-
-    const dx = e.clientX - st.startX;
-    const dy = e.clientY - st.startY;
-
-    // 縦スクロール優先: 縦移動が大きければキャンセル
-    if (!st.pulling && Math.abs(dy) > Math.abs(dx) + 8) {
-        _pullRelease(st, false); return;
-    }
-    // 右方向のみ
-    if (dx <= 0) { if (st.pulling) _pullRelease(st, true); return; }
-    if (dx < 15) return;  // 0〜15px は判定保留（誤操作防止）
-
-    if (!st.pulling) {
-        st.pulling = true;
-        st.card.style.transition  = 'none';
-        st.card.style.willChange  = 'transform';
-        st.card.style.touchAction = 'none';
-
-        // スワイプモード突入：以降の click イベントを capture で消費してカード詳細を阻止
-        if (!st.clickBlocked) {
-            st.clickBlocked = true;
-            st.card.addEventListener('click', _blockPullClick, { capture: true });
-        }
-    }
-
-    // ゴム感：PULL_MAX を超えると急減衰
-    const elastic = dx < PULL_MAX
-        ? dx * PULL_RESIST
-        : PULL_MAX * PULL_RESIST + (dx - PULL_MAX) * 0.08;
-    st.elastic = elastic;
-
-    st.card.style.transform = `translateX(${elastic}px)`;
-
-    // 引っ張り強度に応じた微細バイブ
-    if (kionSettings.isHapticEnabled && navigator.vibrate && (dx | 0) % 18 === 0) {
-        navigator.vibrate([2]);
-    }
-
-    // 閾値到達でアーク展開
-    if (dx >= PULL_THRESHOLD && !st.arcEl) {
-        _showPullArc(st);
-        if (kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([12, 6, 8]);
-    }
-
-    // アーク上のホバーチェック
-    if (st.arcEl) {
-        // ゴーストがhitTestを邪魔しないよう一時退避
-        st.arcEl.style.pointerEvents = 'none';
-        const hit = document.elementFromPoint(e.clientX, e.clientY);
-        st.arcEl.style.pointerEvents = '';
-
-        const fanBtn = hit?.closest('.pull-fan-btn');
-        if (fanBtn) {
-            const r = NEW_REACTIONS[parseInt(fanBtn.dataset.reactionIdx)];
-            if (st.reaction !== r) {
-                st.arcEl.querySelectorAll('.pull-fan-btn').forEach(b => b.classList.remove('drag-selected'));
-                fanBtn.classList.add('drag-selected');
-                st.reaction = r;
-                if (kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([6]);
-            }
-        } else {
-            if (st.reaction) {
-                st.arcEl.querySelectorAll('.pull-fan-btn').forEach(b => b.classList.remove('drag-selected'));
-                st.reaction = null;
-            }
-        }
-    }
-}
-
-function _onPullUp(e) {
-    const st = _pullState;
-    if (!st || e.pointerId !== st.pointerId) return;
-    st.card.removeEventListener('pointermove', _onPullMove);
-    _pullState = null;
-
-    if (!st.pulling) {
-        const card = st.card;
-
-        if (_doubleTapCard === card && _doubleTapTimer) {
-            // ===== ダブルタップ確定 → 💖かわいい =====
-            clearTimeout(_doubleTapTimer);
-            _doubleTapTimer = null;
-            _doubleTapCard  = null;
-            if (kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([15, 5, 25]);
-            const kawaii = NEW_REACTIONS[0]; // 💖かわいい
-            const disp = card.querySelector('[id^="react-display"]');
-            if (disp) _applyNewReaction(kawaii, disp.id, null);
-            _triggerLoveRipple(e.clientX, e.clientY);
-            _triggerSimpleCelebration(kawaii, card);
-        } else {
-            // ===== シングルタップ → 260ms 待機してダブルタップと区別 =====
-            if (_doubleTapTimer) { clearTimeout(_doubleTapTimer); _doubleTapTimer = null; }
-            _doubleTapCard = card;
-            _doubleTapTimer = setTimeout(() => {
-                _doubleTapTimer = null;
-                _doubleTapCard  = null;
-                const wrapper = card.querySelector('.relative');
-                if (wrapper) openCardDetail(wrapper);
-            }, 260);
-        }
-        return;
-    }
-
-    if (st.reaction) {
-        // カチッとした確定バイブ
-        if (kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([10, 5, 20]);
-        const disp = st.card.querySelector('[id^="react-display"]');
-        if (disp) _applyNewReaction(st.reaction, disp.id, null);
-        _triggerSimpleCelebration(st.reaction, st.card);
-    }
-
-    _pullRelease(st, true);
-}
-
-function _onPullCancel() {
-    const st = _pullState;
-    if (!st) return;
-    st.card.removeEventListener('pointermove', _onPullMove);
-    _pullState = null;
-    // ダブルタップ待機中ならキャンセル
-    if (_doubleTapTimer) { clearTimeout(_doubleTapTimer); _doubleTapTimer = null; _doubleTapCard = null; }
-    _pullRelease(st, true);
-}
-
-function _showPullArc(st) {
-    const rect = st.card.getBoundingClientRect();
-    const arc  = document.createElement('div');
-    arc.className = 'pull-arc-container';
-    arc.style.cssText = [
-        `position:fixed`,
-        `left:${rect.left + 14}px`,
-        `top:${rect.top + rect.height / 2}px`,
-        `z-index:9990`,
-        `pointer-events:none`,
-    ].join(';');
-
-    NEW_REACTIONS.forEach((r, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'pull-fan-btn reaction-fan-btn w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-lg border-2 border-white';
-        btn.style.cssText = [
-            `--fx:${PULL_ARC_OFFSETS[i].x}px`,
-            `--fy:${PULL_ARC_OFFSETS[i].y}px`,
-            `background:${r.bg}`,
-            `animation-delay:${i * 22}ms`,
-            `pointer-events:none`,
-        ].join(';');
-        btn.textContent  = r.emoji;
-        btn.dataset.reactionIdx = i;
-
-        const tip = document.createElement('span');
-        tip.className   = 'reaction-fan-tip';
-        tip.textContent = r.label;
-        btn.appendChild(tip);
-
-        arc.appendChild(btn);
-    });
-
-    document.body.appendChild(arc);
-    st.arcEl = arc;
-}
-
-// スワイプ中に発生する click を consume して詳細展開を阻止（1回のみ）
-function _blockPullClick(e) {
-    e.stopPropagation();
-    e.preventDefault();
-    // 自分自身を解除
-    e.currentTarget.removeEventListener('click', _blockPullClick, { capture: true });
-}
-
-function _pullRelease(st, animated) {
-    window._kionElasticActive = false;  // タブスワイプ排他を解除
-    if (st.arcEl) { st.arcEl.remove(); st.arcEl = null; }
-    const card = st.card;
-    card.removeEventListener('pointermove', _onPullMove);
-    // 念のため click ブロッカーも解除（スワイプせず終わった場合）
-    card.removeEventListener('click', _blockPullClick, { capture: true });
-
-    if (animated && st.elastic > 0) {
-        card.style.transition = 'transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1)';
-    }
-    card.style.transform  = '';
-    card.style.willChange = '';
-    card.style.touchAction = '';
-    setTimeout(() => { card.style.transition = ''; }, 400);
-}
-
-// ===== 方法④: 既存バッジへの便乗タップ（Toggle） =====
-function _initBadgeTap() {
-    document.addEventListener('click', (e) => {
-        const badge = e.target.closest('.reacted-badge');
-        if (!badge) return;
-        e.stopPropagation(); // バブリング防止：詳細は開かない
-        _toggleBadgeReaction(badge);
-    });
-}
-
-function _toggleBadgeReaction(badge) {
-    const text     = badge.textContent.trim();
-    const reaction = NEW_REACTIONS.find(r => text.startsWith(r.emoji));
-    if (!reaction) return;
-
-    const card    = badge.closest('[data-reactions]');
-    const display = badge.closest('[id^="react-display"]');
-    const already = badge.dataset.userReacted === '1';
-
-    if (already) {
-        // 取り消し（トグルOFF）
-        badge.dataset.userReacted = '0';
-        badge.classList.remove('user-reacted');
-        const m = text.match(/(\d+)$/);
-        const n = m ? parseInt(m[1]) - 1 : 0;
-        if (n <= 0) {
-            badge.remove();
-        } else {
-            badge.textContent = `${reaction.emoji} ${reaction.label} ${n}`;
-        }
-        if (card) {
-            card.dataset.reactions = Math.max(0, parseInt(card.dataset.reactions || 0) - 1);
-        }
-    } else {
-        // 便乗リアクション（トグルON）
-        badge.dataset.userReacted = '1';
-        badge.classList.add('user-reacted');
-        const m = text.match(/(\d+)$/);
-        const n = m ? parseInt(m[1]) + 1 : 1;
-        badge.textContent = `${reaction.emoji} ${reaction.label} ${n}`;
-        if (kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([10, 5, 20]);
-        if (card) {
-            card.dataset.reactions = parseInt(card.dataset.reactions || 0) + 1;
-        }
-        // カラーフラッシュ＋巨大絵文字演出
-        _triggerSimpleCelebration(reaction, card);
-        if (display) {
-            forceReflow(display);
-            _triggerCelebration(reaction, display);
-        }
-    }
-
-    sortTrendPosts();
-}
-
-// ===== シンプル演出：1秒カラーオーバーレイ + 中央絵文字 =====
-function _triggerSimpleCelebration(reaction, anchorCard) {
-    if (kionSettings.isFullScreenEffectEnabled) {
-        // 全画面モード
-        const overlay = document.createElement('div');
-        overlay.className = 'simple-celebration-overlay';
-        overlay.style.background = reaction.color;
-        const emoji = document.createElement('span');
-        emoji.className = 'simple-celebration-emoji';
-        emoji.textContent = reaction.emoji;
-        overlay.appendChild(emoji);
-        document.body.appendChild(overlay);
-
-        // offsetWidth で初期状態を確定させてからトランジション起動
-        void overlay.offsetWidth;
-        requestAnimationFrame(() => {
-            overlay.style.opacity = '0.32';
-            emoji.style.transform = 'translate(-50%, -50%) scale(1)';
-        });
-
-        setTimeout(() => {
-            overlay.style.transition = 'opacity 0.45s ease';
-            overlay.style.opacity    = '0';
-            setTimeout(() => overlay.remove(), 460);
-        }, 1000);
-
-    } else {
-        // カードのみモード
-        if (!anchorCard) return;
-        const flash = document.createElement('div');
-        flash.className = 'card-celebration-flash';
-        flash.style.background = reaction.color;
-        const emoji = document.createElement('span');
-        emoji.className = 'card-celebration-emoji';
-        emoji.textContent = reaction.emoji;
-        flash.appendChild(emoji);
-
-        // カードが position:relative を持つよう保証
-        const prevPos = anchorCard.style.position;
-        if (!prevPos) anchorCard.style.position = 'relative';
-        anchorCard.appendChild(flash);
-
-        void flash.offsetWidth;
-        requestAnimationFrame(() => {
-            flash.style.opacity = '0.38';
-            emoji.style.transform = 'translate(-50%, -50%) scale(1)';
-        });
-
-        setTimeout(() => {
-            flash.style.transition = 'opacity 0.4s ease';
-            flash.style.opacity    = '0';
-            setTimeout(() => {
-                flash.remove();
-                if (!prevPos) anchorCard.style.position = '';
-            }, 410);
-        }, 1000);
-    }
-}
-
-function _applyNewReaction(reactionOrType, displayId, _cardIdx) {
-    ReactionModule.trigger(reactionOrType, displayId, _cardIdx);
-
-    // 旧ロジックは ReactionModule.trigger に集約されました。
-    // 旧ロジックは ReactionModule.trigger に集約されました。
-}
-
-// ===== 自己完結型セレブレーションシステム (ultimate_demo_v2 準拠) =====
-// DOM要素が存在しない場合に自動生成するBootstrap機構を搭載
-
-let _radTarget = 0;   
-let _radCurrent = 0;  
-let _radActive = false;
-let _currentColor = { hex: '#4A90E2', rgb: '74, 144, 226' };
-let _fadeOutTimer;
-let _particles = [];
-const _tagList = ['#Discovery', '#Vibe', '#Dig', '#Trend', '#Mood', '#Amazing', '#Style', '#OOTD', '#センス', '#着回し'];
-const _celebrationEmojis = ['⚡', '❤️', '⛏️', '✨', '📌', '🔥', '🎉', '💫', '🌟', '✦'];
-
-// HEX→RGB変換ユーティリティ
-function _hexToRgb(hex) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '74, 144, 226';
-}
-
-// DOM自動生成 — 必要なレイヤーが無ければ即座にInjectする
-function _ensureCelebrationDOM() {
-    // Style injection (一度だけ)
-    if (!document.getElementById('kion-celebration-styles')) {
-        const style = document.createElement('style');
-        style.id = 'kion-celebration-styles';
-        style.textContent = `
-            #kion-dimOverlay {
-                position: fixed; inset: 0; background: rgba(0,0,0,0.92);
-                z-index: 9900; opacity: 0; pointer-events: none;
-                transition: opacity 0.3s ease;
-            }
-            #kion-radialLayer {
-                position: fixed; inset: 0; z-index: 9905;
-                pointer-events: none; opacity: 0;
-            }
-            #kion-hashtagContainer {
-                position: fixed; inset: 0; pointer-events: none; z-index: 9910;
-            }
-            #kion-giantEmoji {
-                position: fixed; left: 50%; top: 50%;
-                transform: translate(-50%, -50%) scale(0);
-                font-size: 220px; z-index: 9999;
-                pointer-events: none; opacity: 0;
-                will-change: transform, opacity;
-            }
-            @keyframes kion-giant-extreme-shake {
-                0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
-                10%  { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
-                15%  { transform: translate(calc(-50% - 30px), calc(-50% + 25px)) scale(1.05) rotate(8deg); }
-                20%  { transform: translate(calc(-50% + 25px), calc(-50% - 30px)) scale(0.95) rotate(-7deg); }
-                25%  { transform: translate(calc(-50% - 25px), calc(-50% - 20px)) scale(1.1) rotate(6deg); }
-                30%  { transform: translate(calc(-50% + 30px), calc(-50% + 30px)) scale(0.92) rotate(-8deg); }
-                35%  { transform: translate(calc(-50% - 20px), calc(-50% + 15px)) scale(1.03) rotate(5deg); }
-                40%  { transform: translate(calc(-50% + 15px), calc(-50% - 25px)) scale(0.97) rotate(-4deg); }
-                45%  { transform: translate(calc(-50% - 10px), calc(-50% - 15px)) scale(1.0) rotate(2deg); }
-                50%  { transform: translate(-50%, -50%) scale(1.0) rotate(0deg); opacity: 1; }
-                80%  { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
-                100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; filter: blur(25px); }
-            }
-            .kion-hashtag-burst {
-                position: absolute; color: white; font-weight: 900; font-size: 16px;
-                letter-spacing: 1.5px; padding: 8px 18px; border-radius: 24px;
-                background: rgba(26, 26, 46, 0.6); backdrop-filter: blur(12px);
-                border: 1px solid rgba(255,255,255,0.3);
-                text-shadow: 0 2px 10px rgba(0,0,0,0.9);
-                box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-                opacity: 0; will-change: transform, opacity;
-            }
-            .kion-particle { position: fixed; pointer-events: none; z-index: 9908; will-change: transform; }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // DOM layer injection
-    if (!document.getElementById('kion-dimOverlay')) {
-        const dim = document.createElement('div');
-        dim.id = 'kion-dimOverlay';
-        document.body.appendChild(dim);
-    }
-    if (!document.getElementById('kion-radialLayer')) {
-        const rad = document.createElement('div');
-        rad.id = 'kion-radialLayer';
-        document.body.appendChild(rad);
-    }
-    if (!document.getElementById('kion-hashtagContainer')) {
-        const ht = document.createElement('div');
-        ht.id = 'kion-hashtagContainer';
-        document.body.appendChild(ht);
-    }
-    if (!document.getElementById('kion-giantEmoji')) {
-        const ge = document.createElement('div');
-        ge.id = 'kion-giantEmoji';
-        document.body.appendChild(ge);
-    }
-}
-
-function _animateRadial() {
-    if (!_radActive) return;
-    const radialLayer = document.getElementById('kion-radialLayer');
-    if (!radialLayer) return;
-
-    _radCurrent += (_radTarget - _radCurrent) * 0.15;
-
-    radialLayer.style.background = `radial-gradient(circle at 50% 50%,
-        ${_currentColor.hex} 0%,
-        ${_currentColor.hex} ${_radCurrent}%,
-        #000000 ${_radCurrent + 0.1}%,
-        #000000 ${_radCurrent + 10}%,
-        rgba(${_currentColor.rgb}, 0.6) ${_radCurrent + 15}%,
-        rgba(${_currentColor.rgb}, 0) ${_radCurrent + 80}%
-    )`;
-    requestAnimationFrame(_animateRadial);
-}
-
-// ===== メインエントリ：_triggerCelebration =====
-// reaction: { emoji: '⛏️', color: '#D4AF37' }
-// anchorEl: 対象のDOM要素（カード）
-function _triggerCelebration(reaction, anchorEl) {
-    // カードのみモードの場合は全画面演出をスキップ
-    if (!kionSettings.isFullScreenEffectEnabled) {
-        // カードローカルのミニフラッシュのみ
-        _triggerSimpleCelebration(reaction, anchorEl);
-        return;
-    }
-
-    _ensureCelebrationDOM();
-
-    // テーマカラーを解析・適用
-    const colorHex = reaction.color || '#4A90E2';
-    _currentColor = { hex: colorHex, rgb: _hexToRgb(colorHex) };
-
-    if (navigator.vibrate) navigator.vibrate([100, 150, 250]);
-
-    const radialLayer = document.getElementById('kion-radialLayer');
-    const giantEmoji  = document.getElementById('kion-giantEmoji');
-    const dimOverlay  = document.getElementById('kion-dimOverlay');
-
-    // 1. 暗転オーバーレイ
-    if (dimOverlay) {
-        dimOverlay.style.opacity = '1';
-        setTimeout(() => { if (dimOverlay) dimOverlay.style.opacity = '0'; }, 2500);
-    }
-
-    // 2. 同心円 Radial Gradient
-    clearTimeout(_fadeOutTimer);
-    _radCurrent = 0;
-    _radTarget = 150;
-    if (radialLayer) {
-        radialLayer.style.transition = 'none';
-        radialLayer.style.opacity = '1';
-    }
-    if (!_radActive) {
-        _radActive = true;
-        requestAnimationFrame(_animateRadial);
-    }
-
-    // 3. ハッシュタグ爆発
-    _spawnHashtagsBurst();
-
-    // 4. 巨大絵文字（シェイクバースト）
-    if (giantEmoji) {
-        giantEmoji.textContent = reaction.emoji;
-        giantEmoji.style.animation = 'none';
-        giantEmoji.style.filter = `drop-shadow(0 0 80px ${colorHex})`;
-        void giantEmoji.offsetWidth; // Force reflow
-        giantEmoji.style.animation = 'kion-giant-extreme-shake 1.6s ease-out forwards';
-    }
-
-    // 5. シネマティックFountain演出 (FountainComponent) / フォールバック
-    if (typeof window.FountainComponent !== 'undefined') {
-        window.FountainComponent.fire(reaction, anchorEl);
-    } else {
-        _startParticleRain();
-    }
-
-    // 6. フェードアウト
-    _fadeOutTimer = setTimeout(() => {
-        if (radialLayer) {
-            radialLayer.style.transition = 'opacity 3s ease-out';
-            radialLayer.style.opacity = '0';
-        }
-        setTimeout(() => { _radActive = false; }, 3000);
-    }, 1000);
-}
-
-// グローバル公開
-window._triggerCelebration = _triggerCelebration;
-
-function _spawnHashtagsBurst() {
-    const container = document.getElementById('kion-hashtagContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
-    const tagCount = 15 + Math.floor(Math.random() * 6);
-
-    for (let i = 0; i < tagCount; i++) {
-        const span = document.createElement('span');
-        span.className = 'kion-hashtag-burst';
-        span.style.color = _currentColor.hex;
-        span.style.borderColor = `rgba(${_currentColor.rgb}, 0.5)`;
-        span.textContent = _tagList[Math.floor(Math.random() * _tagList.length)];
-        span.style.left = cx + 'px';
-        span.style.top = cy + 'px';
-        container.appendChild(span);
-
-        const directionMultiplier = Math.random() > 0.5 ? 1 : -1;
-        const vx = directionMultiplier * (200 + Math.random() * 400);
-        const vyPeak = -300 - Math.random() * 400;
-        const dur = 2000 + Math.random() * 1000;
-
-        if (span.animate) {
-            span.animate([
-                { transform: 'translate(-50%, -50%) scale(0.3)', opacity: 0, offset: 0 },
-                { transform: `translate(calc(-50% + ${vx * 0.5}px), calc(-50% + ${vyPeak}px)) scale(1.1)`, opacity: 1, offset: 0.3 },
-                { transform: `translate(calc(-50% + ${vx * 0.9}px), calc(-50% + ${vyPeak + 100}px)) scale(1.4)`, opacity: 1, offset: 0.7 },
-                { transform: `translate(calc(-50% + ${vx}px), calc(-50% + ${vyPeak + 300}px)) scale(1.8)`, opacity: 0, offset: 1 }
-            ], { duration: dur, easing: 'ease-in-out', fill: 'forwards' });
-        }
-        setTimeout(() => span.remove(), dur);
-    }
-}
-
-function _startParticleRain() {
-    const count = 90;
-    const w = window.innerWidth;
-    for (let i = 0; i < count; i++) {
-        const p = {
-            el: document.createElement('div'),
-            x: Math.random() * w,
-            y: -100 - (Math.random() * 600),
-            v: 12 + Math.random() * 20,
-            a: (Math.random() - 0.5) * 15,
-            rot: Math.random() * 360,
-        };
-        p.el.className = 'kion-particle';
-        p.el.textContent = _celebrationEmojis[Math.floor(Math.random() * _celebrationEmojis.length)];
-        p.el.style.fontSize = (15 + Math.random() * 45) + 'px';
-        document.body.appendChild(p.el);
-        _particles.push(p);
-    }
-    requestAnimationFrame(_tickParticleRain);
-}
-
-function _tickParticleRain() {
-    let active = false;
-    const h = window.innerHeight;
-    _particles = _particles.filter(p => {
-        p.y += p.v;
-        p.rot += p.a;
-        p.el.style.transform = `translate(${p.x}px, ${p.y}px) rotate(${p.rot}deg)`;
-        if (p.y < h + 100) {
-            active = true;
-            return true;
-        } else {
-            p.el.remove();
-            return false;
-        }
-    });
-    if (active) requestAnimationFrame(_tickParticleRain);
-}
-
-// ===== ディグ爆発：宝石噴出 =====
-function _triggerGemBurst(gems) {
-    gems = gems || ['💎','💎','💎','✨','🔷','💙','⚡'];
-    const count = 14;
-    for (let i = 0; i < count; i++) {
-        const g = document.createElement('span');
-        g.className = 'gem-particle';
-        const angle = (Math.PI / (count - 1)) * i; // 半円状
-        const dist  = 80 + Math.random() * 80;
-        const gx    = Math.cos(angle - Math.PI / 2) * dist * 1.8;
-        const gy    = -(Math.sin(Math.abs(angle - Math.PI / 2)) * dist + 60);
-        g.textContent = gems[i % gems.length];
-        g.style.cssText = `--gx:${gx}px;--gy:${gy}px;--delay:${i * 40}ms;font-size:${1.3 + Math.random()*0.5}rem;`;
-        document.body.appendChild(g);
-        setTimeout(() => g.remove(), 1200);
-    }
-}
-
-// ===== ダブルタップ演出：💖 波紋（Ping）演出 =====
-function _triggerLoveRipple(x, y) {
-    const ripple = document.createElement('div');
-    ripple.className = 'ripple-heart-container';
-    ripple.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:0;height:0;pointer-events:none;z-index:10005;`;
-    
-    const heart = document.createElement('span');
-    heart.className = 'ripple-heart-emoji';
-    heart.textContent = '💖';
-    heart.style.cssText = `position:absolute;transform:translate(-50%, -50%) scale(0);font-size:5rem;`;
-    
-    ripple.appendChild(heart);
-    document.body.appendChild(ripple);
-    
-    void ripple.offsetWidth;
-    heart.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-    heart.style.transform  = 'translate(-50%, -50%) scale(1.5)';
-    heart.style.opacity    = '0';
-    
-    setTimeout(() => ripple.remove(), 700);
-}
-
-// ===== ジャンルピル：クイックジャンルフィルター =====
 function quickGenreFilter(genre) {
     if(kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([6]);
     filterState.genre = genre || null;
     _syncGenrePills(genre);
     filterTrendCards();
     renderActiveFilterTags();
-    const hasFilter = filterState.scene !== 'すべて' || filterState.genre !== null || filterState.reaction !== null;
+    const hasFilter = filterState.scene !== 'すべて' || filterState.genre !== null || filterState.purpose !== null;
     document.getElementById('filter-dot')?.classList.toggle('hidden', !hasFilter);
-}
-
-// ===== Global DIG Interaction: Drag & Drop Reaction Palette =====
-function _initGlobalDigInteraction() {
-    const container = document.getElementById('global-dig-container');
-    const palette = document.getElementById('global-dig-palette');
-    const btn = document.getElementById('global-dig-btn');
-    if (!container || !palette || !btn) return;
-
-    // パレットの生成
-    palette.innerHTML = '';
-    NEW_REACTIONS.forEach(reaction => {
-        const item = document.createElement('div');
-        item.className = 'dig-palette-emoji';
-        item.textContent = reaction.emoji;
-        item.dataset.label = reaction.label;
-        palette.appendChild(item);
-
-        // ドラッグイベントのバインド
-        item.addEventListener('pointerdown', e => _handleDigDragStart(e, reaction));
-    });
-
-    // DIGボタンのトグル
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isActive = palette.classList.toggle('active');
-        btn.classList.toggle('active', isActive);
-        if (isActive && kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([15]);
-    });
-
-    // パレット外クリックで閉じる
-    document.addEventListener('click', (e) => {
-        if (!container.contains(e.target)) {
-            palette.classList.remove('active');
-            btn.classList.remove('active');
-        }
-    });
-}
-
-let _digGhostEl = null;
-let _currentDragReaction = null;
-let _lastDropTarget = null;
-
-function _handleDigDragStart(e, reaction) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    _currentDragReaction = reaction;
-
-    // 【Focus: 背景暗転とフォーカスカラー設定】
-    const colorMap = {
-        '🔥': { hex: '#FF3300', rgb: '255, 51, 0' },
-        '👏': { hex: '#FFAAA5', rgb: '255, 170, 165' },
-        '💡': { hex: '#FFD700', rgb: '255, 215, 0' },
-        '✨': { hex: '#A200FF', rgb: '162, 0, 255' },
-        '💎': { hex: '#00F2FF', rgb: '0, 242, 255' }
-    };
-    _currentColor = colorMap[reaction.emoji] || { hex: '#4A90E2', rgb: '74, 144, 226' };
-    document.documentElement.style.setProperty('--focus-rgb', _currentColor.rgb);
-    document.body.classList.add('drag-dimming');
-
-    // グラデーションの中身は初期化
-    _radCurrent = 0;
-    const radialLayer = document.getElementById('radialLayer');
-    if (radialLayer) {
-        radialLayer.style.transition = 'none';
-        radialLayer.style.opacity = '1';
-        _radActive = false;
-        
-        // 核だけ少し膨らませる
-        _radTarget = 5;
-        _radActive = true;
-        requestAnimationFrame(animateRadial);
-    }
-    
-    // ゴースト要素の生成
-    _digGhostEl = document.createElement('div');
-    _digGhostEl.className = 'drag-ghost';
-    _digGhostEl.textContent = reaction.emoji;
-    _digGhostEl.style.left = `${e.clientX}px`;
-    _digGhostEl.style.top = `${e.clientY}px`;
-    _digGhostEl.style.transform = 'translate(-50%, -50%) scale(1)';
-    document.body.appendChild(_digGhostEl);
-    
-    if (kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([20]);
-
-    // グローバルな移動・終了イベント
-    window.addEventListener('pointermove', _handleDigDragMove);
-    window.addEventListener('pointerup', _handleDigDragEnd);
-}
-
-function _handleDigDragMove(e) {
-    if (!_digGhostEl) return;
-    
-    // ゴーストを追従
-    _digGhostEl.style.left = `${e.clientX}px`;
-    _digGhostEl.style.top = `${e.clientY}px`;
-    
-    // ヒットテスト (ゴーストを一時的に消して奥の要素を確認)
-    _digGhostEl.style.display = 'none';
-    const target = document.elementFromPoint(e.clientX, e.clientY);
-    _digGhostEl.style.display = 'block';
-    
-    const card = target?.closest('[data-reactions]');
-    
-    if (card !== _lastDropTarget) {
-        if (_lastDropTarget) _lastDropTarget.classList.remove('drag-focus');
-        if (card) {
-            card.classList.add('drag-focus');
-            if (kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate(5);
-        }
-        _lastDropTarget = card;
-    }
-}
-
-function _handleDigDragEnd(e) {
-    window.removeEventListener('pointermove', _handleDigDragMove);
-    window.removeEventListener('pointerup', _handleDigDragEnd);
-    
-    // フォーカス・暗転を解除
-    document.body.classList.remove('drag-dimming');
-    
-    if (!_digGhostEl) return;
-    
-    const reaction = _currentDragReaction;
-    const card = _lastDropTarget;
-    
-    // 成功時
-    if (card && reaction) {
-        const display = card.querySelector('[id^="react-display-"]');
-        card.classList.remove('drag-focus');
-        if (display) {
-            _applyNewReaction(reaction, display.id);
-            // 成功アニメーション（ゴーストが吸い込まれる演出など）
-            _digGhostEl.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
-            _digGhostEl.style.transform = 'translate(-50%, -50%) scale(0)';
-            _digGhostEl.style.opacity = '0';
-        }
-    }
-    
-    // クリーンアップ
-    if (card) card.classList.remove('drop-target-highlight');
-    setTimeout(() => {
-        if (_digGhostEl) _digGhostEl.remove();
-        _digGhostEl = null;
-    }, 300);
-    
-    _lastDropTarget = null;
-    _currentDragReaction = null;
 }
 
 function _syncGenrePills(genre) {
@@ -1863,13 +702,11 @@ function openCardDetail(wrapper) {
 // ===== スライド 1 枚を生成 =====
 function _buildDetailSlide(card, idx, total) {
     const img       = card.querySelector('img[data-desc]') || card.querySelector('img');
-    const display   = card.querySelector('[id^="react-display"]');
     const scene     = card.dataset.scene   || '';
     const genre     = card.dataset.genre   || '';
     const context   = card.dataset.context || '';
     const desc      = img?.dataset.desc    || 'コーデの詳細情報がありません';
     const tags      = (img?.dataset.tags || '').split(',').filter(Boolean).map(t => t.trim());
-    const displayId = display?.id || '';
     const isDark    = document.documentElement.classList.contains('dark');
     const bg        = isDark ? '#0f172a' : '#ffffff';
     const textColor = isDark ? 'rgba(255,255,255,0.9)' : '#1e293b';
@@ -1883,10 +720,6 @@ function _buildDetailSlide(card, idx, total) {
         `<button onclick="quickDigTag('${t}');closeCardDetail();"
             style="padding:5px 12px;background:rgba(0,96,173,0.1);color:#0060ad;border-radius:9999px;font-size:10px;font-weight:700;border:1px solid rgba(0,96,173,0.2);cursor:pointer;">#${t}</button>`
     ).join('');
-
-    const badges = display
-        ? Array.from(display.children).map(b => b.outerHTML).join('')
-        : '';
 
     // スライドインジケーター（ドット）
     const dots = Array.from({ length: total }, (_, i) =>
@@ -1933,16 +766,6 @@ function _buildDetailSlide(card, idx, total) {
 
         <!-- コンテンツパネル -->
         <div style="padding:16px 20px 120px;background:${bg};">
-
-            <!-- リアクションバー（👍ボタン + バッジ） -->
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid ${divider};">
-                <div id="detail-react-${idx}" style="display:flex;gap:5px;flex-wrap:wrap;flex:1;min-height:26px;">
-                    ${badges}
-                </div>
-                <button class="reaction-plus-btn"
-                    style="width:38px;height:38px;background:#0060ad;color:white;border-radius:50%;border:none;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;box-shadow:0 4px 14px rgba(0,96,173,0.38);touch-action:none;"
-                    data-display-id="${displayId}" data-card-idx="${idx}">👍</button>
-            </div>
 
             <!-- 説明文 -->
             <p style="font-size:14px;font-weight:700;line-height:1.65;color:${textColor};">${desc}</p>
@@ -2038,7 +861,7 @@ function initCommunitySearch() {
         if (!trendGrid) return;
         const addCard = trendGrid.lastElementChild;
         Array.from(trendGrid.children)
-            .filter(el => el !== addCard && el.dataset.reactions !== undefined)
+            .filter(el => el !== addCard && el.dataset.postId !== undefined)
             .forEach(card => {
                 const img = card.querySelector('img');
                 const text = (card.textContent + ' ' + (img?.dataset.tags || '') + ' ' + (img?.dataset.desc || '')).toLowerCase();
@@ -2062,14 +885,6 @@ function initCommunity() {
     initCommunitySearch();
     // 設定UIを同期
     _syncSettingsUI();
-    // "+" ボタンのドラッグ委譲
-    _initReactionDelegation();
-    // カードのElastic Pullリアクション
-    _initElasticPull();
-    // 既存バッジへの便乗タップ（方法④）
-    _initBadgeTap();
-    // グローバル DIG リアクション（ドラッグ＆ドロップ）
-    _initGlobalDigInteraction();
 
     // トレンドビューの内部コンポーネントを初期化
     if (typeof AppController !== 'undefined' && typeof AppController.init === 'function') {
@@ -2085,7 +900,6 @@ window.KionCommunity = {
     switchCommunityTab,
     toggleFilterSheet,
     applyFilters,
-    toggleReaction,
     copyToCloset,
     sortTrendPosts,
     quickDigTag,
@@ -2096,13 +910,6 @@ window.KionCommunity = {
  *  KION COMMUNITY - FULL COMPONENT ARCHITECTURE
  *  (Migrated from android_trend_final.html)
  *  ========================================== */
-
-const SYSTEM_REACTIONS = [
-    { id: 'kawaii', emoji: '💖', label: 'かわいい', color: '#f472b6', rgb: '244,114,182' },
-    { id: 'cool',   emoji: '🔥', label: 'カッコいい', color: '#fb923c', rgb: '251,146,60' },
-    { id: 'dig',    emoji: '⛏️', label: 'ディグる', color: '#38bdf8', rgb: '56,189,248' },
-    { id: 'niche',  emoji: '💎', label: '個性的', color: '#a855f7', rgb: '168,85,247' },
-];
 
 const USER_POSTS = [
     {
@@ -2118,7 +925,6 @@ const USER_POSTS = [
         prevRank: 3,
         likes: 5200,
         hashtags: ['MorningCommute', 'WoolShell', 'Layering'],
-        reactionCounts: { dig: 28, emoi: 46, cool: 72, dress: 35, useful: 18, sense: 14, cute: 22 },
         description: '風が冷たい朝に安心なオーバーサイズシェル。',
         hot: false,
     },
@@ -2135,7 +941,6 @@ const USER_POSTS = [
         prevRank: 8,
         likes: 7600,
         hashtags: ['Cyberpunk', 'Techwear', 'StreetStyle'],
-        reactionCounts: { dig: 54, emoi: 32, cool: 88, dress: 62, useful: 24, sense: 18, cute: 12 },
         description: '防風性能と動きやすさを両立するパーカ。',
         hot: true,
     },
@@ -2152,7 +957,6 @@ const USER_POSTS = [
         prevRank: 4,
         likes: 2800,
         hashtags: ['SlowFashion', 'Minimal', 'Linen'],
-        reactionCounts: { dig: 22, emoi: 28, cool: 41, dress: 29, useful: 16, sense: 10, cute: 26 },
         description: 'ナチュラルリネンで作る柔らかい通勤スタイル。',
         hot: false,
     },
@@ -2169,7 +973,6 @@ const USER_POSTS = [
         prevRank: 10,
         likes: 6200,
         hashtags: ['Classic', 'Knitwear', 'IvyStyle'],
-        reactionCounts: { dig: 66, emoi: 58, cool: 79, dress: 43, useful: 36, sense: 22, cute: 15 },
         description: '洗練されたウールのスリムシルエット。',
         hot: true,
     },
@@ -2178,7 +981,6 @@ const USER_POSTS = [
 class AppController {
     static init() {
         this.overlay = document.getElementById('transition-overlay');
-        ReactionModule.init();
         ClosetModule.init();
         ClosetComponent.init();
         DiscoveryModule.init(this);
@@ -2247,268 +1049,6 @@ class DiscoveryModule {
         mBtn.className = mode === 'minimalist'
             ? 'flex-1 py-3 rounded-2xl border flex flex-col justify-center items-center transition-all shadow-[0_4px_25px_rgba(168,85,247,0.7)] bg-purple-600 text-white border-purple-400'
             : 'flex-1 py-3 rounded-2xl border flex flex-col justify-center items-center transition-all bg-black/50 text-white/60 border-white/20 backdrop-blur-md active:scale-95';
-    }
-}
-
-// 注: window.FountainComponent (js/FountainComponent.js) とは別物。
-// あちらは .fire() を持つ IIFE、こちらは .spawn() を持つ単純な紙吹雪スポナー。
-class FountainSpawner {
-    static spawn(cardEl, colorStr, customTags = []) {
-        const container = document.getElementById('fountain-container') || document.body;
-        const rect = cardEl.getBoundingClientRect();
-        const originX = rect.left + rect.width / 2;
-        const originY = rect.top + rect.height * 0.3;
-        const emojis = ['✨', '🌟', '💫', '⚡', '🔥', '💎', '🌙', '🎯'];
-        const defaultTags = ['#VIBES', '#HOT', '#Y2K', '#TREND', '#COOL', '#OMG', '#NEW', '#KION'];
-        const tags = Array.from(new Set([...(customTags || []), ...defaultTags]));
-        const count = 12;
-
-        for (let i = 0; i < count; i++) {
-            const el = document.createElement('div');
-            el.className = 'hashtag-fountain';
-            // 偶数番はハッシュタグ、奇数番は絵文字でバリエーション
-            const useEmoji = i % 4 === 3;
-            el.textContent = useEmoji
-                ? emojis[Math.floor(Math.random() * emojis.length)]
-                : tags[Math.floor(Math.random() * tags.length)];
-            el.style.setProperty('--neon-color', colorStr);
-            el.style.left = (originX + (Math.random() - 0.5) * 60) + 'px';
-            el.style.top = originY + 'px';
-            if (useEmoji) {
-                el.style.fontSize = '20px';
-                el.style.background = 'transparent';
-                el.style.border = 'none';
-                el.style.backdropFilter = 'none';
-                el.style.padding = '0';
-            }
-            container.appendChild(el);
-
-            // 慣性と空気抵抗を模した物理パラメータ
-            const spreadAngle = (Math.random() * 150 - 75) * (Math.PI / 180);
-            const launchForce = 180 + Math.random() * 200;
-            // X軸：左右の広がり（空気抵抗でドリフト）
-            const vx = Math.sin(spreadAngle) * launchForce;
-            // Y軸：上方への初速（重力で減衰後にゆっくり落下）
-            const vy = -(Math.cos(spreadAngle) * launchForce * 0.9 + 60 + Math.random() * 40);
-            // ドリフト：左右に微細な揺らぎ
-            const drift = (Math.random() - 0.5) * 60;
-            const delay = i * 35;
-            // 慣性：初速が高く徐々に減衰するイージング
-            const duration = 1600 + Math.random() * 1000;
-
-            el.animate([
-                {
-                    transform: 'translate(-50%, -50%) scale(0.1) rotate(0deg)',
-                    opacity: 0,
-                    filter: `blur(4px) drop-shadow(0 0 6px ${colorStr})`
-                },
-                {
-                    opacity: 1,
-                    filter: `blur(0px) drop-shadow(0 0 12px ${colorStr})`,
-                    offset: 0.06
-                },
-                {
-                    opacity: 0.9,
-                    filter: `blur(0px) drop-shadow(0 0 8px ${colorStr})`,
-                    offset: 0.55
-                },
-                {
-                    transform: `translate(calc(-50% + ${vx + drift}px), calc(-50% + ${vy + 700}px)) scale(0.7) rotate(${vx / 6}deg)`,
-                    opacity: 0,
-                    filter: `blur(3px) drop-shadow(0 0 2px ${colorStr})`
-                }
-            ], {
-                duration,
-                delay,
-                // easeOutQuart 相当：初速大→ゆっくり減衰
-                easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
-                fill: 'forwards'
-            });
-
-            setTimeout(() => el.remove(), duration + delay + 100);
-        }
-    }
-}
-
-class ReactionModule {
-    static init() {
-        this.dimOverlay = document.getElementById('dim-overlay');
-        this.radialLayer = document.getElementById('radial-layer');
-        this.emojiActor = document.getElementById('giant-emoji-actor');
-    }
-
-    static resolve(type) {
-        if (!type) return null;
-        if (typeof type === 'string') {
-            return Object.values(REACTION_THEME_MASTER).find(r =>
-                r.id === type || r.label === type || r.emoji === type || r.icon === type
-            ) || null;
-        }
-        return type;
-    }
-
-    static trigger(reactionOrType, displayId, _cardIdx) {
-        const reaction = this.resolve(reactionOrType);
-        if (!reaction) return;
-        if (kionSettings.isHapticEnabled && navigator.vibrate) navigator.vibrate([10, 5, 20]);
-
-        const display = document.getElementById(displayId);
-        if (display) {
-            const existing = Array.from(display.children).find(b => b.textContent.startsWith(reaction.emoji));
-            if (existing) {
-                const m = existing.textContent.match(/(\d+)$/);
-                const n = m ? parseInt(m[1]) + 1 : 1;
-                existing.textContent = `${reaction.emoji} ${reaction.label} ${n}`;
-            } else {
-                const badge = document.createElement('span');
-                badge.className = 'reacted-badge reaction-effect-transition animate-[fadeSlideIn_0.3s_ease_forwards]';
-                badge.style.cssText = `background:${reaction.bg};color:${reaction.color};transition: background-color 0.5s ease,color 0.5s ease,box-shadow 0.5s ease;`;
-                badge.textContent = `${reaction.emoji} ${reaction.label} 1`;
-                display.appendChild(badge);
-            }
-        }
-
-        const card = display?.closest('[data-reactions]');
-        if (card) {
-            const current = parseInt(card.dataset.reactions || 0) + 1;
-            card.dataset.reactions = current;
-            const label = card.querySelector('[class*="CURATIONS"]') || Array.from(card.querySelectorAll('span')).find(s => s.textContent.includes('CURATIONS'));
-            if (label) {
-                const disp = current >= 1000 ? (current/1000).toFixed(1) + 'K' : current;
-                label.textContent = `${disp} CURATIONS`;
-            }
-        }
-
-        if (display) {
-            const _snapCont = document.getElementById('card-detail-snap');
-            if (_snapCont) {
-                const _origCard = display.closest('[data-reactions]');
-                if (_origCard) {
-                    const _allCards = Array.from(document.querySelectorAll('#curated-feed-grid > [data-reactions]'));
-                    const _cIdx = _allCards.indexOf(_origCard);
-                    const _detailBadges = _snapCont.querySelector(`#detail-react-${_cIdx}`);
-                    if (_detailBadges) _detailBadges.innerHTML = display.innerHTML;
-                }
-            }
-        }
-
-        if (card && card._postcardComponent) {
-            card._postcardComponent.applyReaction(reaction);
-        }
-
-        this.applyTheme(reaction, card || display);
-        const cardTags = card?.dataset?.hashtags ? card.dataset.hashtags.split(',').filter(Boolean) : [];
-        FountainSpawner.spawn(card || display, reaction.color, cardTags);
-        if (reaction.id === 'dig') _triggerGemBurst(reaction.effects);
-        _triggerCelebration(reaction, display);
-    }
-
-    static applyTheme(reaction, element) {
-        if (this.dimOverlay) {
-            this.dimOverlay.style.transition = 'background-color 0.5s ease, opacity 0.5s ease';
-            this.dimOverlay.style.backgroundColor = reaction.bg;
-        }
-        if (this.radialLayer) {
-            this.radialLayer.style.transition = 'background 0.5s ease, opacity 0.5s ease';
-            this.radialLayer.style.background = `radial-gradient(circle at 50% 50%, ${reaction.color} 0%, ${reaction.bg} 40%, transparent 80%)`;
-        }
-        if (this.emojiActor) {
-            this.emojiActor.style.transition = 'color 0.5s ease, transform 0.5s ease';
-            this.emojiActor.style.color = reaction.color;
-            this.emojiActor.textContent = reaction.emoji;
-        }
-        if (element && element instanceof HTMLElement) {
-            element.classList.add('reaction-effect-transition');
-            element.style.transition = 'background-color 0.5s ease, color 0.5s ease, box-shadow 0.5s ease';
-        }
-    }
-
-    static engageFocus(cardEl, reaction) {
-        cardEl.classList.add('drag-focus');
-        cardEl.style.setProperty('--neon-color', reaction.color);
-        cardEl.style.setProperty('--neon-rgb', reaction.rgb || '255,255,255');
-
-        // カードのみモードの場合は全画面レイヤーをスキップ
-        if (kionSettings.isFullScreenEffectEnabled) {
-            this._applyGradientFlare(reaction.color, 'focus');
-            document.querySelectorAll('#trend-view-container .postcard-wrapper').forEach(el => {
-                if (el !== cardEl.closest('.postcard-wrapper')) el.classList.add('saturation-decay-bg');
-            });
-        }
-        if (navigator.vibrate) navigator.vibrate([15]);
-    }
-
-    static releaseFocus(cardEl) {
-        cardEl.classList.remove('drag-focus');
-        this._removeGradientFlare();
-        document.querySelectorAll('.saturation-decay-bg').forEach(el => el.classList.remove('saturation-decay-bg'));
-    }
-
-    static _applyGradientFlare(colorStr, mode = 'focus') {
-        let flareEl = document.getElementById('gradient-flare-el');
-        if (!flareEl) {
-            flareEl = document.createElement('div');
-            flareEl.id = 'gradient-flare-el';
-            flareEl.className = 'gradient-flare-burst';
-            document.body.appendChild(flareEl);
-        }
-        // テーマカラーを CSS 変数として渡す
-        const r = parseInt(colorStr.slice(1,3)||'ff',16);
-        const g = parseInt(colorStr.slice(3,5)||'ff',16);
-        const b = parseInt(colorStr.slice(5,7)||'ff',16);
-        flareEl.style.setProperty('--flare-color', `rgba(${r},${g},${b},0.18)`);
-        flareEl.style.setProperty('--flare-color2', `rgba(${r},${g},${b},0.08)`);
-        requestAnimationFrame(() => flareEl.classList.add('active'));
-    }
-
-    static _removeGradientFlare() {
-        const flareEl = document.getElementById('gradient-flare-el');
-        if (flareEl) {
-            flareEl.classList.remove('active');
-            setTimeout(() => flareEl.remove(), 600);
-        }
-        if (this.dimOverlay) this.dimOverlay.style.opacity = '0';
-    }
-
-    static triggerBurst(cardEl, reaction) {
-        if (navigator.vibrate) navigator.vibrate([40, 60, 200]);
-
-        // カードのみモードの場合は全画面レイヤーをスキップ
-        if (!kionSettings.isFullScreenEffectEnabled) {
-            // カードローカルのフラッシュのみ
-            _triggerSimpleCelebration(reaction, cardEl);
-            setTimeout(() => this.releaseFocus(cardEl), 800);
-            return;
-        }
-
-        // Gradient Flare バースト（同心円の代替）
-        if (this.radialLayer) {
-            const rgb = reaction.rgb || '255,255,255';
-            this.radialLayer.style.transition = 'none';
-            this.radialLayer.style.opacity = '1';
-            this.radialLayer.style.background = [
-                `radial-gradient(ellipse at 50% 50%, ${reaction.color}CC 0%, transparent 25%)`,
-                `radial-gradient(ellipse at 30% 60%, rgba(${rgb},0.35) 0%, transparent 45%)`,
-                `radial-gradient(ellipse at 70% 40%, rgba(${rgb},0.2) 0%, transparent 40%)`,
-                `radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.7) 30%, transparent 75%)`
-            ].join(', ');
-            requestAnimationFrame(() => {
-                this.radialLayer.style.transition = 'opacity 2.8s cubic-bezier(0.4, 0, 0.2, 1)';
-                this.radialLayer.style.opacity = '0';
-            });
-        }
-
-        if (this.emojiActor) {
-            this.emojiActor.textContent = reaction.emoji;
-            this.emojiActor.style.setProperty('--neon-color', reaction.color);
-            this.emojiActor.classList.remove('burst');
-            void this.emojiActor.offsetWidth;
-            this.emojiActor.classList.add('burst');
-        }
-
-        const cardTags = cardEl?.dataset?.hashtags ? cardEl.dataset.hashtags.split(',').filter(Boolean) : [];
-        FountainSpawner.spawn(cardEl, reaction.color, cardTags);
-        setTimeout(() => this.releaseFocus(cardEl), 800);
     }
 }
 
@@ -2656,7 +1196,7 @@ class ClosetComponent {
 
 class PostcardComponent {
     constructor(data, mode) {
-        this.data = Object.assign({ reactionCounts: { dig: 0, emoi: 0, cool: 0, dress: 0, useful: 0, sense: 0, cute: 0 } }, data);
+        this.data = Object.assign({}, data);
         this.mode = mode;
         this.el = document.createElement('div');
         this.el._postcardComponent = this;
@@ -2664,40 +1204,12 @@ class PostcardComponent {
         this.el.dataset.genre = this.data.genre;
         this.el.dataset.mode = this.data.mode;
         this.el.dataset.hashtags = (this.data.hashtags || []).join(',');
-        this.el.dataset.reactions = this.getTotalReactions();
+        this.el.dataset.likes = this.data.likes;
         this.isTrendingUp = (this.data.prevRank - this.data.currentRank) >= 3;
         this.buildLayout();
         this.bindEvents();
-        this.updateReactionGraph();
     }
 
-    getTotalReactions() {
-        return Object.values(this.data.reactionCounts || {}).reduce((sum, value) => sum + (parseInt(value, 10) || 0), 0);
-    }
-
-    formatCount(value) {
-        if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
-        return `${value}`;
-    }
-
-    buildGraphRows() {
-        const counts = this.data.reactionCounts || {};
-        const maxCount = Math.max(...Object.values(counts), 1);
-        return Object.values(REACTION_THEME_MASTER).map(reaction => {
-            const count = counts[reaction.id] || 0;
-            const width = Math.max(10, Math.round((count / maxCount) * 100));
-            return `
-                <div class="reaction-bar-row">
-                    <div class="reaction-bar-row-label">
-                        <span>${reaction.emoji} ${reaction.label}</span>
-                        <span class="reaction-count-${reaction.id}">${this.formatCount(count)}</span>
-                    </div>
-                    <div class="reaction-bar-track">
-                        <div class="reaction-bar-fill" data-reaction="${reaction.id}" style="width:${width}%; background:${reaction.bg}; box-shadow: 0 0 22px ${reaction.color};"></div>
-                    </div>
-                </div>`;
-        }).join('');
-    }
 
     buildLayout() {
         const scaleBoost = this.isTrendingUp ? 1.15 : 1;
@@ -2715,7 +1227,6 @@ class PostcardComponent {
         const hashtagHtml = (this.data.hashtags || []).map(tag => `<span class="text-[8px] font-bold uppercase text-white/75 bg-white/8 px-2 py-0.5 rounded-full border border-white/10">#${tag}</span>`).join(' ');
         const hotBadge = this.data.hot ? `<span class="absolute left-3 top-3 bg-red-500/85 text-white text-[8px] font-black px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm z-10">急上昇</span>` : '';
         const warmthStars = '★'.repeat(this.data.warmth || 4) + '☆'.repeat(5 - (this.data.warmth || 4));
-        const totalReactions = this.getTotalReactions();
         const likesDisplay = this.data.likes >= 1000 ? `${(this.data.likes / 1000).toFixed(1)}K` : this.data.likes;
 
         this.el.innerHTML = `
@@ -2751,39 +1262,30 @@ class PostcardComponent {
                                             <span class="material-symbols-outlined text-[11px] text-amber-400">favorite</span>${likesDisplay}
                                         </span>
                                         <span class="text-white/55 text-[10px] font-bold flex items-center gap-0.5">
-                                            <span class="material-symbols-outlined text-[11px] text-primary/70">local_fire_department</span>${this.formatCount(totalReactions)}
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
 
                             <!-- トータルバッジ -->
-                            <div class="total-reaction-badge">${this.formatCount(totalReactions)} DIG</div>
+                            <div class="total-likes-badge">${this.formatCount(this.data.likes)} LIKES</div>
                         </div>
 
                         <!-- アクション行 -->
                         <div class="mt-3 flex gap-2">
-                            <button class="flip-toggle-btn flex-1 rounded-xl border border-black/8 dark:border-white/10 bg-white/80 dark:bg-white/5 text-[10px] font-black text-slate-700 dark:text-white/80 py-2.5 active:scale-95 transition-all backdrop-blur-sm tracking-wider uppercase">Analytics</button>
                             <button class="adapt-btn flex-1 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black py-2.5 active:scale-95 transition-all tracking-wider uppercase">Adapt</button>
                         </div>
-                        <div id="post-react-display-${this.data.id}" class="flex flex-wrap gap-2 mt-2"></div>
                     </div>
 
                     <!-- 裏面 -->
                     <div class="flip-card-face flip-card-back text-white relative p-4">
-                        <div class="reaction-graph-panel">
-                            <div class="flex items-center justify-between mb-4">
-                                <div>
-                                    <p class="text-[9px] uppercase tracking-[0.3em] font-black text-blue-400">リアクション分析</p>
-                                    <p class="text-sm font-black text-white mt-1" style="font-family:'Zen Kaku Gothic New','Noto Sans JP',sans-serif;">${this.data.name}</p>
-                                </div>
-                                <button class="flip-toggle-btn border border-white/15 bg-white/8 text-white/80 px-3 py-1.5 rounded-full text-[9px] font-bold active:scale-95 transition-all tracking-wider">← FRONT</button>
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <p class="text-[9px] uppercase tracking-[0.3em] font-black text-blue-400">詳細情報</p>
+                                <p class="text-sm font-black text-white mt-1" style="font-family:'Zen Kaku Gothic New','Noto Sans JP',sans-serif;">${this.data.name}</p>
                             </div>
-                            ${this.buildGraphRows()}
+                            <button class="flip-toggle-btn border border-white/15 bg-white/8 text-white/80 px-3 py-1.5 rounded-full text-[9px] font-bold active:scale-95 transition-all tracking-wider">← FRONT</button>
                         </div>
                         <div class="flip-card-cta mt-3">
-                            <button class="back-dig-btn rounded-xl border border-white/12 bg-white/6 text-white/80 py-2.5 font-bold text-[10px] active:scale-95 transition-all tracking-wider">DIG ⛏️</button>
-                            <button class="back-save-btn rounded-xl bg-emerald-500/90 text-white py-2.5 font-bold text-[10px] active:scale-95 transition-all tracking-wider">ADAPT to Closet</button>
+                            <button class="back-save-btn w-full rounded-xl bg-emerald-500/90 text-white py-2.5 font-bold text-[10px] active:scale-95 transition-all tracking-wider">ADAPT to Closet</button>
                         </div>
                     </div>
                 </div>
@@ -2802,8 +1304,6 @@ class PostcardComponent {
 
         const adaptBtn = this.el.querySelector('.adapt-btn');
         const backSaveBtn = this.el.querySelector('.back-save-btn');
-        const backDigBtn = this.el.querySelector('.back-dig-btn');
-        const displayId = `post-react-display-${this.data.id}`;
 
         if (adaptBtn) {
             adaptBtn.addEventListener('click', (e) => {
@@ -2817,16 +1317,8 @@ class PostcardComponent {
                 e.stopPropagation();
                 if (navigator.vibrate) navigator.vibrate([20, 30]);
                 ClosetComponent.addSavedItem({ img: this.data.img, label: this.data.name || `@${this.data.user}`, tags: this.data.hashtags, memo: 'ADAPT で保存' });
-                ReactionModule.trigger('dress', displayId, this.data.id);
                 backSaveBtn.textContent = 'SAVED';
                 backSaveBtn.disabled = true;
-            });
-        }
-
-        if (backDigBtn) {
-            backDigBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                ReactionModule.trigger('dig', displayId, this.data.id);
             });
         }
 
@@ -2835,8 +1327,6 @@ class PostcardComponent {
                 this.toggleFlip();
             }
         });
-
-        this.el.addEventListener('pointerdown', this.onPointerDown.bind(this));
         this.el.addEventListener('touchstart', e => { e.preventDefault(); }, { passive: false });
     }
 
@@ -2848,118 +1338,11 @@ class PostcardComponent {
 
     handleAdapt() {
         ClosetComponent.addSavedItem({ img: this.data.img, label: this.data.name || `@${this.data.user}`, tags: this.data.hashtags, memo: 'ADAPT で保存' });
-        const displayId = `post-react-display-${this.data.id}`;
-        ReactionModule.trigger('dress', displayId, this.data.id);
         const adaptBtn = this.el.querySelector('.adapt-btn');
         if (adaptBtn) {
             adaptBtn.textContent = 'SAVED';
             adaptBtn.disabled = true;
         }
-    }
-
-    applyReaction(reaction) {
-        const key = reaction.id;
-        if (!this.data.reactionCounts[key]) this.data.reactionCounts[key] = 0;
-        this.data.reactionCounts[key] += 1;
-        this.el.dataset.reactions = this.getTotalReactions();
-        this.updateReactionGraph();
-    }
-
-    updateReactionGraph() {
-        const counts = this.data.reactionCounts || {};
-        const maxCount = Math.max(...Object.values(counts), 1);
-        const total = this.getTotalReactions();
-
-        const totalBadge = this.el.querySelector('.total-reaction-badge');
-        if (totalBadge) {
-            totalBadge.textContent = `TOTAL ${this.formatCount(total)}`;
-            totalBadge.classList.add('pulse');
-            setTimeout(() => totalBadge.classList.remove('pulse'), 450);
-        }
-
-        Object.values(REACTION_THEME_MASTER).forEach(reaction => {
-            const count = counts[reaction.id] || 0;
-            const width = Math.max(10, Math.round((count / maxCount) * 100));
-            const fill = this.el.querySelector(`.reaction-bar-fill[data-reaction="${reaction.id}"]`);
-            const label = this.el.querySelector(`.reaction-count-${reaction.id}`);
-            if (fill) fill.style.width = `${width}%`;
-            if (label) label.textContent = this.formatCount(count);
-        });
-    }
-
-    onPointerDown(e) {
-        if (e.target.closest('button')) return;
-        e.preventDefault();
-        this.el.setPointerCapture(e.pointerId);
-        this.startX = e.clientX;
-        this.pulling = false;
-        this.activeReaction = null;
-        this.arcEl = null;
-
-        ReactionModule.engageFocus(this.el, SYSTEM_REACTIONS[2]);
-        this._onMove = this.onPointerMove.bind(this);
-        this._onUp = this.onPointerUp.bind(this);
-        this.el.addEventListener('pointermove', this._onMove);
-        this.el.addEventListener('pointerup', this._onUp, { once: true });
-        this.el.addEventListener('pointercancel', this._onUp, { once: true });
-    }
-
-    onPointerMove(e) {
-        const dx = e.clientX - this.startX;
-        if (Math.abs(dx) < 15) return;
-        if (!this.pulling) { this.pulling = true; this.showPullArc(); }
-
-        const resist = dx > 130 ? 130 + (dx - 130) * 0.15 : dx * 0.6;
-        const computedBaseScale = this.isTrendingUp ? 1.15 : 1;
-        this.el.style.transform = `translateX(${resist}px) scale(${computedBaseScale}) translateY(-5px)`;
-
-        if (this.arcEl) {
-            this.arcEl.style.pointerEvents = 'none';
-            const hit = document.elementFromPoint(e.clientX, e.clientY);
-            this.arcEl.style.pointerEvents = '';
-            const btn = hit?.closest('.pull-fan-btn');
-            if (btn) {
-                const rId = btn.dataset.rid;
-                if (this.activeReaction?.id !== rId) {
-                    this.arcEl.querySelectorAll('.pull-fan-btn').forEach(b => b.classList.remove('drag-selected'));
-                    btn.classList.add('drag-selected');
-                    this.activeReaction = SYSTEM_REACTIONS.find(r => r.id === rId);
-                    ReactionModule.engageFocus(this.el, this.activeReaction);
-                }
-            }
-        }
-    }
-
-    onPointerUp(e) {
-        this.el.removeEventListener('pointermove', this._onMove);
-        const computedBaseScale = this.isTrendingUp ? 1.2 : 1;
-        this.el.style.transform = `scale(${computedBaseScale})`;
-        if (this.arcEl) this.arcEl.remove();
-
-        if (this.activeReaction) ReactionModule.triggerBurst(this.el, this.activeReaction);
-        else ReactionModule.releaseFocus(this.el);
-    }
-
-    showPullArc() {
-        const rect = this.el.getBoundingClientRect();
-        this.arcEl = document.createElement('div');
-        this.arcEl.className = 'pull-arc-container';
-        this.arcEl.style.left = `${rect.left + 50}px`;
-        this.arcEl.style.top = `${rect.top + rect.height / 2}px`;
-
-        const offsets = [ { x: 20, y: -85 }, { x: 60, y: -40 }, { x: 60, y: 40 }, { x: 20, y: 85 } ];
-        SYSTEM_REACTIONS.forEach((r, i) => {
-            const btn = document.createElement('div');
-            btn.className = 'pull-fan-btn w-[52px] h-[52px] rounded-full flex items-center justify-center text-[24px] bg-slate-900 border border-white text-white drop-shadow-xl';
-            btn.style.setProperty('--fx', offsets[i].x + 'px');
-            btn.style.setProperty('--fy', offsets[i].y + 'px');
-            btn.style.setProperty('--neon-color', r.color);
-            btn.dataset.rid = r.id;
-            btn.textContent = r.emoji;
-            this.arcEl.appendChild(btn);
-        });
-        document.body.appendChild(this.arcEl);
-        if (navigator.vibrate) navigator.vibrate(10);
     }
 }
 
@@ -3003,5 +1386,3 @@ class TrendModule {
         });
     }
 }
-
-
