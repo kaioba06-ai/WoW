@@ -107,6 +107,194 @@
     </button>
 </div>
 
+<!-- 3.5 通知設定モーダル (Notification Settings) -->
+<div id="notification-overlay" onclick="closeNotificationModal()" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] transition-opacity duration-300 opacity-0"></div>
+<div id="notification-modal" class="hidden fixed bottom-0 left-0 w-full z-[10001] max-w-2xl" style="left:50%;transform:translateX(-50%) translateY(100%);">
+    <div class="bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl border border-white/30 dark:border-white/10 max-h-[90vh] flex flex-col">
+        <div class="flex justify-center pt-3 pb-1"><div class="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full"></div></div>
+        <div class="px-6 pt-2 pb-4 flex items-center justify-between">
+            <h3 class="font-headline font-bold text-lg dark:text-white">通知設定</h3>
+            <button onclick="closeNotificationModal()" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                <span class="material-symbols-outlined text-on-surface-variant dark:text-white/60">close</span>
+            </button>
+        </div>
+        <div class="overflow-y-auto flex-1 px-6 pb-[calc(2rem+env(safe-area-inset-bottom))] space-y-6">
+            <!-- マスタースイッチ -->
+            <div class="flex items-center justify-between p-4 rounded-2xl bg-primary/5 dark:bg-blue-500/10 border border-primary/15 dark:border-blue-500/20">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary dark:text-blue-400">notifications_active</span>
+                    <div>
+                        <span class="text-sm font-bold dark:text-white">プッシュ通知</span>
+                        <p class="text-[10px] text-on-surface-variant dark:text-white/50 mt-0.5">すべての通知をまとめてON/OFF</p>
+                    </div>
+                </div>
+                <button type="button" role="switch" onclick="toggleNotificationMaster()" class="notif-switch relative w-12 h-7 rounded-full transition-colors duration-300 flex-shrink-0" data-notif-key="master">
+                    <span class="notif-knob absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300"></span>
+                </button>
+            </div>
+
+            <!-- 個別通知 -->
+            <div id="notification-detail-group" class="wow-settings-card !p-0 overflow-hidden divide-y divide-black/5 dark:divide-white/10 transition-opacity duration-300">
+                <!-- 朝のコーデ提案 -->
+                <div class="flex items-center justify-between p-4">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary/70">wb_sunny</span>
+                        <div>
+                            <span class="text-xs font-bold dark:text-white">朝のコーデ提案</span>
+                            <p class="text-[9px] text-on-surface-variant dark:text-white/40 mt-0.5">毎朝その日のおすすめをお届け</p>
+                        </div>
+                    </div>
+                    <button type="button" role="switch" onclick="toggleNotificationItem(this)" class="notif-switch relative w-12 h-7 rounded-full transition-colors duration-300 flex-shrink-0" data-notif-key="morning">
+                        <span class="notif-knob absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300"></span>
+                    </button>
+                </div>
+                <!-- 朝の通知時刻 -->
+                <div id="notification-morning-time-row" class="flex items-center justify-between px-4 py-3 bg-black/[0.02] dark:bg-white/[0.02]">
+                    <span class="text-[11px] font-bold text-on-surface-variant dark:text-white/50 flex items-center gap-2 pl-8">通知する時刻</span>
+                    <input type="time" id="notification-morning-time" value="07:00" onchange="saveNotificationSettings()" class="bg-white dark:bg-slate-700 border border-black/5 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40"/>
+                </div>
+                <!-- 天気の急変 -->
+                <div class="flex items-center justify-between p-4">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary/70">thunderstorm</span>
+                        <div>
+                            <span class="text-xs font-bold dark:text-white">天気の急変アラート</span>
+                            <p class="text-[9px] text-on-surface-variant dark:text-white/40 mt-0.5">急な雨・気温変化をお知らせ</p>
+                        </div>
+                    </div>
+                    <button type="button" role="switch" onclick="toggleNotificationItem(this)" class="notif-switch relative w-12 h-7 rounded-full transition-colors duration-300 flex-shrink-0" data-notif-key="weather">
+                        <span class="notif-knob absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300"></span>
+                    </button>
+                </div>
+                <!-- コミュニティ -->
+                <div class="flex items-center justify-between p-4">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary/70">favorite</span>
+                        <div>
+                            <span class="text-xs font-bold dark:text-white">いいね・フォロー</span>
+                            <p class="text-[9px] text-on-surface-variant dark:text-white/40 mt-0.5">コミュニティでの反応を通知</p>
+                        </div>
+                    </div>
+                    <button type="button" role="switch" onclick="toggleNotificationItem(this)" class="notif-switch relative w-12 h-7 rounded-full transition-colors duration-300 flex-shrink-0" data-notif-key="community">
+                        <span class="notif-knob absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300"></span>
+                    </button>
+                </div>
+            </div>
+
+            <p class="text-[10px] text-on-surface-variant/60 dark:text-white/30 text-center leading-relaxed px-4">
+                端末の設定でWear for Weatherの通知が許可されている必要があります。
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- 3.6 プライバシーとセキュリティモーダル (Privacy & Security) -->
+<div id="privacy-overlay" onclick="closePrivacyModal()" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] transition-opacity duration-300 opacity-0"></div>
+<div id="privacy-modal" class="hidden fixed bottom-0 left-0 w-full z-[10001] max-w-2xl" style="left:50%;transform:translateX(-50%) translateY(100%);">
+    <div class="bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl border border-white/30 dark:border-white/10 max-h-[90vh] flex flex-col">
+        <div class="flex justify-center pt-3 pb-1"><div class="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full"></div></div>
+        <div class="px-6 pt-2 pb-4 flex items-center justify-between">
+            <h3 class="font-headline font-bold text-lg dark:text-white">プライバシーとセキュリティ</h3>
+            <button onclick="closePrivacyModal()" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                <span class="material-symbols-outlined text-on-surface-variant dark:text-white/60">close</span>
+            </button>
+        </div>
+        <div class="overflow-y-auto flex-1 px-6 pb-[calc(2rem+env(safe-area-inset-bottom))] space-y-6">
+
+            <!-- プライバシー設定 -->
+            <section class="space-y-2">
+                <h4 class="text-[10px] font-black text-on-surface-variant/60 dark:text-white/40 uppercase tracking-widest px-1">プライバシー</h4>
+                <div class="wow-settings-card !p-0 overflow-hidden divide-y divide-black/5 dark:divide-white/10">
+                    <!-- 非公開アカウント -->
+                    <div class="flex items-center justify-between p-4">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary/70">lock</span>
+                            <div>
+                                <span class="text-xs font-bold dark:text-white">非公開アカウント</span>
+                                <p class="text-[9px] text-on-surface-variant dark:text-white/40 mt-0.5">承認したフォロワーだけが投稿を閲覧可</p>
+                            </div>
+                        </div>
+                        <button type="button" role="switch" onclick="togglePrivacyItem(this)" class="priv-switch relative w-12 h-7 rounded-full transition-colors duration-300 flex-shrink-0" data-priv-key="privateAccount">
+                            <span class="notif-knob absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300"></span>
+                        </button>
+                    </div>
+                    <!-- アクティビティ状態 -->
+                    <div class="flex items-center justify-between p-4">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary/70">visibility</span>
+                            <div>
+                                <span class="text-xs font-bold dark:text-white">アクティビティ状態を表示</span>
+                                <p class="text-[9px] text-on-surface-variant dark:text-white/40 mt-0.5">オンライン状態を他のユーザーに公開</p>
+                            </div>
+                        </div>
+                        <button type="button" role="switch" onclick="togglePrivacyItem(this)" class="priv-switch relative w-12 h-7 rounded-full transition-colors duration-300 flex-shrink-0" data-priv-key="activeStatus">
+                            <span class="notif-knob absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300"></span>
+                        </button>
+                    </div>
+                    <!-- おすすめ表示 -->
+                    <div class="flex items-center justify-between p-4">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary/70">person_search</span>
+                            <div>
+                                <span class="text-xs font-bold dark:text-white">おすすめ・検索に表示</span>
+                                <p class="text-[9px] text-on-surface-variant dark:text-white/40 mt-0.5">他のユーザーから見つけられやすくする</p>
+                            </div>
+                        </div>
+                        <button type="button" role="switch" onclick="togglePrivacyItem(this)" class="priv-switch relative w-12 h-7 rounded-full transition-colors duration-300 flex-shrink-0" data-priv-key="discoverable">
+                            <span class="notif-knob absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300"></span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- セキュリティ -->
+            <section class="space-y-2">
+                <h4 class="text-[10px] font-black text-on-surface-variant/60 dark:text-white/40 uppercase tracking-widest px-1">セキュリティ</h4>
+                <div class="wow-settings-card !p-0 overflow-hidden divide-y divide-black/5 dark:divide-white/10">
+                    <!-- パスワード変更 -->
+                    <div onclick="changePassword()" class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer active:scale-[0.99] transition-all">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary/70">key</span>
+                            <span class="text-xs font-bold dark:text-white">パスワードを変更</span>
+                        </div>
+                        <span class="material-symbols-outlined text-sm text-on-surface-variant">chevron_right</span>
+                    </div>
+                    <!-- 全端末ログアウト -->
+                    <div onclick="logoutAllDevices()" class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer active:scale-[0.99] transition-all">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary/70">devices</span>
+                            <span class="text-xs font-bold dark:text-white">すべての端末からログアウト</span>
+                        </div>
+                        <span class="material-symbols-outlined text-sm text-on-surface-variant">chevron_right</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 規約・ポリシー -->
+            <section class="space-y-2">
+                <h4 class="text-[10px] font-black text-on-surface-variant/60 dark:text-white/40 uppercase tracking-widest px-1">規約・ポリシー</h4>
+                <div class="wow-settings-card !p-0 overflow-hidden divide-y divide-black/5 dark:divide-white/10">
+                    <div onclick="window.open('terms.html','_blank')" class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer active:scale-[0.99] transition-all">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary/70">description</span>
+                            <span class="text-xs font-bold dark:text-white">利用規約</span>
+                        </div>
+                        <span class="material-symbols-outlined text-sm text-on-surface-variant">open_in_new</span>
+                    </div>
+                    <div onclick="window.open('privacy.html','_blank')" class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer active:scale-[0.99] transition-all">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary/70">shield</span>
+                            <span class="text-xs font-bold dark:text-white">プライバシーポリシー</span>
+                        </div>
+                        <span class="material-symbols-outlined text-sm text-on-surface-variant">open_in_new</span>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</div>
+
 <!-- 4. チュートリアルモーダル (Tutorial Modal) -->
 <div id="tutorial-modal" class="hidden fixed inset-0 bg-primary/95 z-[30000] flex flex-col items-center justify-center p-10 text-center text-white backdrop-blur-xl transition-opacity duration-500">
     <div class="w-24 h-24 bg-white/20 rounded-[2rem] flex items-center justify-center mb-8 animate-pulse">

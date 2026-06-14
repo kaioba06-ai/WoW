@@ -188,6 +188,234 @@ function closeSettingsModal() {
     }, 400);
 }
 
+// ===== 通知設定 =====
+const NOTIFICATION_KEY = 'kion_notifications';
+const NOTIFICATION_DEFAULTS = { master: true, morning: true, weather: true, community: true, morningTime: '07:00' };
+
+function getNotificationSettings() {
+    try {
+        return Object.assign({}, NOTIFICATION_DEFAULTS, JSON.parse(localStorage.getItem(NOTIFICATION_KEY) || '{}'));
+    } catch (e) {
+        return Object.assign({}, NOTIFICATION_DEFAULTS);
+    }
+}
+
+// スイッチUIに状態を反映（ON=primary背景＋ノブ右、OFF=グレー＋ノブ左）
+function _applyNotifSwitch(btn, on) {
+    if (!btn) return;
+    const knob = btn.querySelector('.notif-knob');
+    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    if (on) {
+        btn.classList.add('bg-primary', 'dark:bg-blue-500');
+        btn.classList.remove('bg-black/15', 'dark:bg-white/15');
+        if (knob) knob.style.left = '22px';
+    } else {
+        btn.classList.remove('bg-primary', 'dark:bg-blue-500');
+        btn.classList.add('bg-black/15', 'dark:bg-white/15');
+        if (knob) knob.style.left = '2px';
+    }
+}
+
+// モーダルUI全体を現在の設定で再構築
+function applyNotificationUI() {
+    const s = getNotificationSettings();
+    document.querySelectorAll('.notif-switch').forEach(btn => {
+        const key = btn.getAttribute('data-notif-key');
+        _applyNotifSwitch(btn, !!s[key]);
+    });
+
+    // マスターOFFのとき個別項目を無効化（薄く＋操作不可）
+    const group = document.getElementById('notification-detail-group');
+    if (group) {
+        group.style.opacity = s.master ? '1' : '0.4';
+        group.style.pointerEvents = s.master ? 'auto' : 'none';
+    }
+
+    // 朝の時刻
+    const timeInput = document.getElementById('notification-morning-time');
+    if (timeInput) timeInput.value = s.morningTime || '07:00';
+    const timeRow = document.getElementById('notification-morning-time-row');
+    if (timeRow) timeRow.style.display = s.morning ? 'flex' : 'none';
+
+    updateNotificationStatusBadge();
+}
+
+// プロフィール画面の「通知設定」行のON/OFFバッジを更新
+function updateNotificationStatusBadge() {
+    const badge = document.getElementById('notification-status');
+    if (!badge) return;
+    const s = getNotificationSettings();
+    badge.textContent = s.master ? 'ON' : 'OFF';
+    if (s.master) {
+        badge.classList.add('text-primary', 'dark:text-blue-300');
+        badge.classList.remove('text-on-surface-variant', 'dark:text-white/50');
+    } else {
+        badge.classList.remove('text-primary', 'dark:text-blue-300');
+        badge.classList.add('text-on-surface-variant', 'dark:text-white/50');
+    }
+}
+
+function saveNotificationSettings() {
+    const s = getNotificationSettings();
+    const timeInput = document.getElementById('notification-morning-time');
+    if (timeInput) s.morningTime = timeInput.value || '07:00';
+    localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(s));
+}
+
+function openNotificationModal() {
+    if (navigator.vibrate) navigator.vibrate([8]);
+    const overlay = document.getElementById('notification-overlay');
+    const modal   = document.getElementById('notification-modal');
+    if (!overlay || !modal) return;
+
+    applyNotificationUI();
+
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        modal.style.transform = 'translateX(-50%) translateY(0)';
+        modal.style.transition = 'transform 0.4s cubic-bezier(0.32,0.72,0,1)';
+    });
+}
+
+function closeNotificationModal() {
+    const overlay = document.getElementById('notification-overlay');
+    const modal   = document.getElementById('notification-modal');
+    if (!overlay || !modal) return;
+    overlay.style.opacity = '0';
+    modal.style.transform = 'translateX(-50%) translateY(100%)';
+    setTimeout(() => {
+        overlay.classList.add('hidden');
+        modal.classList.add('hidden');
+    }, 400);
+}
+
+// マスタースイッチ：全体ON/OFF
+function toggleNotificationMaster() {
+    if (navigator.vibrate) navigator.vibrate([8]);
+    const s = getNotificationSettings();
+    s.master = !s.master;
+    localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(s));
+    applyNotificationUI();
+    if (typeof showToast === 'function') {
+        showToast(s.master ? '通知をオンにしました' : '通知をオフにしました');
+    }
+}
+
+// 個別スイッチ
+function toggleNotificationItem(btn) {
+    if (navigator.vibrate) navigator.vibrate([5]);
+    const key = btn.getAttribute('data-notif-key');
+    if (!key) return;
+    const s = getNotificationSettings();
+    s[key] = !s[key];
+    localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(s));
+    applyNotificationUI();
+}
+
+// ===== プライバシーとセキュリティ =====
+const PRIVACY_KEY = 'kion_privacy';
+const PRIVACY_DEFAULTS = { privateAccount: false, activeStatus: true, discoverable: true };
+
+function getPrivacySettings() {
+    try {
+        return Object.assign({}, PRIVACY_DEFAULTS, JSON.parse(localStorage.getItem(PRIVACY_KEY) || '{}'));
+    } catch (e) {
+        return Object.assign({}, PRIVACY_DEFAULTS);
+    }
+}
+
+// モーダルUIを現在の設定で再構築（スイッチ見た目は通知設定と共通の _applyNotifSwitch を再利用）
+function applyPrivacyUI() {
+    const s = getPrivacySettings();
+    document.querySelectorAll('.priv-switch').forEach(btn => {
+        const key = btn.getAttribute('data-priv-key');
+        _applyNotifSwitch(btn, !!s[key]);
+    });
+}
+
+function openPrivacyModal() {
+    if (navigator.vibrate) navigator.vibrate([8]);
+    const overlay = document.getElementById('privacy-overlay');
+    const modal   = document.getElementById('privacy-modal');
+    if (!overlay || !modal) return;
+
+    applyPrivacyUI();
+
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        modal.style.transform = 'translateX(-50%) translateY(0)';
+        modal.style.transition = 'transform 0.4s cubic-bezier(0.32,0.72,0,1)';
+    });
+}
+
+function closePrivacyModal() {
+    const overlay = document.getElementById('privacy-overlay');
+    const modal   = document.getElementById('privacy-modal');
+    if (!overlay || !modal) return;
+    overlay.style.opacity = '0';
+    modal.style.transform = 'translateX(-50%) translateY(100%)';
+    setTimeout(() => {
+        overlay.classList.add('hidden');
+        modal.classList.add('hidden');
+    }, 400);
+}
+
+function togglePrivacyItem(btn) {
+    if (navigator.vibrate) navigator.vibrate([5]);
+    const key = btn.getAttribute('data-priv-key');
+    if (!key) return;
+    const s = getPrivacySettings();
+    s[key] = !s[key];
+    localStorage.setItem(PRIVACY_KEY, JSON.stringify(s));
+    applyPrivacyUI();
+}
+
+// パスワード変更：Supabase の再設定メールを送信
+async function changePassword() {
+    if (navigator.vibrate) navigator.vibrate([8]);
+    const email = (window.currentUser && window.currentUser.email)
+        || (JSON.parse(localStorage.getItem('kion_profile') || '{}').email);
+    if (!email) {
+        if (typeof showToast === 'function') showToast('メールアドレスが取得できませんでした');
+        return;
+    }
+    if (!confirm(email + ' 宛にパスワード再設定メールを送信します。よろしいですか？')) return;
+
+    try {
+        if (window.supabaseClient && window.supabaseClient.auth) {
+            const redirectTo = location.origin + '/login.html';
+            const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+            if (error) throw error;
+            if (typeof showToast === 'function') showToast('再設定メールを送信しました');
+        } else {
+            if (typeof showToast === 'function') showToast('現在この操作は利用できません');
+        }
+    } catch (e) {
+        console.error('[Security] password reset error:', e);
+        if (typeof showToast === 'function') showToast('送信に失敗しました');
+    }
+}
+
+// すべての端末からログアウト（Supabase global scope）
+async function logoutAllDevices() {
+    if (navigator.vibrate) navigator.vibrate([10]);
+    if (!confirm('すべての端末からログアウトします。よろしいですか？')) return;
+    try {
+        if (window.supabaseClient && window.supabaseClient.auth) {
+            const { error } = await window.supabaseClient.auth.signOut({ scope: 'global' });
+            if (error) throw error;
+        }
+        window.location.href = 'login.html';
+    } catch (e) {
+        console.error('[Security] global signOut error:', e);
+        if (typeof showToast === 'function') showToast('ログアウトに失敗しました');
+    }
+}
+
 // アコーディオン切り替え
 function toggleSettingsAccordion(contentId, headerEl) {
     if (navigator.vibrate) navigator.vibrate([5]);
@@ -810,6 +1038,7 @@ window.addEventListener('sectionsLoaded', () => {
     renderMyPosts();
     updateSignatureCount();
     initFollowState();
+    updateNotificationStatusBadge();
 
     const bioInput = document.getElementById('profile-edit-bio');
     if (bioInput) bioInput.addEventListener('input', () => {

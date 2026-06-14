@@ -557,14 +557,14 @@
                         <span class="material-symbols-outlined accordion-icon text-xl">expand_more</span>
                     </h4>
                     <div id="system-settings-content" class="hidden wow-settings-card !p-0 overflow-hidden divide-y divide-black/5 dark:divide-white/10">
-                    <div class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer active:scale-[0.99] transition-all">
+                    <div onclick="openNotificationModal()" class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer active:scale-[0.99] transition-all">
                         <div class="flex items-center gap-3">
                             <span class="material-symbols-outlined text-primary/70">notifications</span>
                             <span class="text-xs font-bold dark:text-white">通知設定</span>
                         </div>
-                        <span class="text-[9px] font-bold text-on-surface-variant dark:text-white/50 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full">ON</span>
+                        <span class="text-[9px] font-bold text-on-surface-variant dark:text-white/50 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full" id="notification-status">ON</span>
                     </div>
-                    <div class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all">
+                    <div onclick="openPrivacyModal()" class="flex items-center justify-between p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer active:scale-[0.99] transition-all">
                         <div class="flex items-center gap-3">
                             <span class="material-symbols-outlined text-primary/70">lock_person</span>
                             <span class="text-xs font-bold dark:text-white">プライバシーとセキュリティ</span>
